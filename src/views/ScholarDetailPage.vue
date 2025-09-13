@@ -20,6 +20,7 @@
                 {{ scholar.isFollowed ? '已关注' : '关注' }}
               </el-button>
               <el-button :icon="Message">发消息</el-button>
+              <el-button @click="handleStartChat">私信</el-button>
             </div>
           </div>
 
@@ -128,6 +129,16 @@
               </el-card>
             </el-col>
           </el-row>
+
+          <!-- 聊天窗口 -->
+          <el-dialog
+            v-model="showChatWindow"
+            title="私信"
+            width="80%"
+            :before-close="handleCloseChatWindow"
+          >
+            <ChatWindow @close="handleCloseChatWindow" />
+          </el-dialog>
         </div>
 
         <div v-else class="loading-state">
@@ -148,8 +159,10 @@ import { LineChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, GridComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import AppHeader from '@/components/AppHeader.vue'
+import ChatWindow from '@/components/ChatWindow.vue'
 import { mockScholars } from '@/mock/scholars'
 import { mockPapers } from '@/mock/papers'
+import { useChatStore } from '../stores/chat'
 
 use([
   CanvasRenderer,
@@ -160,8 +173,10 @@ use([
 ])
 
 const route = useRoute()
+const chatStore = useChatStore()
 
 const scholar = ref(null)
+const showChatWindow = ref(false)
 const activeTab = ref('papers')
 const papersSortBy = ref('date')
 const scholarPapers = ref([])
@@ -220,6 +235,21 @@ const toggleFollow = () => {
   if (scholar.value) {
     scholar.value.isFollowed = !scholar.value.isFollowed
   }
+}
+
+const handleStartChat = () => {
+  if (scholar.value) {
+    chatStore.startConversation(
+      scholar.value.id,
+      scholar.value.name,
+      scholar.value.avatar
+    )
+    showChatWindow.value = true
+  }
+}
+
+const handleCloseChatWindow = () => {
+  showChatWindow.value = false
 }
 
 onMounted(() => {

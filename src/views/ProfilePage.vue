@@ -137,6 +137,7 @@
 
                 <div class="profile-actions">
                   <el-button @click="handleLogout">退出登录</el-button>
+                  <el-button @click="$router.push('/settings')">个人设置</el-button>
                 </div>
               </el-card>
             </el-col>
@@ -166,19 +167,57 @@
 
                   <el-tab-pane label="我的论文" name="papers">
                     <div class="papers-content">
-                      <el-empty description="暂无上传的论文" />
+                      <el-empty v-if="settings.showFavorites" description="暂无上传的论文" />
+                      <div v-else class="privacy-notice">
+                        <el-alert
+                          title="内容已隐藏"
+                          description="您已在隐私设置中关闭了此内容的展示"
+                          type="info"
+                          :closable="false"
+                        />
+                      </div>
                     </div>
                   </el-tab-pane>
 
                   <el-tab-pane label="收藏夹" name="favorites">
                     <div class="favorites-content">
-                      <el-empty description="暂无收藏的论文" />
+                      <el-empty v-if="settings.showFavorites" description="暂无收藏的论文" />
+                      <div v-else class="privacy-notice">
+                        <el-alert
+                          title="内容已隐藏"
+                          description="您已在隐私设置中关闭了收藏夹的展示"
+                          type="info"
+                          :closable="false"
+                        />
+                      </div>
                     </div>
                   </el-tab-pane>
 
                   <el-tab-pane label="关注列表" name="following">
                     <div class="following-content">
-                      <el-empty description="暂无关注的学者" />
+                      <el-empty v-if="settings.showFollowing" description="暂无关注的学者" />
+                      <div v-else class="privacy-notice">
+                        <el-alert
+                          title="内容已隐藏"
+                          description="您已在隐私设置中关闭了关注列表的展示"
+                          type="info"
+                          :closable="false"
+                        />
+                      </div>
+                    </div>
+                  </el-tab-pane>
+
+                  <el-tab-pane label="粉丝列表" name="followers">
+                    <div class="followers-content">
+                      <el-empty v-if="settings.showFollowers" description="暂无粉丝" />
+                      <div v-else class="privacy-notice">
+                        <el-alert
+                          title="内容已隐藏"
+                          description="您已在隐私设置中关闭了粉丝列表的展示"
+                          type="info"
+                          :closable="false"
+                        />
+                      </div>
                     </div>
                   </el-tab-pane>
                 </el-tabs>
@@ -196,8 +235,10 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
+import { useSettingsStore } from '../stores/settings'
 
 const authStore = useAuthStore()
+const settingsStore = useSettingsStore()
 
 const authTab = ref('login')
 const activeTab = ref('info')
@@ -218,6 +259,7 @@ const registerForm = ref({
 
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user)
+const settings = computed(() => settingsStore.settings)
 
 const loginRules = {
   username: [
@@ -288,6 +330,7 @@ const handleLogout = () => {
 
 onMounted(() => {
   authStore.initAuth()
+  settingsStore.loadSettings()
 })
 </script>
 
@@ -384,11 +427,16 @@ onMounted(() => {
 
     .papers-content,
     .favorites-content,
-    .following-content {
+    .following-content,
+    .followers-content {
       min-height: 300px;
       display: flex;
       align-items: center;
       justify-content: center;
+
+      .privacy-notice {
+        width: 100%;
+      }
     }
   }
 }

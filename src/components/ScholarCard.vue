@@ -27,6 +27,12 @@
       >
         {{ scholar.isFollowed ? '已关注' : '关注' }}
       </el-button>
+      <el-button
+        size="small"
+        @click="startChat"
+      >
+        私信
+      </el-button>
     </div>
 
     <div class="scholar-fields">
@@ -58,16 +64,30 @@
 </template>
 
 <script setup lang="ts">
+import { useChatStore } from '../stores/chat'
 import type { Scholar } from '../types/scholar'
 
 interface Props {
   scholar: Scholar
 }
 
+defineEmits<{
+  startChat: [participantId: string, participantName: string, participantAvatar?: string]
+}>()
+
 const props = defineProps<Props>()
+const chatStore = useChatStore()
 
 const toggleFollow = () => {
   props.scholar.isFollowed = !props.scholar.isFollowed
+}
+
+const startChat = () => {
+  chatStore.startConversation(
+    props.scholar.id,
+    props.scholar.name,
+    props.scholar.avatar
+  )
 }
 </script>
 

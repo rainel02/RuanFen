@@ -37,6 +37,12 @@ const routes: RouteRecordRaw[] = [
     name: 'ScholarDetail',
     component: () => import('../views/ScholarDetailPage.vue'),
     meta: { title: '学者详情' }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/SettingsPage.vue'),
+    meta: { title: '个人设置' }
   }
 ]
 

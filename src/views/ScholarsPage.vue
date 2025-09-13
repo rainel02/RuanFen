@@ -53,13 +53,26 @@
             :key="scholar.id"
             class="scholar-item"
           >
-            <ScholarCard :scholar="scholar" />
+            <ScholarCard 
+              :scholar="scholar" 
+              @start-chat="handleStartChat"
+            />
           </div>
         </div>
 
         <div v-if="filteredScholars.length === 0" class="empty-state">
           <el-empty description="暂无符合条件的学者" />
         </div>
+
+        <!-- 聊天窗口 -->
+        <el-dialog
+          v-model="showChatWindow"
+          title="私信"
+          width="80%"
+          :before-close="handleCloseChatWindow"
+        >
+          <ChatWindow @close="handleCloseChatWindow" />
+        </el-dialog>
       </div>
     </div>
   </div>
@@ -69,9 +82,13 @@
 import { ref, computed } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ScholarCard from '@/components/ScholarCard.vue'
+import ChatWindow from '@/components/ChatWindow.vue'
 import { mockScholars } from '../mock/scholars'
+import { useChatStore } from '../stores/chat'
 
 const scholars = ref(mockScholars)
+const chatStore = useChatStore()
+const showChatWindow = ref(false)
 const selectedInstitution = ref('')
 const selectedField = ref('')
 const sortBy = ref('hIndex')
@@ -106,6 +123,15 @@ const filteredScholars = computed(() => {
   return result
 })
 </script>
+const handleStartChat = (participantId: string, participantName: string, participantAvatar?: string) => {
+  chatStore.startConversation(participantId, participantName, participantAvatar)
+  showChatWindow.value = true
+}
+
+const handleCloseChatWindow = () => {
+  showChatWindow.value = false
+}
+
 
 <style scoped lang="scss">
 @import "../styles/main.scss";
