@@ -151,7 +151,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { Plus, Message, Document, Star } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -173,6 +173,7 @@ use([
 ])
 
 const route = useRoute()
+const router = useRouter()
 const chatStore = useChatStore()
 
 const scholar = ref(null)
@@ -244,7 +245,8 @@ const handleStartChat = () => {
       scholar.value.name,
       scholar.value.avatar
     )
-    showChatWindow.value = true
+    // 跳转到私信页面
+    router.push('/chat')
   }
 }
 

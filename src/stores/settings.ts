@@ -4,11 +4,24 @@ import type { UserSettings } from '../types/chat'
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref<UserSettings>({
+    // 隐私设置
     showFavorites: true,
     showFollowers: true,
     showFollowing: true,
     allowMessages: true,
-    emailNotifications: true
+    emailNotifications: true,
+    
+    // 个性化设置
+    userRole: '',
+    researchFields: [],
+    recommendationFrequency: 'weekly',
+    
+    // 功能设置
+    enableForum: true,
+    enablePaperGuide: true,
+    enableCircles: true,
+    enableAISummary: true,
+    enableAIRecommendation: true
   })
 
   const loadSettings = () => {

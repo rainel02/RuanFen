@@ -43,6 +43,9 @@
             >
               <el-menu-item index="/">论文</el-menu-item>
               <el-menu-item index="/scholars">学者</el-menu-item>
+              <el-menu-item index="/paper-guide" v-if="showPaperGuide">导读</el-menu-item>
+              <el-menu-item index="/forum" v-if="showForum">论坛</el-menu-item>
+              <el-menu-item index="/chat">私信</el-menu-item>
               <el-menu-item index="/analytics">统计</el-menu-item>
               <el-menu-item index="/profile">
                 <el-icon v-if="!isLoggedIn">
@@ -64,16 +67,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePapersStore } from '../stores/papers'
+import { useSettingsStore } from '../stores/settings'
 import { Search, User, School } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const papersStore = usePapersStore()
+const settingsStore = useSettingsStore()
 
 const searchInput = ref('')
 
@@ -81,6 +86,10 @@ const activeIndex = computed(() => route.path + '') // 保证为字符串
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user)
 const showSearch = computed(() => route.path === '/')
+
+// 根据设置显示功能
+const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
+const showForum = computed(() => settingsStore.settings.enableForum)
 
 const handleSelect = (index: string) => {
   if (index !== route.path) {
@@ -100,6 +109,10 @@ const handleSearchSubmit = () => {
   }
   papersStore.searchPapers(searchInput.value)
 }
+
+onMounted(() => {
+  settingsStore.loadSettings()
+})
 
 watch(() => route.path, () => {
   if (route.path !== '/') {

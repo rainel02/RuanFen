@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { useChatStore } from '../stores/chat'
 import type { Scholar } from '../types/scholar'
 
@@ -76,6 +77,7 @@ defineEmits<{
 }>()
 
 const props = defineProps<Props>()
+const router = useRouter()
 const chatStore = useChatStore()
 
 const toggleFollow = () => {
@@ -83,11 +85,15 @@ const toggleFollow = () => {
 }
 
 const startChat = () => {
+  // 创建或找到与该学者的对话
   chatStore.startConversation(
     props.scholar.id,
     props.scholar.name,
     props.scholar.avatar
   )
+  
+  // 跳转到私信页面
+  router.push('/chat')
 }
 </script>
 

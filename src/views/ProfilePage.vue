@@ -162,6 +162,40 @@
                       <h4>联系信息</h4>
                       <p><strong>邮箱：</strong>{{ user?.email }}</p>
                       <p><strong>机构：</strong>{{ user?.institution }}</p>
+
+                      <div class="verification-section">
+                        <h4>学术认证</h4>
+                        <div class="verification-status">
+                          <div v-if="verificationStatus === 'verified'" class="status-verified">
+                            <el-icon class="status-icon"><CircleCheckFilled /></el-icon>
+                            <span class="status-text">已认证学术专家</span>
+                            <el-tag type="success" size="small">认证通过</el-tag>
+                          </div>
+                          <div v-else-if="verificationStatus === 'pending'" class="status-pending">
+                            <el-icon class="status-icon"><Clock /></el-icon>
+                            <span class="status-text">认证审核中</span>
+                            <el-tag type="warning" size="small">审核中</el-tag>
+                          </div>
+                          <div v-else-if="verificationStatus === 'rejected'" class="status-rejected">
+                            <el-icon class="status-icon"><CircleCloseFilled /></el-icon>
+                            <span class="status-text">认证未通过</span>
+                            <el-tag type="danger" size="small">未通过</el-tag>
+                            <el-button size="small" type="primary" @click="showVerificationDialog = true">
+                              重新申请
+                            </el-button>
+                          </div>
+                          <div v-else class="status-unverified">
+                            <el-icon class="status-icon"><QuestionFilled /></el-icon>
+                            <span class="status-text">未认证</span>
+                            <el-button size="small" type="primary" @click="showVerificationDialog = true">
+                              申请认证
+                            </el-button>
+                          </div>
+                        </div>
+                        <p class="verification-desc">
+                          认证后可以管理您名下的所有论文，包括编辑论文信息、回复评论等
+                        </p>
+                      </div>
                     </div>
                   </el-tab-pane>
 
@@ -220,6 +254,60 @@
                       </div>
                     </div>
                   </el-tab-pane>
+
+                  <el-tab-pane label="认证管理" name="verification" v-if="verificationStatus === 'verified'">
+                    <div class="verification-management">
+                      <div class="verification-header">
+                        <h4>学术专家认证管理</h4>
+                        <el-tag type="success">已认证</el-tag>
+                      </div>
+                      
+                      <el-alert
+                        title="认证权限"
+                        description="您已通过学术专家认证，可以管理名下的所有论文"
+                        type="success"
+                        :closable="false"
+                        show-icon
+                        style="margin-bottom: 20px;"
+                      />
+
+                      <div class="managed-papers">
+                        <h5>可管理的论文</h5>
+                        <div class="papers-list">
+                          <div
+                            v-for="paper in managedPapers"
+                            :key="paper.id"
+                            class="managed-paper-item"
+                          >
+                            <div class="paper-info">
+                              <h6 class="paper-title">{{ paper.title }}</h6>
+                              <p class="paper-meta">
+                                {{ paper.journal }} - {{ new Date(paper.publishDate).getFullYear() }}
+                              </p>
+                              <div class="paper-stats">
+                                <span>引用: {{ paper.citations }}</span>
+                                <span>收藏: {{ paper.favorites }}</span>
+                              </div>
+                            </div>
+                            <div class="paper-actions">
+                              <el-button size="small" @click="editPaper(paper)">
+                                <el-icon><Edit /></el-icon>
+                                编辑
+                              </el-button>
+                              <el-button size="small" @click="viewPaperComments(paper)">
+                                <el-icon><ChatDotSquare /></el-icon>
+                                评论管理
+                              </el-button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div v-if="managedPapers.length === 0" class="empty-papers">
+                          <el-empty description="暂无可管理的论文" />
+                        </div>
+                      </div>
+                    </div>
+                  </el-tab-pane>
                 </el-tabs>
               </el-card>
             </el-col>
@@ -227,12 +315,137 @@
         </div>
       </div>
     </div>
+
+    <!-- 学术专家认证对话框 -->
+    <el-dialog
+      v-model="showVerificationDialog"
+      title="学术专家认证申请"
+      width="800px"
+      @close="resetVerificationForm"
+    >
+      <div class="verification-form">
+        <el-alert
+          title="认证说明"
+          description="请提供相关证明材料以验证您的学术专家身份。审核通过后，您将能够管理名下的所有论文。"
+          type="info"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 20px;"
+        />
+
+        <el-form :model="verificationForm" :rules="verificationRules" ref="verificationFormRef" label-width="120px">
+          <el-form-item label="真实姓名" prop="realName">
+            <el-input
+              v-model="verificationForm.realName"
+              placeholder="请输入您的真实姓名"
+            />
+          </el-form-item>
+
+          <el-form-item label="学术机构" prop="institution">
+            <el-input
+              v-model="verificationForm.institution"
+              placeholder="请输入您所在的学术机构"
+            />
+          </el-form-item>
+
+          <el-form-item label="职位/职称" prop="position">
+            <el-select v-model="verificationForm.position" placeholder="请选择您的职位" style="width: 100%">
+              <el-option label="教授" value="professor" />
+              <el-option label="副教授" value="associate_professor" />
+              <el-option label="助理教授" value="assistant_professor" />
+              <el-option label="研究员" value="researcher" />
+              <el-option label="副研究员" value="associate_researcher" />
+              <el-option label="助理研究员" value="assistant_researcher" />
+              <el-option label="博士后" value="postdoc" />
+              <el-option label="其他" value="other" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="学者主页" prop="homepage">
+            <el-input
+              v-model="verificationForm.homepage"
+              placeholder="请输入您的学者主页链接（如Google Scholar、ResearchGate等）"
+            />
+          </el-form-item>
+
+          <el-form-item label="ORCID" prop="orcid">
+            <el-input
+              v-model="verificationForm.orcid"
+              placeholder="请输入您的ORCID ID（可选）"
+            />
+          </el-form-item>
+
+          <el-form-item label="代表性论文" prop="representativePapers">
+            <el-input
+              v-model="verificationForm.representativePapers"
+              type="textarea"
+              :rows="4"
+              placeholder="请列出3-5篇您的代表性论文（包括标题、期刊、年份）"
+            />
+          </el-form-item>
+
+          <el-form-item label="证明材料" prop="documents">
+            <div class="upload-section">
+              <el-upload
+                v-model:file-list="verificationForm.documents"
+                :before-upload="beforeUpload"
+                :on-remove="handleRemove"
+                multiple
+                :limit="5"
+                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+              >
+                <el-button type="primary">
+                  <el-icon><Upload /></el-icon>
+                  上传证明材料
+                </el-button>
+                <template #tip>
+                  <div class="el-upload__tip">
+                    支持上传工作证明、学位证书、论文发表证明等，格式：PDF、JPG、PNG、DOC，单个文件不超过10MB，最多5个文件
+                  </div>
+                </template>
+              </el-upload>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="补充说明" prop="additionalInfo">
+            <el-input
+              v-model="verificationForm.additionalInfo"
+              type="textarea"
+              :rows="3"
+              placeholder="如有其他需要说明的情况，请在此填写（可选）"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showVerificationDialog = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleSubmitVerification"
+            :loading="submittingVerification"
+          >
+            提交申请
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { 
+  CircleCheckFilled, 
+  Clock, 
+  CircleCloseFilled, 
+  QuestionFilled,
+  Edit,
+  ChatDotSquare,
+  Upload
+} from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
@@ -244,6 +457,42 @@ const authTab = ref('login')
 const activeTab = ref('info')
 const loginLoading = ref(false)
 const registerLoading = ref(false)
+
+// 认证相关变量
+const verificationStatus = ref('unverified') // 'unverified' | 'pending' | 'verified' | 'rejected'
+const showVerificationDialog = ref(false)
+const submittingVerification = ref(false)
+
+const verificationForm = ref({
+  realName: '',
+  institution: '',
+  position: '',
+  homepage: '',
+  orcid: '',
+  representativePapers: '',
+  documents: [],
+  additionalInfo: ''
+})
+
+// 模拟已认证用户可管理的论文
+const managedPapers = ref([
+  {
+    id: 'paper-1',
+    title: '深度学习在自然语言处理中的应用研究',
+    journal: 'Nature Machine Intelligence',
+    publishDate: '2024-01-15',
+    citations: 156,
+    favorites: 23
+  },
+  {
+    id: 'paper-2', 
+    title: '基于Transformer架构的多模态学习方法',
+    journal: 'IEEE Transactions on Pattern Analysis',
+    publishDate: '2023-11-20',
+    citations: 89,
+    favorites: 15
+  }
+])
 
 const loginForm = ref({
   username: '',
@@ -285,7 +534,7 @@ const registerRules = {
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: Function) => {
+      validator: (_rule: any, value: string, callback: Function) => {
         if (value !== registerForm.value.password) {
           callback(new Error('两次输入的密码不一致'))
         } else {
@@ -294,6 +543,26 @@ const registerRules = {
       },
       trigger: 'blur'
     }
+  ]
+}
+
+// 认证表单验证规则
+const verificationRules = {
+  realName: [
+    { required: true, message: '请输入真实姓名', trigger: 'blur' }
+  ],
+  institution: [
+    { required: true, message: '请输入学术机构', trigger: 'blur' }
+  ],
+  position: [
+    { required: true, message: '请选择职位', trigger: 'change' }
+  ],
+  homepage: [
+    { required: true, message: '请输入学者主页链接', trigger: 'blur' },
+    { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
+  ],
+  representativePapers: [
+    { required: true, message: '请列出代表性论文', trigger: 'blur' }
   ]
 }
 
@@ -328,9 +597,71 @@ const handleLogout = () => {
   ElMessage.success('已退出登录')
 }
 
+// 认证相关方法
+const resetVerificationForm = () => {
+  verificationForm.value = {
+    realName: '',
+    institution: '',
+    position: '',
+    homepage: '',
+    orcid: '',
+    representativePapers: '',
+    documents: [],
+    additionalInfo: ''
+  }
+}
+
+const beforeUpload = (file: any) => {
+  const isValidType = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)
+  const isValidSize = file.size / 1024 / 1024 < 10
+
+  if (!isValidType) {
+    ElMessage.error('只能上传 PDF、JPG、PNG、DOC 格式的文件！')
+    return false
+  }
+  if (!isValidSize) {
+    ElMessage.error('文件大小不能超过 10MB！')
+    return false
+  }
+  return true
+}
+
+const handleRemove = () => {
+  // 处理文件移除
+}
+
+const handleSubmitVerification = () => {
+  submittingVerification.value = true
+  
+  // 模拟提交审核
+  setTimeout(() => {
+    verificationStatus.value = 'pending'
+    showVerificationDialog.value = false
+    submittingVerification.value = false
+    ElMessage.success('认证申请已提交，我们将在3-5个工作日内完成审核')
+    resetVerificationForm()
+  }, 2000)
+}
+
+// 论文管理方法
+const editPaper = (paper: any) => {
+  ElMessage.info(`编辑论文: ${paper.title}`)
+  // 这里可以跳转到论文编辑页面
+}
+
+const viewPaperComments = (paper: any) => {
+  ElMessage.info(`查看论文评论: ${paper.title}`)
+  // 这里可以跳转到评论管理页面
+}
+
 onMounted(() => {
   authStore.initAuth()
   settingsStore.loadSettings()
+  
+  // 设置用户认证状态为未认证，可以测试认证申请流程
+  if (authStore.isLoggedIn) {
+    verificationStatus.value = 'unverified' // 未认证状态，可以申请认证
+  }
 })
 </script>
 
@@ -436,6 +767,157 @@ onMounted(() => {
 
       .privacy-notice {
         width: 100%;
+      }
+    }
+
+    // 认证相关样式
+    .verification-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #f0f0f0;
+
+      h4 {
+        margin-bottom: 16px;
+      }
+
+      .verification-status {
+        margin-bottom: 12px;
+
+        .status-verified,
+        .status-pending,
+        .status-rejected,
+        .status-unverified {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          .status-icon {
+            font-size: 18px;
+          }
+
+          .status-text {
+            font-weight: 500;
+          }
+        }
+
+        .status-verified .status-icon {
+          color: var(--el-color-success);
+        }
+
+        .status-pending .status-icon {
+          color: var(--el-color-warning);
+        }
+
+        .status-rejected .status-icon {
+          color: var(--el-color-danger);
+        }
+
+        .status-unverified .status-icon {
+          color: var(--el-color-info);
+        }
+      }
+
+      .verification-desc {
+        font-size: 12px;
+        color: #666;
+        margin: 8px 0 0 0;
+      }
+    }
+
+    // 认证管理样式
+    .verification-management {
+      .verification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+
+        h4 {
+          margin: 0;
+        }
+      }
+
+      .managed-papers {
+        h5 {
+          margin-bottom: 16px;
+          font-size: 16px;
+          font-weight: 500;
+        }
+
+        .papers-list {
+          .managed-paper-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border: 1px solid #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 12px;
+
+            .paper-info {
+              flex: 1;
+
+              .paper-title {
+                margin: 0 0 4px 0;
+                font-size: 16px;
+                font-weight: 500;
+              }
+
+              .paper-meta {
+                margin: 4px 0;
+                font-size: 14px;
+                color: #666;
+              }
+
+              .paper-stats {
+                display: flex;
+                gap: 16px;
+                font-size: 12px;
+                color: #999;
+                margin-top: 8px;
+              }
+            }
+
+            .paper-actions {
+              display: flex;
+              gap: 8px;
+            }
+          }
+        }
+
+        .empty-papers {
+          text-align: center;
+          padding: 40px 0;
+        }
+      }
+    }
+  }
+
+  // 认证对话框样式
+  .verification-form {
+    .upload-section {
+      .el-upload__tip {
+        color: #666;
+        font-size: 12px;
+        line-height: 1.4;
+        margin-top: 8px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-page {
+    .profile-content {
+      .managed-papers .papers-list .managed-paper-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+
+        .paper-actions {
+          width: 100%;
+          justify-content: flex-end;
+        }
       }
     }
   }

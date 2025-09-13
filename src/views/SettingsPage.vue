@@ -19,6 +19,14 @@
                 mode="vertical"
                 @select="handleMenuSelect"
               >
+                <el-menu-item index="personalization">
+                  <el-icon><User /></el-icon>
+                  <span>个性化推荐</span>
+                </el-menu-item>
+                <el-menu-item index="features">
+                  <el-icon><Setting /></el-icon>
+                  <span>功能设置</span>
+                </el-menu-item>
                 <el-menu-item index="privacy">
                   <el-icon><Lock /></el-icon>
                   <span>隐私设置</span>
@@ -37,6 +45,156 @@
 
           <el-col :lg="18" :md="16" :sm="24" :xs="24">
             <el-card class="settings-content">
+              <!-- 个性化推荐设置 -->
+              <div v-if="activeSection === 'personalization'" class="settings-section">
+                <h3>个性化推荐设置</h3>
+                <p class="section-description">设置您的身份和研究兴趣，我们将为您推荐相关论文</p>
+
+                <div class="setting-group">
+                  <h4>身份选择</h4>
+                  <div class="setting-items">
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <span class="setting-label">您的身份</span>
+                        <span class="setting-desc">选择最符合您的身份，我们将据此调整推荐内容</span>
+                      </div>
+                      <el-select
+                        v-model="localSettings.userRole"
+                        placeholder="请选择身份"
+                        style="width: 200px;"
+                        @change="handleSettingChange"
+                      >
+                        <el-option label="本科生" value="undergraduate" />
+                        <el-option label="研究生" value="graduate" />
+                        <el-option label="博士生" value="phd" />
+                        <el-option label="博士后" value="postdoc" />
+                        <el-option label="助理教授" value="assistant_professor" />
+                        <el-option label="副教授" value="associate_professor" />
+                        <el-option label="教授" value="professor" />
+                        <el-option label="研究员" value="researcher" />
+                        <el-option label="行业从业者" value="industry" />
+                        <el-option label="其他" value="other" />
+                      </el-select>
+                    </div>
+
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <span class="setting-label">研究领域</span>
+                        <span class="setting-desc">选择您感兴趣的研究领域（可多选）</span>
+                      </div>
+                      <el-select
+                        v-model="localSettings.researchFields"
+                        placeholder="请选择研究领域"
+                        multiple
+                        style="width: 300px;"
+                        @change="handleSettingChange"
+                      >
+                        <el-option label="人工智能" value="ai" />
+                        <el-option label="机器学习" value="ml" />
+                        <el-option label="深度学习" value="dl" />
+                        <el-option label="计算机视觉" value="cv" />
+                        <el-option label="自然语言处理" value="nlp" />
+                        <el-option label="数据挖掘" value="dm" />
+                        <el-option label="数据库" value="database" />
+                        <el-option label="网络安全" value="security" />
+                        <el-option label="软件工程" value="se" />
+                        <el-option label="分布式系统" value="distributed" />
+                        <el-option label="生物信息学" value="bioinformatics" />
+                        <el-option label="量子计算" value="quantum" />
+                      </el-select>
+                    </div>
+
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <span class="setting-label">推荐频率</span>
+                        <span class="setting-desc">设置论文推荐的频率</span>
+                      </div>
+                      <el-select
+                        v-model="localSettings.recommendationFrequency"
+                        style="width: 150px;"
+                        @change="handleSettingChange"
+                      >
+                        <el-option label="每日推荐" value="daily" />
+                        <el-option label="每周推荐" value="weekly" />
+                        <el-option label="每月推荐" value="monthly" />
+                        <el-option label="关闭推荐" value="off" />
+                      </el-select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 功能设置 -->
+              <div v-if="activeSection === 'features'" class="settings-section">
+                <h3>功能设置</h3>
+                <p class="section-description">控制平台功能的启用状态</p>
+
+                <div class="setting-group">
+                  <h4>社区功能</h4>
+                  <div class="setting-items">
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <span class="setting-label">论坛功能</span>
+                        <span class="setting-desc">启用论坛功能，参与学术讨论和交流</span>
+                      </div>
+                      <el-switch
+                        v-model="localSettings.enableForum"
+                        @change="handleSettingChange"
+                      />
+                    </div>
+
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <span class="setting-label">论文导读</span>
+                        <span class="setting-desc">启用个性化论文导读功能</span>
+                      </div>
+                      <el-switch
+                        v-model="localSettings.enablePaperGuide"
+                        @change="handleSettingChange"
+                      />
+                    </div>
+
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <span class="setting-label">学术圈子</span>
+                        <span class="setting-desc">加入感兴趣的学术圈子</span>
+                      </div>
+                      <el-switch
+                        v-model="localSettings.enableCircles"
+                        @change="handleSettingChange"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="setting-group">
+                  <h4>AI辅助功能</h4>
+                  <div class="setting-items">
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <span class="setting-label">智能摘要</span>
+                        <span class="setting-desc">使用AI为论文生成智能摘要</span>
+                      </div>
+                      <el-switch
+                        v-model="localSettings.enableAISummary"
+                        @change="handleSettingChange"
+                      />
+                    </div>
+
+                    <div class="setting-item">
+                      <div class="setting-info">
+                        <span class="setting-label">相关论文推荐</span>
+                        <span class="setting-desc">基于AI算法推荐相关论文</span>
+                      </div>
+                      <el-switch
+                        v-model="localSettings.enableAIRecommendation"
+                        @change="handleSettingChange"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- 隐私设置 -->
               <div v-if="activeSection === 'privacy'" class="settings-section">
                 <h3>隐私设置</h3>
@@ -170,20 +328,33 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Lock, Bell, User } from '@element-plus/icons-vue'
+import { Lock, Bell, User, Setting } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useSettingsStore } from '../stores/settings'
 import type { UserSettings } from '../types/chat'
 
 const settingsStore = useSettingsStore()
-const activeSection = ref('privacy')
+const activeSection = ref('personalization')
 
 const localSettings = reactive<UserSettings>({
+  // 隐私设置
   showFavorites: true,
   showFollowers: true,
   showFollowing: true,
   allowMessages: true,
-  emailNotifications: true
+  emailNotifications: true,
+  
+  // 个性化设置
+  userRole: '',
+  researchFields: [],
+  recommendationFrequency: 'weekly',
+  
+  // 功能设置
+  enableForum: true,
+  enablePaperGuide: true,
+  enableCircles: true,
+  enableAISummary: true,
+  enableAIRecommendation: true
 })
 
 const passwordForm = reactive({
@@ -203,7 +374,7 @@ const passwordRules = {
   confirmPassword: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: Function) => {
+      validator: (_rule: any, value: string, callback: Function) => {
         if (value !== passwordForm.newPassword) {
           callback(new Error('两次输入的密码不一致'))
         } else {
