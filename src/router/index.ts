@@ -43,6 +43,24 @@ const routes: RouteRecordRaw[] = [
     name: 'Settings',
     component: () => import('../views/SettingsPage.vue'),
     meta: { title: '个人设置' }
+  },
+  {
+    path: '/chat',
+    name: 'Chat',
+    component: () => import('../views/ChatPage.vue'),
+    meta: { title: '私信' }
+  },
+  {
+    path: '/paper-guide',
+    name: 'PaperGuide',
+    component: () => import('../views/PaperGuidePage.vue'),
+    meta: { title: '论文导读' }
+  },
+  {
+    path: '/forum',
+    name: 'Forum',
+    component: () => import('../views/ForumPage.vue'),
+    meta: { title: '学术论坛' }
   }
 ]
 

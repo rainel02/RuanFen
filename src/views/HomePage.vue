@@ -13,6 +13,51 @@
 
           <el-col :md="18" :sm="24" :xs="24">
             <div class="main-content">
+              <!-- 论文导读推荐区域 -->
+              <div v-if="showPaperGuide && !searchQuery" class="paper-guide-section">
+                <el-card class="guide-card">
+                  <template #header>
+                    <div class="guide-header">
+                      <h4>
+                        <el-icon><Star /></el-icon>
+                        个性化推荐
+                      </h4>
+                      <router-link to="/paper-guide" class="view-all-link">
+                        查看全部 <el-icon><ArrowRight /></el-icon>
+                      </router-link>
+                    </div>
+                  </template>
+                  
+                  <div class="recommended-papers">
+                    <div
+                      v-for="paper in recommendedPapers"
+                      :key="`rec-${paper.id}`"
+                      class="recommended-paper"
+                    >
+                      <div class="paper-info">
+                        <h5 class="paper-title">
+                          <router-link :to="`/paper/${paper.id}`">{{ paper.title }}</router-link>
+                        </h5>
+                        <p class="paper-meta">
+                          {{ paper.authors.slice(0, 2).map((a: any) => a.name).join(', ') }} - {{ paper.journal }}
+                        </p>
+                        <div class="recommendation-tag">
+                          <el-tag size="small" type="primary">{{ paper.recommendationReason }}</el-tag>
+                        </div>
+                      </div>
+                      <div class="paper-actions">
+                        <el-button size="small" text>
+                          <el-icon><View /></el-icon>
+                        </el-button>
+                        <el-button size="small" text>
+                          <el-icon><Star /></el-icon>
+                        </el-button>
+                      </div>
+                    </div>
+                  </div>
+                </el-card>
+              </div>
+
               <div class="content-header">
                 <div class="results-info">
                   <span class="results-count">
@@ -63,12 +108,15 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Star, ArrowRight, View } from '@element-plus/icons-vue'
 import AppHeader from '../components/AppHeader.vue'
 import PaperCard from '../components/PaperCard.vue'
 import FilterSidebar from '../components/FilterSidebar.vue'
 import { usePapersStore } from '../stores/papers'
+import { useSettingsStore } from '../stores/settings'
 
 const papersStore = usePapersStore()
+const settingsStore = useSettingsStore()
 
 const loading = computed(() => papersStore.loading)
 const paginatedPapers = computed(() => papersStore.paginatedPapers)
@@ -83,6 +131,17 @@ const pageSize = computed({
   set: (value) => { papersStore.pageSize = value }
 })
 const totalPages = computed(() => papersStore.totalPages)
+
+// 显示论文导读功能
+const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
+
+// 推荐论文（简化版）
+const recommendedPapers = computed(() => {
+  return filteredPapers.value.slice(0, 3).map(paper => ({
+    ...paper,
+    recommendationReason: '基于兴趣推荐'
+  }))
+})
 
 const handleSizeChange = (size: number) => {
   papersStore.pageSize = size
@@ -108,6 +167,87 @@ const handleCurrentChange = (page: number) => {
 }
 
 .main-content {
+  .paper-guide-section {
+    margin-bottom: 24px;
+
+    .guide-card {
+      .guide-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        h4 {
+          margin: 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          color: var(--primary-color);
+        }
+
+        .view-all-link {
+          color: var(--primary-color);
+          text-decoration: none;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+
+      .recommended-papers {
+        .recommended-paper {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 0;
+          border-bottom: 1px solid #f0f0f0;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          .paper-info {
+            flex: 1;
+
+            .paper-title {
+              margin: 0 0 4px 0;
+              font-size: 14px;
+              font-weight: 500;
+
+              a {
+                color: #333;
+                text-decoration: none;
+
+                &:hover {
+                  color: var(--primary-color);
+                }
+              }
+            }
+
+            .paper-meta {
+              margin: 4px 0;
+              font-size: 12px;
+              color: #666;
+            }
+
+            .recommendation-tag {
+              margin-top: 4px;
+            }
+          }
+
+          .paper-actions {
+            display: flex;
+            gap: 4px;
+          }
+        }
+      }
+    }
+  }
+
   .content-header {
     margin-bottom: 20px;
 
