@@ -167,14 +167,96 @@
 
                   <el-tab-pane label="我的论文" name="papers">
                     <div class="papers-content">
-                      <el-empty v-if="settings.showFavorites" description="暂无上传的论文" />
-                      <div v-else class="privacy-notice">
-                        <el-alert
-                          title="内容已隐藏"
-                          description="您已在隐私设置中关闭了此内容的展示"
-                          type="info"
-                          :closable="false"
-                        />
+                      <div v-if="!academicStore.isVerified" class="academic-verification-prompt">
+                        <el-empty description="暂无论文数据">
+                          <template #default>
+                            <div class="verification-info">
+                              <p>完成学术认证后，系统将自动同步您在谷歌学术上的论文数据</p>
+                              <el-button type="primary" @click="$router.push('/settings?section=academic')">
+                                前往认证
+                              </el-button>
+                            </div>
+                          </template>
+                        </el-empty>
+                      </div>
+                      
+                      <div v-else-if="academicStore.syncedPapers.length === 0" class="no-papers">
+                        <el-empty description="暂无同步的论文数据">
+                          <template #default>
+                            <div class="sync-info">
+                              <p>您已完成学术认证，但暂未同步到论文数据</p>
+                              <el-button @click="handleSyncPapers" :loading="syncLoading">
+                                立即同步
+                              </el-button>
+                            </div>
+                          </template>
+                        </el-empty>
+                      </div>
+                      
+                      <div v-else class="papers-list">
+                        <div class="papers-header">
+                          <div class="papers-stats">
+                            <span class="stat-item">
+                              <strong>{{ academicStore.syncedPapers.length }}</strong> 篇论文
+                            </span>
+                            <span class="stat-item">
+                              <strong>{{ academicStore.settings.totalCitations }}</strong> 总引用
+                            </span>
+                            <span class="stat-item">
+                              <strong>{{ academicStore.settings.hIndex }}</strong> H指数
+                            </span>
+                          </div>
+                          <div class="papers-actions">
+                            <el-button size="small" @click="handleSyncPapers" :loading="syncLoading">
+                              {{ academicStore.hasRecentSync ? '重新同步' : '立即同步' }}
+                            </el-button>
+                            <span v-if="academicStore.settings.lastSyncTime" class="last-sync">
+                              最后同步：{{ formatTime(academicStore.settings.lastSyncTime) }}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div class="papers-grid">
+                          <div
+                            v-for="paper in academicStore.syncedPapers"
+                            :key="paper.id"
+                            class="paper-item"
+                          >
+                            <div class="paper-card">
+                              <div class="paper-header">
+                                <h4 class="paper-title">{{ paper.title }}</h4>
+                                <div class="paper-year">{{ paper.year }}</div>
+                              </div>
+                              
+                              <div class="paper-authors">
+                                <span class="authors-label">作者：</span>
+                                <span class="authors-list">{{ paper.authors.join(', ') }}</span>
+                              </div>
+                              
+                              <div class="paper-journal">
+                                <span class="journal-label">期刊：</span>
+                                <span class="journal-name">{{ paper.journal }}</span>
+                              </div>
+                              
+                              <div class="paper-meta">
+                                <div class="paper-citations">
+                                  <el-icon><Star /></el-icon>
+                                  <span>{{ paper.citations }} 引用</span>
+                                </div>
+                                <div class="paper-actions">
+                                  <el-button size="small" text @click="openPaperUrl(paper.url)">
+                                    <el-icon><Link /></el-icon>
+                                    查看详情
+                                  </el-button>
+                                </div>
+                              </div>
+                              
+                              <div v-if="paper.abstract" class="paper-abstract">
+                                <p>{{ paper.abstract.substring(0, 150) }}{{ paper.abstract.length > 150 ? '...' : '' }}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </el-tab-pane>
@@ -233,12 +315,15 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { Star, Link } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
+import { useAcademicStore } from '../stores/academic'
 
 const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
+const academicStore = useAcademicStore()
 
 const authTab = ref('login')
 const activeTab = ref('info')
@@ -260,6 +345,9 @@ const registerForm = ref({
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user)
 const settings = computed(() => settingsStore.settings)
+
+// 学术认证相关
+const syncLoading = ref(false)
 
 const loginRules = {
   username: [
@@ -285,7 +373,7 @@ const registerRules = {
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
     {
-      validator: (rule: any, value: string, callback: Function) => {
+      validator: (_rule: any, value: string, callback: Function) => {
         if (value !== registerForm.value.password) {
           callback(new Error('两次输入的密码不一致'))
         } else {
@@ -328,9 +416,40 @@ const handleLogout = () => {
   ElMessage.success('已退出登录')
 }
 
+// 学术认证相关方法
+const handleSyncPapers = async () => {
+  syncLoading.value = true
+  
+  const result = await academicStore.syncPapers()
+  syncLoading.value = false
+  
+  if (result.success) {
+    ElMessage.success(result.message)
+  } else {
+    ElMessage.error(result.message)
+  }
+}
+
+const formatTime = (timestamp: string) => {
+  if (!timestamp) return '未知'
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  
+  if (diff < 60000) return '刚刚'
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  return date.toLocaleDateString('zh-CN')
+}
+
+const openPaperUrl = (url: string) => {
+  window.open(url, '_blank')
+}
+
 onMounted(() => {
   authStore.initAuth()
   settingsStore.loadSettings()
+  academicStore.loadSettings()
 })
 </script>
 
@@ -430,12 +549,162 @@ onMounted(() => {
     .following-content,
     .followers-content {
       min-height: 300px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
 
       .privacy-notice {
         width: 100%;
+      }
+
+      // 学术认证提示样式
+      .academic-verification-prompt,
+      .no-papers {
+        .verification-info,
+        .sync-info {
+          text-align: center;
+          
+          p {
+            margin-bottom: 16px;
+            color: var(--text-light);
+          }
+        }
+      }
+
+      // 论文列表样式
+      .papers-list {
+        .papers-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 24px;
+          padding: 16px;
+          background: #f8f9fa;
+          border-radius: var(--border-radius);
+
+          .papers-stats {
+            display: flex;
+            gap: 24px;
+
+            .stat-item {
+              color: var(--text-color);
+              
+              strong {
+                color: var(--primary-color);
+                font-size: 18px;
+              }
+            }
+          }
+
+          .papers-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+
+            .last-sync {
+              font-size: 12px;
+              color: var(--text-light);
+            }
+          }
+        }
+
+        .papers-grid {
+          display: grid;
+          gap: 16px;
+
+          .paper-item {
+            .paper-card {
+              border: 1px solid var(--border-color);
+              border-radius: var(--border-radius);
+              padding: 20px;
+              background: white;
+              transition: all 0.2s;
+
+              &:hover {
+                box-shadow: var(--shadow-medium);
+                border-color: var(--primary-color);
+              }
+
+              .paper-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                margin-bottom: 12px;
+
+                .paper-title {
+                  flex: 1;
+                  margin: 0;
+                  font-size: 16px;
+                  font-weight: 600;
+                  color: var(--text-color);
+                  line-height: 1.4;
+                  margin-right: 12px;
+                }
+
+                .paper-year {
+                  background: var(--primary-color);
+                  color: white;
+                  padding: 4px 8px;
+                  border-radius: 4px;
+                  font-size: 12px;
+                  font-weight: 500;
+                }
+              }
+
+              .paper-authors,
+              .paper-journal {
+                margin-bottom: 8px;
+                font-size: 14px;
+                
+                .authors-label,
+                .journal-label {
+                  color: var(--text-light);
+                  margin-right: 4px;
+                }
+
+                .authors-list,
+                .journal-name {
+                  color: var(--text-color);
+                }
+              }
+
+              .paper-meta {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin: 16px 0;
+
+                .paper-citations {
+                  display: flex;
+                  align-items: center;
+                  gap: 4px;
+                  color: var(--text-light);
+                  font-size: 14px;
+
+                  .el-icon {
+                    color: #faad14;
+                  }
+                }
+
+                .paper-actions {
+                  .el-button {
+                    padding: 4px 8px;
+                  }
+                }
+              }
+
+              .paper-abstract {
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px solid var(--border-color);
+
+                p {
+                  margin: 0;
+                  font-size: 13px;
+                  color: var(--text-light);
+                  line-height: 1.5;
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

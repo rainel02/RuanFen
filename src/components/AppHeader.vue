@@ -44,6 +44,7 @@
               <el-menu-item index="/">论文</el-menu-item>
               <el-menu-item index="/scholars">学者</el-menu-item>
               <el-menu-item index="/analytics">统计</el-menu-item>
+              <el-menu-item index="/chat">私信</el-menu-item>
               <el-menu-item index="/profile">
                 <el-icon v-if="!isLoggedIn">
                   <User />

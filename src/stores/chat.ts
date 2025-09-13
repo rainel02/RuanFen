@@ -49,6 +49,7 @@ export const useChatStore = defineStore('chat', () => {
           senderId: 'scholar-1',
           receiverId: 'current-user',
           content: '您好，我看到您对我的论文很感兴趣，有什么问题可以交流。',
+          type: 'text',
           timestamp: new Date(Date.now() - 3600000).toISOString(),
           isRead: false
         }
@@ -65,6 +66,7 @@ export const useChatStore = defineStore('chat', () => {
           senderId: 'current-user',
           receiverId: 'scholar-2',
           content: '谢谢您的建议，我会仔细考虑的。',
+          type: 'text',
           timestamp: new Date(Date.now() - 86400000).toISOString(),
           isRead: true
         }
@@ -78,6 +80,7 @@ export const useChatStore = defineStore('chat', () => {
         senderId: 'scholar-1',
         receiverId: 'current-user',
         content: '您好，我看到您对我的论文很感兴趣，有什么问题可以交流。',
+        type: 'text',
         timestamp: new Date(Date.now() - 3600000).toISOString(),
         isRead: false
       },
@@ -86,6 +89,7 @@ export const useChatStore = defineStore('chat', () => {
         senderId: 'current-user',
         receiverId: 'scholar-2',
         content: '谢谢您的建议，我会仔细考虑的。',
+        type: 'text',
         timestamp: new Date(Date.now() - 86400000).toISOString(),
         isRead: true
       }
@@ -113,7 +117,12 @@ export const useChatStore = defineStore('chat', () => {
     return newConv.id
   }
 
-  const sendMessage = (content: string) => {
+  const sendMessage = (content: string, type: 'text' | 'image' | 'file' | 'emoji' = 'text', options?: {
+    imageUrl?: string
+    fileUrl?: string
+    fileName?: string
+    fileSize?: number
+  }) => {
     if (!currentConversation.value || !canSendMessage.value) return false
 
     const message: ChatMessage = {
@@ -121,8 +130,10 @@ export const useChatStore = defineStore('chat', () => {
       senderId: 'current-user',
       receiverId: currentConversation.value.participantId,
       content,
+      type,
       timestamp: new Date().toISOString(),
-      isRead: false
+      isRead: false,
+      ...options
     }
 
     messages.value.push(message)
