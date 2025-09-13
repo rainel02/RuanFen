@@ -130,151 +130,305 @@
 
                 <div class="setting-group">
                   <h4>认证状态</h4>
-                  <div class="academic-status">
-                    <div v-if="!academicSettings.isVerified" class="status-unverified">
-                      <el-icon class="status-icon" color="#faad14"><Warning /></el-icon>
-                      <div class="status-info">
-                        <span class="status-text">未认证</span>
-                        <span class="status-desc">请绑定您的谷歌学术账号完成认证</span>
+                  <div class="academic-platforms">
+                    <!-- 谷歌学术状态 -->
+                    <div class="platform-status">
+                      <div class="platform-header">
+                        <div class="platform-info">
+                          <el-icon class="platform-icon"><Trophy /></el-icon>
+                          <span class="platform-name">谷歌学术</span>
+                        </div>
+                        <div v-if="!academicSettings.googleScholar.isVerified" class="status-unverified">
+                          <el-icon class="status-icon" color="#faad14"><Warning /></el-icon>
+                          <span class="status-text">未认证</span>
+                        </div>
+                        <div v-else class="status-verified">
+                          <el-icon class="status-icon" color="#52c41a"><CircleCheck /></el-icon>
+                          <span class="status-text">已认证</span>
+                        </div>
+                      </div>
+                      <div v-if="academicSettings.googleScholar.isVerified" class="platform-details">
+                        <span class="sync-time">最后同步：{{ formatLastSync(academicSettings.googleScholar.lastSyncTime) }}</span>
                       </div>
                     </div>
-                    <div v-else class="status-verified">
-                      <el-icon class="status-icon" color="#52c41a"><CircleCheck /></el-icon>
-                      <div class="status-info">
-                        <span class="status-text">已认证</span>
-                        <span class="status-desc">谷歌学术账号已绑定，论文数据自动同步</span>
+
+                    <!-- 知网状态 -->
+                    <div class="platform-status">
+                      <div class="platform-header">
+                        <div class="platform-info">
+                          <el-icon class="platform-icon"><Document /></el-icon>
+                          <span class="platform-name">中国知网</span>
+                        </div>
+                        <div v-if="!academicSettings.cnki.isVerified" class="status-unverified">
+                          <el-icon class="status-icon" color="#faad14"><Warning /></el-icon>
+                          <span class="status-text">未认证</span>
+                        </div>
+                        <div v-else class="status-verified">
+                          <el-icon class="status-icon" color="#52c41a"><CircleCheck /></el-icon>
+                          <span class="status-text">已认证</span>
+                        </div>
+                      </div>
+                      <div v-if="academicSettings.cnki.isVerified" class="platform-details">
+                        <span class="sync-time">最后同步：{{ formatLastSync(academicSettings.cnki.lastSyncTime) }}</span>
+                      </div>
+                    </div>
+
+                    <!-- 总体状态 -->
+                    <div class="overall-status" v-if="academicSettings.googleScholar.isVerified || academicSettings.cnki.isVerified">
+                      <div class="status-summary">
+                        <span class="summary-text">
+                          {{ getOverallStatusText() }}
+                        </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div class="setting-group" v-if="!academicSettings.isVerified">
-                  <h4>绑定谷歌学术账号</h4>
-                  <div class="google-scholar-bind">
-                    <el-form :model="googleScholarForm" :rules="googleScholarRules" ref="googleScholarFormRef" label-width="120px">
-                      <el-form-item label="学者档案URL" prop="profileUrl">
-                        <el-input
-                          v-model="googleScholarForm.profileUrl"
-                          placeholder="请输入您的谷歌学术档案链接"
-                          style="width: 400px;"
-                        >
-                          <template #prefix>
-                            <el-icon><Link /></el-icon>
-                          </template>
-                        </el-input>
-                        <div class="form-help">
-                          <span>示例：https://scholar.google.com/citations?user=XXXXX</span>
-                        </div>
-                      </el-form-item>
+                <!-- 平台绑定选项卡 -->
+                <div class="setting-group">
+                  <h4>账号绑定</h4>
+                  <el-tabs v-model="activeBindTab" class="bind-tabs">
+                    <!-- 谷歌学术绑定 -->
+                    <el-tab-pane label="谷歌学术" name="google-scholar">
+                      <div v-if="!academicSettings.googleScholar.isVerified" class="bind-content">
+                        <el-form :model="googleScholarForm" :rules="googleScholarRules" ref="googleScholarFormRef" label-width="120px">
+                          <el-form-item label="学者档案URL" prop="profileUrl">
+                            <el-input
+                              v-model="googleScholarForm.profileUrl"
+                              placeholder="请输入您的谷歌学术档案链接"
+                              style="width: 400px;"
+                            >
+                              <template #prefix>
+                                <el-icon><Link /></el-icon>
+                              </template>
+                            </el-input>
+                            <div class="form-help">
+                              <span>示例：https://scholar.google.com/citations?user=XXXXX</span>
+                            </div>
+                          </el-form-item>
+                          
+                          <el-form-item label="ORCID ID" prop="orcidId">
+                            <el-input
+                              v-model="googleScholarForm.orcidId"
+                              placeholder="请输入您的ORCID ID（可选）"
+                              style="width: 300px;"
+                            >
+                              <template #prefix>
+                                <el-icon><Stamp /></el-icon>
+                              </template>
+                            </el-input>
+                            <div class="form-help">
+                              <span>示例：0000-0000-0000-0000</span>
+                            </div>
+                          </el-form-item>
+
+                          <el-form-item>
+                            <el-button 
+                              type="primary" 
+                              @click="handleGoogleScholarBind"
+                              :loading="googleScholarBinding"
+                            >
+                              {{ googleScholarBinding ? '验证中...' : '开始认证' }}
+                            </el-button>
+                            <el-button @click="resetGoogleScholarForm">重置</el-button>
+                          </el-form-item>
+                        </el-form>
+                      </div>
                       
-                      <el-form-item label="ORCID ID" prop="orcidId">
-                        <el-input
-                          v-model="googleScholarForm.orcidId"
-                          placeholder="请输入您的ORCID ID（可选）"
-                          style="width: 300px;"
-                        >
-                          <template #prefix>
-                            <el-icon><Stamp /></el-icon>
-                          </template>
-                        </el-input>
-                        <div class="form-help">
-                          <span>示例：0000-0000-0000-0000</span>
+                      <div v-else class="bound-content">
+                        <div class="bound-info">
+                          <el-descriptions :column="2" border>
+                            <el-descriptions-item label="认证状态">
+                              <el-tag type="success">已认证</el-tag>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="档案链接">
+                              <el-link :href="academicSettings.googleScholar.profileUrl" target="_blank">
+                                查看档案
+                              </el-link>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="ORCID ID">
+                              {{ academicSettings.googleScholar.orcidId || '未设置' }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="自动同步">
+                              <el-switch
+                                v-model="academicSettings.googleScholar.autoSync"
+                                @change="handleAcademicSettingChange"
+                              />
+                            </el-descriptions-item>
+                          </el-descriptions>
                         </div>
-                      </el-form-item>
+                        
+                        <div class="bound-actions">
+                          <el-button @click="handleSyncGoogleScholar" :loading="googleScholarSyncing">
+                            {{ googleScholarSyncing ? '同步中...' : '立即同步' }}
+                          </el-button>
+                          <el-button @click="handleUnbindGoogleScholar" type="danger" plain>
+                            解除绑定
+                          </el-button>
+                        </div>
+                      </div>
+                    </el-tab-pane>
 
-                      <el-form-item>
-                        <el-button 
-                          type="primary" 
-                          @click="handleGoogleScholarBind"
-                          :loading="bindingLoading"
-                        >
-                          {{ bindingLoading ? '验证中...' : '开始认证' }}
-                        </el-button>
-                        <el-button @click="resetForm">重置</el-button>
-                      </el-form-item>
-                    </el-form>
+                    <!-- 知网绑定 -->
+                    <el-tab-pane label="中国知网" name="cnki">
+                      <div v-if="!academicSettings.cnki.isVerified" class="bind-content">
+                        <el-form :model="cnkiForm" :rules="cnkiRules" ref="cnkiFormRef" label-width="120px">
+                          <el-form-item label="知网用户名" prop="username">
+                            <el-input
+                              v-model="cnkiForm.username"
+                              placeholder="请输入您的知网用户名"
+                              style="width: 300px;"
+                            >
+                              <template #prefix>
+                                <el-icon><User /></el-icon>
+                              </template>
+                            </el-input>
+                            <div class="form-help">
+                              <span>请使用您在知网注册的用户名</span>
+                            </div>
+                          </el-form-item>
+                          
+                          <el-form-item label="作者标识码" prop="authorId">
+                            <el-input
+                              v-model="cnkiForm.authorId"
+                              placeholder="请输入您的知网作者标识码"
+                              style="width: 300px;"
+                            >
+                              <template #prefix>
+                                <el-icon><Stamp /></el-icon>
+                              </template>
+                            </el-input>
+                            <div class="form-help">
+                              <span>可在知网个人主页找到作者标识码</span>
+                            </div>
+                          </el-form-item>
 
-                    <div class="bind-help">
-                      <el-alert
-                        title="认证说明"
-                        type="info"
-                        :closable="false"
-                        show-icon
-                      >
-                        <p>1. 请确保您的谷歌学术档案是公开可访问的</p>
-                        <p>2. 认证成功后，系统将自动同步您的论文数据</p>
-                        <p>3. 同步的论文将显示在您的个人资料页面</p>
-                        <p>4. 数据同步可能需要几分钟时间，请耐心等待</p>
-                      </el-alert>
-                    </div>
+                          <el-form-item>
+                            <el-button 
+                              type="primary" 
+                              @click="handleCnkiBind"
+                              :loading="cnkiBinding"
+                            >
+                              {{ cnkiBinding ? '验证中...' : '开始认证' }}
+                            </el-button>
+                            <el-button @click="resetCnkiForm">重置</el-button>
+                          </el-form-item>
+                        </el-form>
+                      </div>
+                      
+                      <div v-else class="bound-content">
+                        <div class="bound-info">
+                          <el-descriptions :column="2" border>
+                            <el-descriptions-item label="认证状态">
+                              <el-tag type="success">已认证</el-tag>
+                            </el-descriptions-item>
+                            <el-descriptions-item label="用户名">
+                              {{ academicSettings.cnki.username }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="作者标识码">
+                              {{ academicSettings.cnki.authorId }}
+                            </el-descriptions-item>
+                            <el-descriptions-item label="自动同步">
+                              <el-switch
+                                v-model="academicSettings.cnki.autoSync"
+                                @change="handleAcademicSettingChange"
+                              />
+                            </el-descriptions-item>
+                          </el-descriptions>
+                        </div>
+                        
+                        <div class="bound-actions">
+                          <el-button @click="handleSyncCnki" :loading="cnkiSyncing">
+                            {{ cnkiSyncing ? '同步中...' : '立即同步' }}
+                          </el-button>
+                          <el-button @click="handleUnbindCnki" type="danger" plain>
+                            解除绑定
+                          </el-button>
+                        </div>
+                      </div>
+                    </el-tab-pane>
+                  </el-tabs>
+
+                  <div class="bind-help">
+                    <el-alert
+                      title="多平台认证说明"
+                      type="info"
+                      :closable="false"
+                      show-icon
+                    >
+                      <p>1. 支持同时绑定谷歌学术和知网账号</p>
+                      <p>2. 系统会自动检测并合并重复的论文</p>
+                      <p>3. 对于相同论文，以谷歌学术数据为准</p>
+                      <p>4. 知网独有的论文会被保留并合并到列表中</p>
+                    </el-alert>
                   </div>
                 </div>
 
-                <div class="setting-group" v-if="academicSettings.isVerified">
-                  <h4>已绑定账号信息</h4>
-                  <div class="bound-account-info">
-                    <div class="account-item">
-                      <span class="account-label">学者姓名：</span>
-                      <span class="account-value">{{ academicSettings.scholarName || '获取中...' }}</span>
-                    </div>
-                    <div class="account-item">
-                      <span class="account-label">机构：</span>
-                      <span class="account-value">{{ academicSettings.institution || '获取中...' }}</span>
-                    </div>
-                    <div class="account-item">
-                      <span class="account-label">研究领域：</span>
-                      <span class="account-value">{{ academicSettings.researchFields?.join('、') || '获取中...' }}</span>
-                    </div>
-                    <div class="account-item">
-                      <span class="account-label">H指数：</span>
-                      <span class="account-value">{{ academicSettings.hIndex || 0 }}</span>
-                    </div>
-                    <div class="account-item">
-                      <span class="account-label">总引用数：</span>
-                      <span class="account-value">{{ academicSettings.totalCitations || 0 }}</span>
-                    </div>
-                    <div class="account-item">
-                      <span class="account-label">论文数量：</span>
-                      <span class="account-value">{{ academicSettings.paperCount || 0 }}</span>
-                    </div>
-                    <div class="account-item">
-                      <span class="account-label">最后同步：</span>
-                      <span class="account-value">{{ formatLastSync(academicSettings.lastSyncTime) }}</span>
-                    </div>
-                  </div>
-
-                  <div class="account-actions">
-                    <el-button @click="handleSyncPapers" :loading="syncLoading">
-                      {{ syncLoading ? '同步中...' : '立即同步论文' }}
-                    </el-button>
-                    <el-button @click="handleUnbindAccount" type="danger" plain>
-                      解除绑定
-                    </el-button>
-                  </div>
-                </div>
-
-                <div class="setting-group" v-if="academicSettings.isVerified">
-                  <h4>同步设置</h4>
+                <!-- 合并设置 -->
+                <div class="setting-group" v-if="academicSettings.googleScholar.isVerified || academicSettings.cnki.isVerified">
+                  <h4>数据合并设置</h4>
                   <div class="setting-items">
                     <div class="setting-item">
                       <div class="setting-info">
-                        <span class="setting-label">自动同步</span>
-                        <span class="setting-desc">每日自动从谷歌学术同步最新论文数据</span>
+                        <span class="setting-label">合并策略</span>
+                        <span class="setting-desc">当发现重复论文时的处理方式</span>
                       </div>
-                      <el-switch
-                        v-model="academicSettings.autoSync"
-                        @change="handleAcademicSettingChange"
-                      />
+                      <el-select v-model="academicSettings.mergeStrategy" @change="handleAcademicSettingChange">
+                        <el-option label="谷歌学术优先" value="google-first" />
+                        <el-option label="知网优先" value="cnki-first" />
+                        <el-option label="手动处理" value="manual" />
+                      </el-select>
                     </div>
+                    
                     <div class="setting-item">
                       <div class="setting-info">
                         <span class="setting-label">同步合作论文</span>
-                        <span class="setting-desc">同步您作为合作者的论文</span>
+                        <span class="setting-desc">包含您作为合作者的论文</span>
                       </div>
                       <el-switch
                         v-model="academicSettings.syncCollaborations"
                         @change="handleAcademicSettingChange"
                       />
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 统计信息 -->
+                <div class="setting-group" v-if="academicSettings.googleScholar.isVerified || academicSettings.cnki.isVerified">
+                  <h4>学术统计</h4>
+                  <div class="academic-stats">
+                    <div class="stats-grid">
+                      <div class="stat-card">
+                        <div class="stat-value">{{ academicSettings.paperCount }}</div>
+                        <div class="stat-label">总论文数</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-value">{{ academicSettings.totalCitations }}</div>
+                        <div class="stat-label">总引用数</div>
+                      </div>
+                      <div class="stat-card">
+                        <div class="stat-value">{{ academicSettings.hIndex }}</div>
+                        <div class="stat-label">H指数</div>
+                      </div>
+                    </div>
+                    
+                    <div class="stats-details">
+                      <div class="detail-item">
+                        <span class="detail-label">学者姓名：</span>
+                        <span class="detail-value">{{ academicSettings.scholarName || '获取中...' }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">所属机构：</span>
+                        <span class="detail-value">{{ academicSettings.institution || '获取中...' }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">研究领域：</span>
+                        <span class="detail-value">{{ academicSettings.researchFields?.join('、') || '获取中...' }}</span>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">最后更新：</span>
+                        <span class="detail-value">{{ formatLastSync(academicSettings.lastSyncTime) }}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -331,7 +485,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Lock, Bell, User, Trophy, Warning, CircleCheck, Link, Stamp } from '@element-plus/icons-vue'
+import { Lock, Bell, User, Trophy, Warning, CircleCheck, Link, Stamp, Document } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useSettingsStore } from '../stores/settings'
 import { useAcademicStore } from '../stores/academic'
@@ -364,9 +518,20 @@ const googleScholarForm = reactive({
   orcidId: ''
 })
 
-const bindingLoading = ref(false)
-const syncLoading = ref(false)
+const cnkiForm = reactive({
+  username: '',
+  authorId: ''
+})
+
 const googleScholarFormRef = ref()
+const cnkiFormRef = ref()
+
+// 界面状态
+const activeBindTab = ref('google-scholar')
+const googleScholarBinding = ref(false)
+const googleScholarSyncing = ref(false)
+const cnkiBinding = ref(false)
+const cnkiSyncing = ref(false)
 
 const passwordRules = {
   currentPassword: [
@@ -410,6 +575,18 @@ const googleScholarRules = {
   ]
 }
 
+// 知网表单验证规则
+const cnkiRules = {
+  username: [
+    { required: true, message: '请输入知网用户名', trigger: 'blur' },
+    { min: 2, max: 50, message: '用户名长度应为2-50个字符', trigger: 'blur' }
+  ],
+  authorId: [
+    { required: true, message: '请输入作者标识码', trigger: 'blur' },
+    { pattern: /^[0-9A-Za-z-]+$/, message: '作者标识码格式不正确', trigger: 'blur' }
+  ]
+}
+
 const handleMenuSelect = (index: string) => {
   activeSection.value = index
 }
@@ -437,79 +614,156 @@ const formatLastSync = (timestamp: string) => {
   return date.toLocaleDateString('zh-CN')
 }
 
+const getOverallStatusText = () => {
+  const googleVerified = academicSettings.value.googleScholar.isVerified
+  const cnkiVerified = academicSettings.value.cnki.isVerified
+  
+  if (googleVerified && cnkiVerified) {
+    return `已绑定谷歌学术和知网账号，共同步 ${academicSettings.value.paperCount} 篇论文`
+  } else if (googleVerified) {
+    return `已绑定谷歌学术账号，已同步 ${academicSettings.value.paperCount} 篇论文`
+  } else if (cnkiVerified) {
+    return `已绑定知网账号，已同步 ${academicSettings.value.paperCount} 篇论文`
+  }
+  return ''
+}
+
+// 谷歌学术绑定处理
 const handleGoogleScholarBind = async () => {
   if (!googleScholarFormRef.value) return
   
   try {
     await googleScholarFormRef.value.validate()
-    bindingLoading.value = true
+    googleScholarBinding.value = true
     
-    const result = await academicStore.verifyGoogleScholar(
-      googleScholarForm.profileUrl,
-      googleScholarForm.orcidId
-    )
-    
-    bindingLoading.value = false
+    const result = await academicStore.bindGoogleScholar({
+      profileUrl: googleScholarForm.profileUrl,
+      orcidId: googleScholarForm.orcidId
+    })
     
     if (result.success) {
-      ElMessage.success('学术认证成功！论文数据正在同步中...')
-      academicStore.saveSettings()
-      
-      // 清空表单
-      resetForm()
-      
-      setTimeout(() => {
-        ElMessage.success('论文数据同步完成，请前往个人资料页面查看')
-      }, 3000)
+      ElMessage.success('谷歌学术账号绑定成功！')
+      resetGoogleScholarForm()
+      // 自动同步论文
+      handleSyncGoogleScholar()
     } else {
-      ElMessage.error(result.message || '认证失败，请检查链接是否正确')
+      ElMessage.error(result.message || '绑定失败，请检查输入信息')
     }
-    
   } catch (error) {
-    bindingLoading.value = false
-    console.error('表单验证失败:', error)
+    ElMessage.error('绑定失败，请检查输入信息')
+  } finally {
+    googleScholarBinding.value = false
   }
 }
 
-const handleSyncPapers = async () => {
-  syncLoading.value = true
-  
-  const result = await academicStore.syncPapers()
-  syncLoading.value = false
-  
-  if (result.success) {
-    ElMessage.success(result.message)
-    academicStore.saveSettings()
-  } else {
-    ElMessage.error(result.message)
+const resetGoogleScholarForm = () => {
+  googleScholarForm.profileUrl = ''
+  googleScholarForm.orcidId = ''
+  googleScholarFormRef.value?.clearValidate()
+}
+
+const handleSyncGoogleScholar = async () => {
+  try {
+    googleScholarSyncing.value = true
+    const result = await academicStore.syncGoogleScholarPapers()
+    if (result.success) {
+      ElMessage.success('谷歌学术论文同步成功！')
+    } else {
+      ElMessage.error(result.message || '论文同步失败')
+    }
+  } catch (error) {
+    ElMessage.error('论文同步失败')
+  } finally {
+    googleScholarSyncing.value = false
   }
 }
 
-const handleUnbindAccount = async () => {
+const handleUnbindGoogleScholar = async () => {
   try {
     await ElMessageBox.confirm(
-      '解除绑定后，已同步的论文数据将保留，但不会再自动同步新数据。确定要解除绑定吗？',
+      '解除绑定后，已同步的谷歌学术论文数据将被清除，确认解除绑定吗？',
       '确认解除绑定',
       {
-        confirmButtonText: '确定',
+        confirmButtonText: '确认',
         cancelButtonText: '取消',
-        type: 'warning',
+        type: 'warning'
       }
     )
     
-    academicStore.unbindAccount()
-    academicStore.saveSettings()
+    await academicStore.unbindGoogleScholar()
     ElMessage.success('已解除谷歌学术账号绑定')
-    
   } catch (error) {
     // 用户取消操作
   }
 }
 
-const resetForm = () => {
-  googleScholarForm.profileUrl = ''
-  googleScholarForm.orcidId = ''
-  googleScholarFormRef.value?.clearValidate()
+// 知网绑定处理
+const handleCnkiBind = async () => {
+  if (!cnkiFormRef.value) return
+  
+  try {
+    await cnkiFormRef.value.validate()
+    cnkiBinding.value = true
+    
+    const result = await academicStore.bindCnki({
+      username: cnkiForm.username,
+      authorId: cnkiForm.authorId
+    })
+    
+    if (result.success) {
+      ElMessage.success('知网账号绑定成功！')
+      resetCnkiForm()
+      // 自动同步论文
+      handleSyncCnki()
+    } else {
+      ElMessage.error(result.message || '绑定失败，请检查输入信息')
+    }
+  } catch (error) {
+    ElMessage.error('绑定失败，请检查输入信息')
+  } finally {
+    cnkiBinding.value = false
+  }
+}
+
+const resetCnkiForm = () => {
+  cnkiForm.username = ''
+  cnkiForm.authorId = ''
+  cnkiFormRef.value?.clearValidate()
+}
+
+const handleSyncCnki = async () => {
+  try {
+    cnkiSyncing.value = true
+    const result = await academicStore.syncCnkiPapers()
+    if (result.success) {
+      ElMessage.success('知网论文同步成功！')
+    } else {
+      ElMessage.error(result.message || '论文同步失败')
+    }
+  } catch (error) {
+    ElMessage.error('论文同步失败')
+  } finally {
+    cnkiSyncing.value = false
+  }
+}
+
+const handleUnbindCnki = async () => {
+  try {
+    await ElMessageBox.confirm(
+      '解除绑定后，已同步的知网论文数据将被清除，确认解除绑定吗？',
+      '确认解除绑定',
+      {
+        confirmButtonText: '确认',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    await academicStore.unbindCnki()
+    ElMessage.success('已解除知网账号绑定')
+  } catch (error) {
+    // 用户取消操作
+  }
 }
 
 const handlePasswordChange = () => {
@@ -650,6 +904,164 @@ onMounted(() => {
 
       .bind-help {
         margin-top: 24px;
+      }
+    }
+
+    // 多平台认证状态
+    .academic-platforms {
+      .platform-status {
+        background: #f8f9fa;
+        border: 1px solid #e8e8e8;
+        border-radius: var(--border-radius);
+        padding: 16px;
+        margin-bottom: 12px;
+
+        .platform-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          .platform-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            .platform-icon {
+              font-size: 18px;
+              color: var(--primary-color);
+            }
+
+            .platform-name {
+              font-weight: 500;
+              font-size: 14px;
+            }
+          }
+
+          .status-verified, .status-unverified {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+
+            .status-icon {
+              font-size: 14px;
+            }
+          }
+        }
+
+        .platform-details {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid #e8e8e8;
+
+          .sync-time {
+            font-size: 12px;
+            color: var(--text-light);
+          }
+        }
+      }
+
+      .overall-status {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 16px;
+        border-radius: var(--border-radius);
+        text-align: center;
+
+        .status-summary {
+          font-size: 14px;
+          font-weight: 500;
+        }
+      }
+    }
+
+    // 绑定选项卡
+    .bind-tabs {
+      margin-top: 16px;
+
+      .bind-content {
+        padding: 20px 0;
+
+        .form-help {
+          margin-top: 4px;
+          font-size: 12px;
+          color: var(--text-light);
+        }
+      }
+
+      .bound-content {
+        padding: 20px 0;
+
+        .bound-info {
+          margin-bottom: 20px;
+        }
+
+        .bound-actions {
+          display: flex;
+          gap: 12px;
+        }
+      }
+    }
+
+    .bind-help {
+      margin-top: 20px;
+    }
+
+    // 统计信息
+    .academic-stats {
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+
+        .stat-card {
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: var(--border-radius);
+          text-align: center;
+          border: 1px solid #e8e8e8;
+
+          .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+          }
+
+          .stat-label {
+            font-size: 12px;
+            color: var(--text-light);
+          }
+        }
+      }
+
+      .stats-details {
+        background: #f8f9fa;
+        padding: 16px;
+        border-radius: var(--border-radius);
+        border: 1px solid #e8e8e8;
+
+        .detail-item {
+          display: flex;
+          justify-content: space-between;
+          padding: 6px 0;
+          border-bottom: 1px solid #e8e8e8;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          .detail-label {
+            font-weight: 500;
+            font-size: 14px;
+          }
+
+          .detail-value {
+            color: var(--text-light);
+            font-size: 14px;
+          }
+        }
       }
     }
 

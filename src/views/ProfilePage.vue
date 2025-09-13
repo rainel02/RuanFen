@@ -171,7 +171,8 @@
                         <el-empty description="暂无论文数据">
                           <template #default>
                             <div class="verification-info">
-                              <p>完成学术认证后，系统将自动同步您在谷歌学术上的论文数据</p>
+                              <p>完成学术认证后，系统将自动同步您的论文数据</p>
+                              <p>支持谷歌学术和知网等平台的数据同步</p>
                               <el-button type="primary" @click="$router.push('/settings?section=academic')">
                                 前往认证
                               </el-button>
@@ -194,6 +195,35 @@
                       </div>
                       
                       <div v-else class="papers-list">
+                        <!-- 认证状态概览 -->
+                        <div class="platform-overview">
+                          <div class="platform-item" v-if="academicStore.settings.googleScholar.isVerified">
+                            <div class="platform-info">
+                              <el-icon class="platform-icon" color="#4285f4"><Trophy /></el-icon>
+                              <span class="platform-name">谷歌学术</span>
+                              <el-tag size="small" type="success">已认证</el-tag>
+                            </div>
+                            <div class="platform-stats">
+                              <span class="stat-text">
+                                {{ getPlatformPaperCount('google-scholar') }} 篇论文
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div class="platform-item" v-if="academicStore.settings.cnki.isVerified">
+                            <div class="platform-info">
+                              <el-icon class="platform-icon" color="#c41e3a"><Document /></el-icon>
+                              <span class="platform-name">中国知网</span>
+                              <el-tag size="small" type="success">已认证</el-tag>
+                            </div>
+                            <div class="platform-stats">
+                              <span class="stat-text">
+                                {{ getPlatformPaperCount('cnki') }} 篇论文
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
                         <div class="papers-header">
                           <div class="papers-stats">
                             <span class="stat-item">
@@ -207,25 +237,62 @@
                             </span>
                           </div>
                           <div class="papers-actions">
-                            <el-button size="small" @click="handleSyncPapers" :loading="syncLoading">
-                              {{ academicStore.hasRecentSync ? '重新同步' : '立即同步' }}
-                            </el-button>
+                            <el-dropdown @command="handleSyncCommand">
+                              <el-button size="small" :loading="syncLoading">
+                                同步论文
+                                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                              </el-button>
+                              <template #dropdown>
+                                <el-dropdown-menu>
+                                  <el-dropdown-item command="sync-all">同步所有平台</el-dropdown-item>
+                                  <el-dropdown-item command="sync-google" v-if="academicStore.settings.googleScholar.isVerified">
+                                    同步谷歌学术
+                                  </el-dropdown-item>
+                                  <el-dropdown-item command="sync-cnki" v-if="academicStore.settings.cnki.isVerified">
+                                    同步知网
+                                  </el-dropdown-item>
+                                </el-dropdown-menu>
+                              </template>
+                            </el-dropdown>
                             <span v-if="academicStore.settings.lastSyncTime" class="last-sync">
                               最后同步：{{ formatTime(academicStore.settings.lastSyncTime) }}
                             </span>
                           </div>
                         </div>
+
+                        <!-- 论文筛选 -->
+                        <div class="papers-filter">
+                          <el-radio-group v-model="paperFilter" size="small">
+                            <el-radio-button label="all">全部论文</el-radio-button>
+                            <el-radio-button label="google-scholar" v-if="academicStore.settings.googleScholar.isVerified">
+                              谷歌学术
+                            </el-radio-button>
+                            <el-radio-button label="cnki" v-if="academicStore.settings.cnki.isVerified">
+                              知网
+                            </el-radio-button>
+                          </el-radio-group>
+                        </div>
                         
                         <div class="papers-grid">
                           <div
-                            v-for="paper in academicStore.syncedPapers"
+                            v-for="paper in filteredPapers"
                             :key="paper.id"
                             class="paper-item"
                           >
                             <div class="paper-card">
                               <div class="paper-header">
                                 <h4 class="paper-title">{{ paper.title }}</h4>
-                                <div class="paper-year">{{ paper.year }}</div>
+                                <div class="paper-meta-info">
+                                  <div class="paper-year">{{ paper.year }}</div>
+                                  <div class="paper-source">
+                                    <el-tag 
+                                      :type="paper.source === 'google-scholar' ? 'primary' : 'danger'" 
+                                      size="small"
+                                    >
+                                      {{ getSourceLabel(paper.source) }}
+                                    </el-tag>
+                                  </div>
+                                </div>
                               </div>
                               
                               <div class="paper-authors">
@@ -252,7 +319,7 @@
                               </div>
                               
                               <div v-if="paper.abstract" class="paper-abstract">
-                                <p>{{ paper.abstract.substring(0, 150) }}{{ paper.abstract.length > 150 ? '...' : '' }}</p>
+                                <p>{{ paper.abstract }}</p>
                               </div>
                             </div>
                           </div>
@@ -315,7 +382,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Star, Link } from '@element-plus/icons-vue'
+import { Star, Link, Trophy, Document, ArrowDown } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
@@ -329,6 +396,8 @@ const authTab = ref('login')
 const activeTab = ref('info')
 const loginLoading = ref(false)
 const registerLoading = ref(false)
+const loginFormRef = ref()
+const registerFormRef = ref()
 
 const loginForm = ref({
   username: '',
@@ -348,6 +417,7 @@ const settings = computed(() => settingsStore.settings)
 
 // 学术认证相关
 const syncLoading = ref(false)
+const paperFilter = ref('all')
 
 const loginRules = {
   username: [
@@ -386,8 +456,12 @@ const registerRules = {
 }
 
 const handleLogin = async () => {
-  loginLoading.value = true
+  if (!loginFormRef.value) return
+  
   try {
+    await loginFormRef.value.validate()
+    loginLoading.value = true
+    
     const result = await authStore.login(loginForm.value.username, loginForm.value.password)
     if (result.success) {
       ElMessage.success('登录成功')
@@ -395,6 +469,10 @@ const handleLogin = async () => {
       ElMessage.error(result.message || '登录失败')
     }
   } catch (error) {
+    if (error === false) {
+      // 表单验证失败
+      return
+    }
     ElMessage.error('登录失败')
   } finally {
     loginLoading.value = false
@@ -402,13 +480,35 @@ const handleLogin = async () => {
 }
 
 const handleRegister = async () => {
-  registerLoading.value = true
-  // Mock register
-  setTimeout(() => {
-    ElMessage.success('注册成功，请登录')
-    authTab.value = 'login'
+  if (!registerFormRef.value) return
+  
+  try {
+    await registerFormRef.value.validate()
+    registerLoading.value = true
+    
+    // Mock register
+    setTimeout(() => {
+      ElMessage.success('注册成功，请登录')
+      authTab.value = 'login'
+      registerLoading.value = false
+      
+      // 清空注册表单
+      registerForm.value = {
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      }
+      registerFormRef.value?.clearValidate()
+    }, 1000)
+  } catch (error) {
+    if (error === false) {
+      // 表单验证失败
+      return
+    }
+    ElMessage.error('注册失败')
     registerLoading.value = false
-  }, 1000)
+  }
 }
 
 const handleLogout = () => {
@@ -420,15 +520,69 @@ const handleLogout = () => {
 const handleSyncPapers = async () => {
   syncLoading.value = true
   
-  const result = await academicStore.syncPapers()
-  syncLoading.value = false
-  
-  if (result.success) {
-    ElMessage.success(result.message)
-  } else {
-    ElMessage.error(result.message)
+  try {
+    // 根据认证状态同步相应平台
+    if (academicStore.settings.googleScholar.isVerified) {
+      await academicStore.syncGoogleScholarPapers()
+    }
+    if (academicStore.settings.cnki.isVerified) {
+      await academicStore.syncCnkiPapers()
+    }
+    ElMessage.success('论文同步成功')
+  } catch (error) {
+    ElMessage.error('论文同步失败')
   }
+  
+  syncLoading.value = false
 }
+
+const handleSyncCommand = async (command: string) => {
+  syncLoading.value = true
+  
+  try {
+    switch (command) {
+      case 'sync-all':
+        if (academicStore.settings.googleScholar.isVerified) {
+          await academicStore.syncGoogleScholarPapers()
+        }
+        if (academicStore.settings.cnki.isVerified) {
+          await academicStore.syncCnkiPapers()
+        }
+        ElMessage.success('所有平台论文同步成功')
+        break
+      case 'sync-google':
+        await academicStore.syncGoogleScholarPapers()
+        ElMessage.success('谷歌学术论文同步成功')
+        break
+      case 'sync-cnki':
+        await academicStore.syncCnkiPapers()
+        ElMessage.success('知网论文同步成功')
+        break
+    }
+  } catch (error) {
+    ElMessage.error('论文同步失败')
+  }
+  
+  syncLoading.value = false
+}
+
+// 获取特定平台的论文数量
+const getPlatformPaperCount = (source: 'google-scholar' | 'cnki') => {
+  return academicStore.syncedPapers.filter(paper => paper.source === source).length
+}
+
+// 获取来源标签
+const getSourceLabel = (source: string) => {
+  return source === 'google-scholar' ? 'Google Scholar' : '知网'
+}
+
+// 筛选后的论文列表
+const filteredPapers = computed(() => {
+  if (paperFilter.value === 'all') {
+    return academicStore.syncedPapers
+  }
+  return academicStore.syncedPapers.filter(paper => paper.source === paperFilter.value)
+})
 
 const formatTime = (timestamp: string) => {
   if (!timestamp) return '未知'
@@ -568,6 +722,51 @@ onMounted(() => {
         }
       }
 
+      // 平台概览样式
+      .platform-overview {
+        display: flex;
+        gap: 16px;
+        margin-bottom: 24px;
+        
+        .platform-item {
+          flex: 1;
+          background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+          border-radius: var(--border-radius);
+          padding: 16px;
+          border: 1px solid #e8e8e8;
+          
+          .platform-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            
+            .platform-icon {
+              font-size: 20px;
+            }
+            
+            .platform-name {
+              font-weight: 500;
+              font-size: 14px;
+            }
+          }
+          
+          .platform-stats {
+            .stat-text {
+              font-size: 12px;
+              color: var(--text-light);
+            }
+          }
+        }
+      }
+
+      // 论文筛选样式
+      .papers-filter {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: center;
+      }
+
       // 论文列表样式
       .papers-list {
         .papers-header {
@@ -638,13 +837,20 @@ onMounted(() => {
                   margin-right: 12px;
                 }
 
-                .paper-year {
-                  background: var(--primary-color);
-                  color: white;
-                  padding: 4px 8px;
-                  border-radius: 4px;
-                  font-size: 12px;
-                  font-weight: 500;
+                .paper-meta-info {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: flex-end;
+                  gap: 6px;
+
+                  .paper-year {
+                    background: var(--primary-color);
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    font-weight: 500;
+                  }
                 }
               }
 

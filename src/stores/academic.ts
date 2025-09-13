@@ -1,27 +1,40 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { AcademicSettings, GoogleScholarProfile, ScholarPaper } from '../types/chat'
+import type { AcademicSettings, GoogleScholarProfile, CnkiProfile, ScholarPaper, MergedPaper } from '../types/chat'
 
 export const useAcademicStore = defineStore('academic', () => {
   const settings = ref<AcademicSettings>({
-    isVerified: false,
+    googleScholar: {
+      isVerified: false,
+      profileUrl: '',
+      orcidId: '',
+      lastSyncTime: '',
+      autoSync: true
+    },
+    cnki: {
+      isVerified: false,
+      username: '',
+      authorId: '',
+      lastSyncTime: '',
+      autoSync: true
+    },
+    mergeStrategy: 'google-first',
+    syncCollaborations: true,
     scholarName: '',
     institution: '',
     researchFields: [],
     hIndex: 0,
     totalCitations: 0,
     paperCount: 0,
-    lastSyncTime: '',
-    autoSync: true,
-    syncCollaborations: true,
-    googleScholarUrl: '',
-    orcidId: ''
+    lastSyncTime: ''
   })
 
   const syncedPapers = ref<ScholarPaper[]>([])
   const isSyncing = ref(false)
 
-  const isVerified = computed(() => settings.value.isVerified)
+  const isVerified = computed(() => 
+    settings.value.googleScholar.isVerified || settings.value.cnki.isVerified
+  )
   const hasRecentSync = computed(() => {
     if (!settings.value.lastSyncTime) return false
     const lastSync = new Date(settings.value.lastSyncTime)
@@ -30,112 +43,164 @@ export const useAcademicStore = defineStore('academic', () => {
     return diffHours < 24 // 24小时内算作最近同步
   })
 
-  // 模拟验证谷歌学术账号
-  const verifyGoogleScholar = async (profileUrl: string, orcidId?: string): Promise<{
-    success: boolean
-    profile?: GoogleScholarProfile
-    message?: string
-  }> => {
+  // 绑定谷歌学术账号
+  const bindGoogleScholar = async (data: { 
+    profileUrl: string
+    orcidId?: string 
+  }): Promise<{ success: boolean; message?: string }> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        // 模拟API验证
-        if (profileUrl.includes('scholar.google.com')) {
-          const profile: GoogleScholarProfile = {
-            name: '张伟教授',
-            institution: '清华大学',
-            email: 'zhangwei@tsinghua.edu.cn',
-            researchFields: ['人工智能', '机器学习', '深度学习', '计算机视觉'],
-            hIndex: 42,
-            totalCitations: 8520,
-            papers: generateMockPapers()
-          }
-
-          // 更新设置
-          settings.value = {
-            ...settings.value,
+        if (data.profileUrl.includes('scholar.google.com')) {
+          // 模拟成功绑定
+          settings.value.googleScholar = {
             isVerified: true,
-            scholarName: profile.name,
-            institution: profile.institution,
-            researchFields: profile.researchFields,
-            hIndex: profile.hIndex,
-            totalCitations: profile.totalCitations,
-            paperCount: profile.papers.length,
+            profileUrl: data.profileUrl,
+            orcidId: data.orcidId || '',
             lastSyncTime: new Date().toISOString(),
-            googleScholarUrl: profileUrl,
-            orcidId: orcidId || ''
+            autoSync: true
           }
 
-          syncedPapers.value = profile.papers
+          // 更新学者信息
+          settings.value.scholarName = '张伟教授'
+          settings.value.institution = '清华大学'
+          settings.value.researchFields = ['人工智能', '机器学习', '深度学习']
+          settings.value.hIndex = 42
+          settings.value.totalCitations = 8520
+          settings.value.lastSyncTime = new Date().toISOString()
 
-          resolve({
-            success: true,
-            profile,
-            message: '验证成功'
-          })
+          resolve({ success: true, message: '谷歌学术账号绑定成功' })
         } else {
-          resolve({
-            success: false,
-            message: '无效的谷歌学术链接'
-          })
+          resolve({ success: false, message: '无效的谷歌学术链接' })
         }
       }, 2000)
     })
   }
 
-  // 同步论文数据
-  const syncPapers = async (): Promise<{
-    success: boolean
-    newPapers: number
-    message: string
-  }> => {
-    if (!settings.value.isVerified) {
-      return {
-        success: false,
-        newPapers: 0,
-        message: '未完成学术认证'
-      }
-    }
-
-    isSyncing.value = true
-
+  // 绑定知网账号
+  const bindCnki = async (data: { 
+    username: string
+    authorId: string 
+  }): Promise<{ success: boolean; message?: string }> => {
     return new Promise((resolve) => {
       setTimeout(() => {
-        // 模拟同步新论文
-        const newPapers = generateMockPapers(2) // 生成2篇新论文
-        syncedPapers.value = [...syncedPapers.value, ...newPapers]
-        
-        settings.value.paperCount = syncedPapers.value.length
-        settings.value.lastSyncTime = new Date().toISOString()
-        settings.value.totalCitations += 50 // 模拟增加引用
-        
-        isSyncing.value = false
+        // 模拟成功绑定
+        settings.value.cnki = {
+          isVerified: true,
+          username: data.username,
+          authorId: data.authorId,
+          lastSyncTime: new Date().toISOString(),
+          autoSync: true
+        }
 
-        resolve({
-          success: true,
-          newPapers: newPapers.length,
-          message: `同步完成，新增 ${newPapers.length} 篇论文`
-        })
+        // 如果是第一次绑定学术账号，设置学者信息
+        if (!settings.value.googleScholar.isVerified) {
+          settings.value.scholarName = '张伟教授'
+          settings.value.institution = '清华大学'
+          settings.value.researchFields = ['计算机科学', '软件工程', '数据库']
+        }
+        
+        settings.value.lastSyncTime = new Date().toISOString()
+        resolve({ success: true, message: '知网账号绑定成功' })
       }, 2000)
     })
   }
 
-  // 解除绑定
-  const unbindAccount = () => {
-    settings.value = {
-      isVerified: false,
-      scholarName: '',
-      institution: '',
-      researchFields: [],
-      hIndex: 0,
-      totalCitations: 0,
-      paperCount: 0,
-      lastSyncTime: '',
-      autoSync: true,
-      syncCollaborations: true,
-      googleScholarUrl: '',
-      orcidId: ''
+  // 同步谷歌学术论文
+  const syncGoogleScholarPapers = async (): Promise<{
+    success: boolean
+    message?: string
+  }> => {
+    if (!settings.value.googleScholar.isVerified) {
+      return { success: false, message: '谷歌学术账号未绑定' }
     }
-    syncedPapers.value = []
+
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const newPapers = generateMockPapers(3, 'google-scholar')
+        syncedPapers.value = mergePapers([...syncedPapers.value, ...newPapers])
+        
+        settings.value.paperCount = syncedPapers.value.length
+        settings.value.googleScholar.lastSyncTime = new Date().toISOString()
+        settings.value.lastSyncTime = new Date().toISOString()
+        
+        resolve({ success: true, message: '谷歌学术论文同步成功' })
+      }, 2000)
+    })
+  }
+
+  // 同步知网论文
+  const syncCnkiPapers = async (): Promise<{
+    success: boolean
+    message?: string
+  }> => {
+    if (!settings.value.cnki.isVerified) {
+      return { success: false, message: '知网账号未绑定' }
+    }
+
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const newPapers = generateMockPapers(2, 'cnki')
+        syncedPapers.value = mergePapers([...syncedPapers.value, ...newPapers])
+        
+        settings.value.paperCount = syncedPapers.value.length
+        settings.value.cnki.lastSyncTime = new Date().toISOString()
+        settings.value.lastSyncTime = new Date().toISOString()
+        
+        resolve({ success: true, message: '知网论文同步成功' })
+      }, 2000)
+    })
+  }
+
+  // 解除谷歌学术绑定
+  const unbindGoogleScholar = async () => {
+    settings.value.googleScholar = {
+      isVerified: false,
+      profileUrl: '',
+      orcidId: '',
+      lastSyncTime: '',
+      autoSync: true
+    }
+    // 过滤掉谷歌学术的论文
+    syncedPapers.value = syncedPapers.value.filter(paper => paper.source !== 'google-scholar')
+    settings.value.paperCount = syncedPapers.value.length
+  }
+
+  // 解除知网绑定
+  const unbindCnki = async () => {
+    settings.value.cnki = {
+      isVerified: false,
+      username: '',
+      authorId: '',
+      lastSyncTime: '',
+      autoSync: true
+    }
+    // 过滤掉知网的论文
+    syncedPapers.value = syncedPapers.value.filter(paper => paper.source !== 'cnki')
+    settings.value.paperCount = syncedPapers.value.length
+  }
+
+  // 论文合并逻辑
+  const mergePapers = (papers: ScholarPaper[]): ScholarPaper[] => {
+    const mergedMap = new Map<string, ScholarPaper>()
+    
+    for (const paper of papers) {
+      const key = paper.title.toLowerCase().replace(/\s+/g, '')
+      
+      if (mergedMap.has(key)) {
+        const existing = mergedMap.get(key)!
+        // 根据合并策略处理重复论文
+        if (settings.value.mergeStrategy === 'google-first' && paper.source === 'google-scholar') {
+          mergedMap.set(key, paper)
+        } else if (settings.value.mergeStrategy === 'cnki-first' && paper.source === 'cnki') {
+          mergedMap.set(key, paper)
+        }
+        // manual 策略保持第一个
+      } else {
+        mergedMap.set(key, paper)
+      }
+    }
+    
+    return Array.from(mergedMap.values())
   }
 
   // 更新设置
@@ -157,7 +222,7 @@ export const useAcademicStore = defineStore('academic', () => {
         settings.value = { ...settings.value, ...parsed }
         
         // 如果已认证，加载论文数据
-        if (settings.value.isVerified) {
+        if (settings.value.googleScholar.isVerified || settings.value.cnki.isVerified) {
           syncedPapers.value = generateMockPapers(settings.value.paperCount)
         }
       } catch (error) {
@@ -172,9 +237,12 @@ export const useAcademicStore = defineStore('academic', () => {
     isSyncing,
     isVerified,
     hasRecentSync,
-    verifyGoogleScholar,
-    syncPapers,
-    unbindAccount,
+    bindGoogleScholar,
+    bindCnki,
+    syncGoogleScholarPapers,
+    syncCnkiPapers,
+    unbindGoogleScholar,
+    unbindCnki,
     updateSettings,
     saveSettings,
     loadSettings
@@ -182,10 +250,10 @@ export const useAcademicStore = defineStore('academic', () => {
 })
 
 // 生成模拟论文数据
-function generateMockPapers(count = 15): ScholarPaper[] {
+function generateMockPapers(count = 15, source: 'google-scholar' | 'cnki' = 'google-scholar'): ScholarPaper[] {
   const mockTitles = [
     'Deep Learning for Computer Vision: A Comprehensive Survey',
-    'Transformer Networks in Natural Language Processing',
+    'Transformer Networks in Natural Language Processing', 
     'Federated Learning: Challenges and Opportunities',
     'Graph Neural Networks for Social Network Analysis',
     'Adversarial Training in Machine Learning',
@@ -201,32 +269,38 @@ function generateMockPapers(count = 15): ScholarPaper[] {
     'Blockchain Technology in Healthcare Systems'
   ]
 
-  const mockJournals = [
-    'Nature Machine Intelligence',
-    'IEEE Transactions on Pattern Analysis and Machine Intelligence',
-    'Journal of Machine Learning Research',
-    'Artificial Intelligence',
-    'Neural Networks',
-    'IEEE Transactions on Neural Networks and Learning Systems',
-    'Computer Vision and Image Understanding',
-    'Information Sciences',
-    'Knowledge-Based Systems',
-    'Expert Systems with Applications'
-  ]
+  const mockJournals = source === 'google-scholar' 
+    ? [
+        'Nature Machine Intelligence',
+        'IEEE Transactions on Pattern Analysis and Machine Intelligence',
+        'Journal of Machine Learning Research',
+        'Artificial Intelligence',
+        'Neural Networks'
+      ]
+    : [
+        '计算机学报',
+        '软件学报',
+        '中国科学：信息科学',
+        '自动化学报',
+        '电子学报'
+      ]
 
   const papers: ScholarPaper[] = []
   const currentYear = new Date().getFullYear()
 
   for (let i = 0; i < count; i++) {
     papers.push({
-      id: `paper-${Date.now()}-${i}`,
+      id: `paper-${source}-${Date.now()}-${i}`,
       title: mockTitles[i % mockTitles.length],
       authors: ['张伟', '李明', '王芳', '陈浩'].slice(0, Math.floor(Math.random() * 3) + 2),
       year: currentYear - Math.floor(Math.random() * 5),
       journal: mockJournals[Math.floor(Math.random() * mockJournals.length)],
       citations: Math.floor(Math.random() * 200) + 10,
-      url: `https://scholar.google.com/paper${i}`,
-      abstract: `This paper presents a comprehensive study on ${mockTitles[i % mockTitles.length].toLowerCase()}. We propose novel methods and demonstrate their effectiveness through extensive experiments.`
+      url: source === 'google-scholar' 
+        ? `https://scholar.google.com/paper${i}`
+        : `https://kns.cnki.net/paper${i}`,
+      abstract: `This paper presents a comprehensive study on ${mockTitles[i % mockTitles.length].toLowerCase()}. We propose novel methods and demonstrate their effectiveness through extensive experiments.`,
+      source
     })
   }
 
