@@ -261,7 +261,7 @@
                         <h4>学术专家认证管理</h4>
                         <el-tag type="success">已认证</el-tag>
                       </div>
-                      
+
                       <el-alert
                         title="认证权限"
                         description="您已通过学术专家认证，可以管理名下的所有论文"
@@ -301,7 +301,7 @@
                             </div>
                           </div>
                         </div>
-                        
+
                         <div v-if="managedPapers.length === 0" class="empty-papers">
                           <el-empty description="暂无可管理的论文" />
                         </div>
@@ -326,7 +326,7 @@
       <div class="verification-form">
         <el-alert
           title="认证说明"
-          description="请提供相关证明材料以验证您的学术专家身份。审核通过后，您将能够管理名下的所有论文。"
+          description="请输入真实姓名和edu邮箱，获取验证码并完成邮箱验证。"
           type="info"
           :closable="false"
           show-icon
@@ -341,88 +341,38 @@
             />
           </el-form-item>
 
-          <el-form-item label="学术机构" prop="institution">
+          <el-form-item label="edu邮箱" prop="email">
             <el-input
-              v-model="verificationForm.institution"
-              placeholder="请输入您所在的学术机构"
+              v-model="verificationForm.email"
+              placeholder="请输入您的edu邮箱"
             />
           </el-form-item>
 
-          <el-form-item label="职位/职称" prop="position">
-            <el-select v-model="verificationForm.position" placeholder="请选择您的职位" style="width: 100%">
-              <el-option label="教授" value="professor" />
-              <el-option label="副教授" value="associate_professor" />
-              <el-option label="助理教授" value="assistant_professor" />
-              <el-option label="研究员" value="researcher" />
-              <el-option label="副研究员" value="associate_researcher" />
-              <el-option label="助理研究员" value="assistant_researcher" />
-              <el-option label="博士后" value="postdoc" />
-              <el-option label="其他" value="other" />
-            </el-select>
-          </el-form-item>
-
-          <el-form-item label="学者主页" prop="homepage">
-            <el-input
-              v-model="verificationForm.homepage"
-              placeholder="请输入您的学者主页链接（如Google Scholar、ResearchGate等）"
-            />
-          </el-form-item>
-
-          <el-form-item label="ORCID" prop="orcid">
-            <el-input
-              v-model="verificationForm.orcid"
-              placeholder="请输入您的ORCID ID（可选）"
-            />
-          </el-form-item>
-
-          <el-form-item label="代表性论文" prop="representativePapers">
-            <el-input
-              v-model="verificationForm.representativePapers"
-              type="textarea"
-              :rows="4"
-              placeholder="请列出3-5篇您的代表性论文（包括标题、期刊、年份）"
-            />
-          </el-form-item>
-
-          <el-form-item label="证明材料" prop="documents">
-            <div class="upload-section">
-              <el-upload
-                v-model:file-list="verificationForm.documents"
-                :before-upload="beforeUpload"
-                :on-remove="handleRemove"
-                multiple
-                :limit="5"
-                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-              >
-                <el-button type="primary">
-                  <el-icon><Upload /></el-icon>
-                  上传证明材料
+          <el-form-item label="验证码" prop="code">
+            <el-row :gutter="8">
+              <el-col :span="16">
+                <el-input v-model="verificationForm.code" placeholder="请输入验证码" />
+              </el-col>
+              <el-col :span="8">
+                <el-button
+                  :disabled="codeSending || codeCountdown > 0 || !verificationForm.email"
+                  @click="handleSendCode"
+                  style="width: 100%;"
+                >
+                  <span v-if="codeCountdown === 0">获取验证码</span>
+                  <span v-else>{{ codeCountdown }}秒后重试</span>
                 </el-button>
-                <template #tip>
-                  <div class="el-upload__tip">
-                    支持上传工作证明、学位证书、论文发表证明等，格式：PDF、JPG、PNG、DOC，单个文件不超过10MB，最多5个文件
-                  </div>
-                </template>
-              </el-upload>
-            </div>
-          </el-form-item>
-
-          <el-form-item label="补充说明" prop="additionalInfo">
-            <el-input
-              v-model="verificationForm.additionalInfo"
-              type="textarea"
-              :rows="3"
-              placeholder="如有其他需要说明的情况，请在此填写（可选）"
-            />
+              </el-col>
+            </el-row>
           </el-form-item>
         </el-form>
       </div>
-      
+
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="showVerificationDialog = false">取消</el-button>
-          <el-button 
-            type="primary" 
+          <el-button
+            type="primary"
             @click="handleSubmitVerification"
             :loading="submittingVerification"
           >
@@ -437,14 +387,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { 
-  CircleCheckFilled, 
-  Clock, 
-  CircleCloseFilled, 
+import {
+  CircleCheckFilled,
+  Clock,
+  CircleCloseFilled,
   QuestionFilled,
   Edit,
-  ChatDotSquare,
-  Upload
+  ChatDotSquare
 } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
@@ -462,37 +411,18 @@ const registerLoading = ref(false)
 const verificationStatus = ref('unverified') // 'unverified' | 'pending' | 'verified' | 'rejected'
 const showVerificationDialog = ref(false)
 const submittingVerification = ref(false)
+const verificationFormRef = ref()
 
 const verificationForm = ref({
   realName: '',
-  institution: '',
-  position: '',
-  homepage: '',
-  orcid: '',
-  representativePapers: '',
-  documents: [],
-  additionalInfo: ''
+  email: '',
+  code: ''
 })
 
-// 模拟已认证用户可管理的论文
-const managedPapers = ref([
-  {
-    id: 'paper-1',
-    title: '深度学习在自然语言处理中的应用研究',
-    journal: 'Nature Machine Intelligence',
-    publishDate: '2024-01-15',
-    citations: 156,
-    favorites: 23
-  },
-  {
-    id: 'paper-2', 
-    title: '基于Transformer架构的多模态学习方法',
-    journal: 'IEEE Transactions on Pattern Analysis',
-    publishDate: '2023-11-20',
-    citations: 89,
-    favorites: 15
-  }
-])
+const codeSending = ref(false)
+const codeCountdown = ref(0)
+let codeTimer: any = null
+const sentCode = ref('')
 
 const loginForm = ref({
   username: '',
@@ -551,18 +481,22 @@ const verificationRules = {
   realName: [
     { required: true, message: '请输入真实姓名', trigger: 'blur' }
   ],
-  institution: [
-    { required: true, message: '请输入学术机构', trigger: 'blur' }
+  email: [
+    { required: true, message: '请输入edu邮箱', trigger: 'blur' },
+    {
+      validator: (_rule: any, value: string, callback: Function) => {
+        if (!value) return callback(new Error('请输入edu邮箱'))
+        if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.edu(\.[A-Za-z]{2,})?$/.test(value)) {
+          callback(new Error('请输入有效的edu邮箱'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ],
-  position: [
-    { required: true, message: '请选择职位', trigger: 'change' }
-  ],
-  homepage: [
-    { required: true, message: '请输入学者主页链接', trigger: 'blur' },
-    { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
-  ],
-  representativePapers: [
-    { required: true, message: '请列出代表性论文', trigger: 'blur' }
+  code: [
+    { required: true, message: '请输入验证码', trigger: 'blur' }
   ]
 }
 
@@ -598,49 +532,60 @@ const handleLogout = () => {
 }
 
 // 认证相关方法
-const resetVerificationForm = () => {
-  verificationForm.value = {
-    realName: '',
-    institution: '',
-    position: '',
-    homepage: '',
-    orcid: '',
-    representativePapers: '',
-    documents: [],
-    additionalInfo: ''
+const handleSendCode = async () => {
+  const email = verificationForm.value.email
+  if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.edu(\.[A-Za-z]{2,})?$/.test(email)) {
+    ElMessage.error('请输入有效的edu邮箱')
+    return
   }
-}
-
-const beforeUpload = (file: any) => {
-  const isValidType = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)
-  const isValidSize = file.size / 1024 / 1024 < 10
-
-  if (!isValidType) {
-    ElMessage.error('只能上传 PDF、JPG、PNG、DOC 格式的文件！')
-    return false
-  }
-  if (!isValidSize) {
-    ElMessage.error('文件大小不能超过 10MB！')
-    return false
-  }
-  return true
-}
-
-const handleRemove = () => {
-  // 处理文件移除
+  codeSending.value = true
+  // 模拟发送验证码
+  sentCode.value = (Math.floor(100000 + Math.random() * 900000)).toString()
+  ElMessage.success(`验证码已发送到邮箱（模拟：${sentCode.value}）`)
+  codeCountdown.value = 60
+  codeTimer && clearInterval(codeTimer)
+  codeTimer = setInterval(() => {
+    codeCountdown.value--
+    if (codeCountdown.value <= 0) {
+      clearInterval(codeTimer)
+      codeCountdown.value = 0
+    }
+  }, 1000)
+  codeSending.value = false
 }
 
 const handleSubmitVerification = () => {
   submittingVerification.value = true
-  
-  // 模拟提交审核
-  setTimeout(() => {
-    verificationStatus.value = 'pending'
-    showVerificationDialog.value = false
-    submittingVerification.value = false
-    ElMessage.success('认证申请已提交，我们将在3-5个工作日内完成审核')
-    resetVerificationForm()
-  }, 2000)
+  const formRef = verificationFormRef.value
+  formRef.validate((valid: boolean) => {
+    if (!valid) {
+      submittingVerification.value = false
+      return
+    }
+    if (verificationForm.value.code !== sentCode.value) {
+      ElMessage.error('验证码错误')
+      submittingVerification.value = false
+      return
+    }
+    setTimeout(() => {
+      verificationStatus.value = 'verified' // 认证通过，直接变成已认证学术专家
+      showVerificationDialog.value = false
+      submittingVerification.value = false
+      ElMessage.success('认证成功，您已成为学术专家')
+      resetVerificationForm()
+    }, 1000)
+  })
+}
+
+const resetVerificationForm = () => {
+  verificationForm.value = {
+    realName: '',
+    email: '',
+    code: ''
+  }
+  sentCode.value = ''
+  codeCountdown.value = 0
+  codeTimer && clearInterval(codeTimer)
 }
 
 // 论文管理方法
@@ -654,10 +599,13 @@ const viewPaperComments = (paper: any) => {
   // 这里可以跳转到评论管理页面
 }
 
+// 新增：声明 managedPapers，模拟数据或空数组
+const managedPapers = ref<any[]>([])
+
 onMounted(() => {
   authStore.initAuth()
   settingsStore.loadSettings()
-  
+
   // 设置用户认证状态为未认证，可以测试认证申请流程
   if (authStore.isLoggedIn) {
     verificationStatus.value = 'unverified' // 未认证状态，可以申请认证
