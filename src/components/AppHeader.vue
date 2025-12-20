@@ -1,78 +1,62 @@
 <template>
-  <div class="page-header">
+  <div class="app-header glass-header">
     <div class="container">
-      <el-row align="middle" justify="space-between" style="height: 64px;">
-        <el-col :span="6">
-          <div class="logo">
-            <router-link to="/" class="logo-link">
-              <el-icon size="28" color="#1890ff">
-                <School />
-              </el-icon>
-              <span class="logo-text">学术平台</span>
-            </router-link>
+      <div class="header-content">
+        <!-- Logo -->
+        <div class="logo-section" @click="router.push('/')">
+          <div class="logo-icon">
+            <el-icon><School /></el-icon>
           </div>
-        </el-col>
+          <span class="logo-text">ScholarHub</span>
+        </div>
 
-        <el-col :span="12">
-          <div class="search-wrapper" v-if="showSearch">
-            <el-input
-              v-model="searchInput"
-              placeholder="搜索论文、作者、关键词..."
-              size="large"
-              clearable
-              @input="handleSearch"
-              @keyup.enter="handleSearchSubmit"
-            >
-              <template #prefix>
-                <el-icon>
-                  <Search />
-                </el-icon>
-              </template>
-            </el-input>
-          </div>
-        </el-col>
+        <!-- Search Bar (Hidden on Home) -->
+        <div class="search-section" v-if="!isHomePage">
+          <el-input
+            v-model="searchInput"
+            placeholder="搜索..."
+            class="header-search"
+            @keyup.enter="handleSearchSubmit"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
 
-        <el-col :span="6">
-          <div class="nav-actions">
-            <el-menu
-              mode="horizontal"
-              :default-active="activeIndex"
-              class="nav-menu"
-              @select="handleSelect"
-              router
-            >
-              <el-menu-item index="/">论文</el-menu-item>
-              <el-menu-item index="/scholars">学者</el-menu-item>
-              <el-menu-item index="/paper-guide" v-if="showPaperGuide">导读</el-menu-item>
-              <el-menu-item index="/forum" v-if="showForum">论坛</el-menu-item>
-              <el-menu-item index="/chat">私信</el-menu-item>
-              <el-menu-item index="/analytics">统计</el-menu-item>
-              <el-menu-item index="/profile">
-                <el-icon v-if="!isLoggedIn">
-                  <User />
-                </el-icon>
-                <el-avatar v-else :src="user?.avatar" :size="24">
-                  {{ user?.name?.charAt(0) }}
-                </el-avatar>
-                <span style="margin-left: 6px;">
-                  {{ isLoggedIn ? user?.name : '登录' }}
-                </span>
-              </el-menu-item>
-            </el-menu>
+        <!-- Navigation -->
+        <div class="nav-section">
+          <router-link to="/" class="nav-item" :class="{ active: route.path === '/' }">首页</router-link>
+          <router-link to="/scholars" class="nav-item" :class="{ active: route.path.startsWith('/scholar') }">学者</router-link>
+          <router-link v-if="showPaperGuide" to="/paper-guide" class="nav-item" :class="{ active: route.path === '/paper-guide' }">导读</router-link>
+          <router-link v-if="showForum" to="/forum" class="nav-item" :class="{ active: route.path.startsWith('/forum') }">论坛</router-link>
+          <router-link to="/chat" class="nav-item" :class="{ active: route.path === '/chat' }">消息</router-link>
+          <router-link to="/analytics" class="nav-item" :class="{ active: route.path === '/analytics' }">分析</router-link>
+          
+          <div class="user-menu" @click="router.push('/profile')">
+            <template v-if="isLoggedIn">
+              <el-avatar :size="32" :src="user?.avatar" class="user-avatar">
+                {{ user?.name?.charAt(0) }}
+              </el-avatar>
+              <span class="user-name">{{ user?.name }}</span>
+            </template>
+            <template v-else>
+              <el-button type="primary" round size="small">登录</el-button>
+            </template>
           </div>
-        </el-col>
-      </el-row>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePapersStore } from '../stores/papers'
 import { useSettingsStore } from '../stores/settings'
-import { Search, User, School } from '@element-plus/icons-vue'
+import { Search, School } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -82,94 +66,154 @@ const settingsStore = useSettingsStore()
 
 const searchInput = ref('')
 
-const activeIndex = computed(() => route.path + '') // 保证为字符串
-const isLoggedIn = computed(() => authStore.isLoggedIn)
+const isHomePage = computed(() => route.path === '/')
+const isLoggedIn = computed(() => authStore.isAuthenticated)
 const user = computed(() => authStore.user)
-const showSearch = computed(() => route.path === '/')
-
-// 根据设置显示功能
 const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
 const showForum = computed(() => settingsStore.settings.enableForum)
 
-const handleSelect = (index: string) => {
-  if (index !== route.path) {
-    router.push(index)
-  }
-}
-
-const handleSearch = (value: string) => {
-  if (route.path === '/') {
-    papersStore.searchPapers(value)
-  }
-}
-
 const handleSearchSubmit = () => {
-  if (route.path !== '/') {
-    router.push('/')
+  if (searchInput.value.trim()) {
+    papersStore.setSearchQuery(searchInput.value)
+    if (route.path !== '/') {
+      router.push({ path: '/', query: { q: searchInput.value } })
+    }
   }
-  papersStore.searchPapers(searchInput.value)
 }
-
-onMounted(() => {
-  settingsStore.loadSettings()
-})
-
-watch(() => route.path, () => {
-  if (route.path !== '/') {
-    searchInput.value = ''
-  }
-})
 </script>
 
 <style scoped lang="scss">
+.app-header {
+  height: 64px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
 
-.logo {
-  .logo-link {
+.glass-header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 100%;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #409eff, #36d1dc);
+    border-radius: 8px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #303133, #606266);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+.search-section {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 40px;
+
+  .header-search {
+    :deep(.el-input__wrapper) {
+      border-radius: 20px;
+      background-color: #f5f7fa;
+      box-shadow: none;
+      &:focus-within {
+        background-color: #fff;
+        box-shadow: 0 0 0 1px #409eff inset;
+      }
+    }
+  }
+}
+
+.nav-section {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+
+  .nav-item {
     text-decoration: none;
-    color: var(--text-color);
-    font-weight: 600;
-
-    .logo-text {
-      margin-left: 8px;
-      font-size: 18px;
-      color: var(--primary-color);
-    }
-  }
-}
-
-.search-wrapper {
-  max-width: 500px;
-
-  :deep(.el-input__wrapper) {
-    border-radius: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-}
-
-.nav-menu {
-  border: none;
-  background: transparent;
-
-  :deep(.el-menu-item) {
-    border: none;
-    color: var(--text-color);
+    color: #606266;
+    font-size: 15px;
     font-weight: 500;
-
-    &.is-active {
-      color: var(--primary-color);
-      border-bottom: 2px solid var(--primary-color);
-    }
+    transition: color 0.2s;
+    position: relative;
 
     &:hover {
-      color: var(--primary-color);
+      color: #409eff;
+    }
+
+    &.active {
+      color: #409eff;
+      font-weight: 600;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -22px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background-color: #409eff;
+        border-radius: 3px 3px 0 0;
+      }
+    }
+  }
+
+  .user-menu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding-left: 15px;
+    border-left: 1px solid #ebeef5;
+    
+    .user-name {
+      font-size: 14px;
+      color: #303133;
+      font-weight: 500;
+    }
+    
+    &:hover .user-name {
+      color: #409eff;
     }
   }
 }
 
-.nav-actions {
-  display: flex;
-  justify-content: flex-end;
+@media (max-width: 768px) {
+  .search-section { display: none; }
+  .nav-section { gap: 15px; }
+  .nav-item { font-size: 14px; }
 }
 </style>

@@ -5,232 +5,211 @@
     <div class="page-content">
       <div class="container">
         <div v-if="scholar" class="scholar-detail">
-          <div class="scholar-header">
-            <el-breadcrumb separator="/">
-              <el-breadcrumb-item :to="{ path: '/scholars' }">科研人员</el-breadcrumb-item>
-              <el-breadcrumb-item>学者详情</el-breadcrumb-item>
-            </el-breadcrumb>
-
-            <div class="scholar-actions">
-              <el-button
-                :type="scholar.isFollowed ? 'primary' : 'default'"
-                :icon="Plus"
-                @click="toggleFollow"
-              >
-                {{ scholar.isFollowed ? '已关注' : '关注' }}
-              </el-button>
-              <el-button :icon="Message">发消息</el-button>
-              <el-button @click="handleStartChat">私信</el-button>
+          <!-- Header Section -->
+          <div class="scholar-header-card glass-panel">
+            <div class="header-bg"></div>
+            <div class="header-content">
+              <div class="avatar-section">
+                <el-avatar :src="scholar.avatar" :size="120" class="main-avatar">
+                  {{ scholar.name.charAt(0) }}
+                </el-avatar>
+              </div>
+              <div class="info-section">
+                <div class="name-row">
+                  <h1>{{ scholar.name }}</h1>
+                  <el-tag v-if="scholar.isVerified" type="success" effect="dark" round size="small">
+                    <el-icon><Select /></el-icon> 认证学者
+                  </el-tag>
+                </div>
+                <p class="title">{{ scholar.title }}</p>
+                <p class="institution"><el-icon><School /></el-icon> {{ scholar.institution }}</p>
+                
+                <div class="action-buttons">
+                  <el-button 
+                    :type="scholar.isFollowed ? 'success' : 'primary'" 
+                    round 
+                    :icon="scholar.isFollowed ? Check : Plus"
+                    @click="toggleFollow"
+                  >
+                    {{ scholar.isFollowed ? '已关注' : '关注' }}
+                  </el-button>
+                  <el-button round :icon="ChatLineRound" @click="handleStartChat">私信</el-button>
+                  <el-button circle :icon="Share" />
+                </div>
+              </div>
+              
+              <div class="stats-section">
+                <div class="stat-box">
+                  <div class="value">{{ scholar.stats.hIndex }}</div>
+                  <div class="label">H-Index</div>
+                </div>
+                <div class="stat-box">
+                  <div class="value">{{ formatNumber(scholar.stats.citations) }}</div>
+                  <div class="label">总引用</div>
+                </div>
+                <div class="stat-box">
+                  <div class="value">{{ scholar.stats.papers }}</div>
+                  <div class="label">论文数</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <el-row :gutter="24">
+          <el-row :gutter="24" class="main-body">
+            <!-- Left Column -->
             <el-col :lg="8" :md="24" :sm="24" :xs="24">
-              <el-card class="scholar-profile">
-                <div class="profile-header">
-                  <el-avatar :src="scholar.avatar" :size="100">
-                    {{ scholar.name.charAt(0) }}
-                  </el-avatar>
-                  <h2>{{ scholar.name }}</h2>
-                  <p class="scholar-title">{{ scholar.title }}</p>
-                  <p class="scholar-institution">{{ scholar.institution }}</p>
-                </div>
+              <div class="sidebar-stack">
+                <!-- About Card -->
+                <div class="glass-panel sidebar-card">
+                  <h3>关于学者</h3>
+                  <div class="bio-text">{{ scholar.bio || '暂无简介' }}</div>
+                  
+                  <div class="info-group">
+                    <label>研究领域</label>
+                    <div class="tags-wrapper">
+                      <el-tag 
+                        v-for="field in scholar.fields" 
+                        :key="field" 
+                        effect="light"
+                        class="field-tag"
+                      >
+                        {{ field }}
+                      </el-tag>
+                    </div>
+                  </div>
 
-                <div class="profile-stats">
-                  <div class="stat-item">
-                    <span class="stat-value">{{ scholar.hIndex }}</span>
-                    <span class="stat-label">H指数</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-value">{{ scholar.citations }}</span>
-                    <span class="stat-label">引用数</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-value">{{ scholar.papers }}</span>
-                    <span class="stat-label">论文数</span>
-                  </div>
-                </div>
-
-                <div class="profile-fields">
-                  <h4>研究领域</h4>
-                  <div class="fields-list">
-                    <el-tag
-                      v-for="field in scholar.fields"
-                      :key="field"
-                      size="small"
-                      effect="plain"
-                    >
-                      {{ field }}
-                    </el-tag>
+                  <div class="info-group" v-if="scholar.email">
+                    <label>联系方式</label>
+                    <div class="contact-row">
+                      <el-icon><Message /></el-icon> {{ scholar.email }}
+                    </div>
                   </div>
                 </div>
 
-                <div class="profile-contact" v-if="scholar.email">
-                  <h4>联系方式</h4>
-                  <p><el-icon><Message /></el-icon> {{ scholar.email }}</p>
+                <!-- Co-authors Card (Mock) -->
+                <div class="glass-panel sidebar-card">
+                  <h3>合作学者</h3>
+                  <div class="co-authors-list">
+                    <div v-for="i in 3" :key="i" class="co-author-item">
+                      <el-avatar :size="32" :src="`https://i.pravatar.cc/150?u=${i}`" />
+                      <div class="info">
+                        <div class="name">Dr. CoAuthor {{ i }}</div>
+                        <div class="inst">University of Science</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
-                <div class="profile-bio" v-if="scholar.bio">
-                  <h4>个人简介</h4>
-                  <p>{{ scholar.bio }}</p>
-                </div>
-              </el-card>
+              </div>
             </el-col>
 
+            <!-- Right Column -->
             <el-col :lg="16" :md="24" :sm="24" :xs="24">
-              <el-card class="scholar-content">
-                <el-tabs v-model="activeTab">
-                  <el-tab-pane label="论文列表" name="papers">
-                    <div class="papers-list">
-                      <div class="papers-header">
-                        <span class="papers-count">共 {{ scholarPapers.length }} 篇论文</span>
-                        <el-select v-model="papersSortBy" size="small" style="width: 120px;">
-                          <el-option label="最新发表" value="date" />
-                          <el-option label="引用数" value="citations" />
-                        </el-select>
-                      </div>
+              <div class="glass-panel content-card">
+                <el-tabs v-model="activeTab" class="custom-tabs">
+                  <el-tab-pane label="发表论文" name="papers">
+                    <div class="tab-header">
+                      <span>共 {{ scholarPapers.length }} 篇论文</span>
+                      <el-select v-model="papersSortBy" size="small" style="width: 120px">
+                        <el-option label="最新发表" value="date" />
+                        <el-option label="引用最高" value="citations" />
+                      </el-select>
+                    </div>
 
-                      <div class="papers-grid">
-                        <div
-                          v-for="paper in sortedScholarPapers"
-                          :key="paper.id"
-                          class="paper-item"
-                        >
-                          <h4 class="paper-title">
-                            <router-link :to="`/paper/${paper.id}`">{{ paper.title }}</router-link>
-                          </h4>
-                          <p class="paper-journal">{{ paper.journal }} | {{ formatDate(paper.publishDate) }}</p>
-                          <p class="paper-abstract">{{ paper.abstract.substring(0, 150) }}...</p>
-                          <div class="paper-stats">
-                            <span><el-icon><Document /></el-icon> {{ paper.citations }} 引用</span>
-                            <span><el-icon><Star /></el-icon> {{ paper.favorites }} 收藏</span>
+                    <div class="papers-list">
+                      <div 
+                        v-for="paper in sortedScholarPapers" 
+                        :key="paper.id" 
+                        class="paper-list-item"
+                      >
+                        <div class="paper-main">
+                          <h3 class="paper-title" @click="router.push(`/paper/${paper.id}`)">
+                            {{ paper.title }}
+                          </h3>
+                          <div class="paper-meta">
+                            <span class="journal">{{ paper.journal }}</span>
+                            <span class="year">{{ paper.year }}</span>
+                          </div>
+                          <div class="paper-authors">
+                            {{ paper.authors.join(', ') }}
+                          </div>
+                        </div>
+                        <div class="paper-stats">
+                          <div class="citation-badge">
+                            <span class="count">{{ paper.citations }}</span>
+                            <span class="label">引用</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   </el-tab-pane>
-
-                  <el-tab-pane label="影响力趋势" name="impact">
-                    <div class="impact-chart">
-                      <v-chart
-                        :option="impactChartOptions"
-                        autoresize
-                        style="height: 400px;"
-                      />
-                    </div>
-                  </el-tab-pane>
-
-                  <el-tab-pane label="合作者网络" name="network">
-                    <div class="collaboration-network">
-                      <el-empty description="合作者网络图开发中..." />
-                    </div>
+                  
+                  <el-tab-pane label="科研动态" name="activity">
+                    <el-empty description="暂无动态" />
                   </el-tab-pane>
                 </el-tabs>
-              </el-card>
+              </div>
             </el-col>
           </el-row>
-
-          <!-- 聊天窗口 -->
-          <el-dialog
-            v-model="showChatWindow"
-            title="私信"
-            width="80%"
-            :before-close="handleCloseChatWindow"
-          >
-            <ChatWindow @close="handleCloseChatWindow" />
-          </el-dialog>
-        </div>
-
-        <div v-else class="loading-state">
-          <el-skeleton :rows="8" animated />
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Plus, Message, Document, Star } from '@element-plus/icons-vue'
-import { use } from 'echarts/core'
-import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart } from 'echarts/charts'
-import { TitleComponent, TooltipComponent, GridComponent } from 'echarts/components'
-import VChart from 'vue-echarts'
 import AppHeader from '@/components/AppHeader.vue'
-import ChatWindow from '@/components/ChatWindow.vue'
-import { mockScholars } from '@/mock/scholars'
-import { mockPapers } from '@/mock/papers'
-import { useChatStore } from '../stores/chat'
-
-use([
-  CanvasRenderer,
-  LineChart,
-  TitleComponent,
-  TooltipComponent,
-  GridComponent
-])
+import { 
+  Plus, Check, ChatLineRound, Share, School, 
+  Message, Select 
+} from '@element-plus/icons-vue'
+import { getScholarDetail } from '../api/scholars' // Need to ensure this exists or mock it
+import { mockScholars } from '../mock/scholars'
+import { mockPapers } from '../mock/papers'
 
 const route = useRoute()
 const router = useRouter()
-const chatStore = useChatStore()
-
-const scholar = ref(null)
-const showChatWindow = ref(false)
+const scholar = ref<any>(null)
 const activeTab = ref('papers')
 const papersSortBy = ref('date')
-const scholarPapers = ref([])
 
-const sortedScholarPapers = computed(() => {
-  const papers = [...scholarPapers.value]
-  if (papersSortBy.value === 'citations') {
-    return papers.sort((a, b) => b.citations - a.citations)
+// Mock data fetching
+const fetchScholarDetail = async () => {
+  const id = route.params.id as string
+  // In real app: const res = await getScholarDetail(id)
+  // For now, find in mock
+  const found = mockScholars.find(s => s.id === id)
+  if (found) {
+    scholar.value = {
+      ...found,
+      stats: found.stats || { hIndex: 0, citations: 0, papers: 0 }, // Ensure stats exist
+      bio: '致力于人工智能与计算机视觉领域的研究，在顶级会议发表多篇论文。',
+      isVerified: true,
+      email: 'scholar@university.edu'
+    }
   }
-  return papers.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate))
+}
+
+const scholarPapers = computed(() => {
+  // Filter mock papers for this scholar (mock logic)
+  return mockPapers.slice(0, 5).map(p => ({
+    ...p,
+    year: 2023,
+    journal: 'Nature Machine Intelligence',
+    citations: Math.floor(Math.random() * 100)
+  }))
 })
 
-const impactChartOptions = computed(() => ({
-  tooltip: {
-    trigger: 'axis'
-  },
-  xAxis: {
-    type: 'category',
-    data: ['2019', '2020', '2021', '2022', '2023', '2024']
-  },
-  yAxis: [
-    {
-      type: 'value',
-      name: 'H指数'
-    },
-    {
-      type: 'value',
-      name: '引用数',
-      position: 'right'
-    }
-  ],
-  series: [
-    {
-      name: 'H指数',
-      type: 'line',
-      data: [32, 35, 38, 41, 43, scholar.value?.hIndex || 45],
-      smooth: true,
-      itemStyle: { color: '#1890ff' }
-    },
-    {
-      name: '年引用数',
-      type: 'line',
-      yAxisIndex: 1,
-      data: [156, 234, 312, 387, 445, 520],
-      smooth: true,
-      itemStyle: { color: '#52c41a' }
-    }
-  ]
-}))
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('zh-CN')
-}
+const sortedScholarPapers = computed(() => {
+  let papers = [...scholarPapers.value]
+  if (papersSortBy.value === 'citations') {
+    papers.sort((a, b) => b.citations - a.citations)
+  } else {
+    // Date sort (mock)
+  }
+  return papers
+})
 
 const toggleFollow = () => {
   if (scholar.value) {
@@ -239,206 +218,240 @@ const toggleFollow = () => {
 }
 
 const handleStartChat = () => {
-  if (scholar.value) {
-    chatStore.startConversation(
-      scholar.value.id,
-      scholar.value.name,
-      scholar.value.avatar
-    )
-    // 跳转到私信页面
-    router.push('/chat')
-  }
+  router.push('/chat')
 }
 
-const handleCloseChatWindow = () => {
-  showChatWindow.value = false
+const formatNumber = (num: number) => {
+  return num > 1000 ? (num / 1000).toFixed(1) + 'k' : num
 }
 
 onMounted(() => {
-  const scholarId = route.params.id
-  scholar.value = mockScholars.find(s => s.id === scholarId)
-
-  if (scholar.value) {
-    // 获取该学者的论文（模拟数据）
-    scholarPapers.value = mockPapers
-      .filter(paper => paper.authors.some(author => author.name === scholar.value.name))
-      .slice(0, 10)
-  }
+  fetchScholarDetail()
 })
 </script>
 
 <style scoped lang="scss">
 .scholar-detail-page {
   min-height: 100vh;
+  background-color: #f0f2f5;
+  background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
 }
 
-.scholar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+.page-content {
+  padding-bottom: 40px;
+}
 
-  @include mobile {
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+}
+
+.scholar-header-card {
+  margin-top: 30px;
+  margin-bottom: 24px;
+  position: relative;
+  overflow: hidden;
+
+  .header-bg {
+    height: 120px;
+    background: linear-gradient(90deg, #409eff, #36d1dc);
+    opacity: 0.8;
+  }
+
+  .header-content {
+    padding: 0 40px 30px;
+    display: flex;
+    align-items: flex-end;
+    gap: 30px;
+    margin-top: -60px;
+
+    .avatar-section {
+      .main-avatar {
+        border: 4px solid #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        background: #fff;
+      }
+    }
+
+    .info-section {
+      flex: 1;
+      padding-bottom: 5px;
+
+      .name-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        h1 { margin: 0; font-size: 28px; color: #303133; }
+      }
+
+      .title { margin: 5px 0; font-size: 16px; color: #606266; }
+      .institution { margin: 0 0 15px 0; color: #909399; display: flex; align-items: center; gap: 5px; }
+
+      .action-buttons {
+        display: flex;
+        gap: 12px;
+      }
+    }
+
+    .stats-section {
+      display: flex;
+      gap: 30px;
+      padding-bottom: 10px;
+
+      .stat-box {
+        text-align: center;
+        .value { font-size: 24px; font-weight: 700; color: #303133; }
+        .label { font-size: 12px; color: #909399; text-transform: uppercase; letter-spacing: 0.5px; }
+      }
+    }
+  }
+}
+
+.main-body {
+  .sidebar-stack {
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-}
-
-.scholar-profile {
-  margin-bottom: 24px;
-
-  .profile-header {
-    text-align: center;
-    margin-bottom: 24px;
-
-    h2 {
-      margin: 16px 0 4px 0;
-      font-size: 24px;
-      font-weight: 600;
-    }
-
-    .scholar-title, .scholar-institution {
-      margin: 4px 0;
-      color: var(--text-light);
-    }
+    gap: 20px;
   }
 
-  .profile-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 24px;
-    text-align: center;
-
-    .stat-item {
-      .stat-value {
-        display: block;
-        font-size: 24px;
-        font-weight: 600;
-        color: var(--primary-color);
-        margin-bottom: 4px;
-      }
-
-      .stat-label {
-        display: block;
-        font-size: 12px;
-        color: var(--text-light);
-      }
-    }
-  }
-
-  .profile-fields, .profile-contact, .profile-bio {
-    margin-bottom: 20px;
-
-    h4 {
-      margin: 0 0 8px 0;
+  .sidebar-card {
+    padding: 20px;
+    
+    h3 { margin: 0 0 15px 0; font-size: 16px; color: #303133; border-left: 3px solid #409eff; padding-left: 10px; }
+    
+    .bio-text {
+      color: #606266;
+      line-height: 1.6;
       font-size: 14px;
-      font-weight: 600;
-      color: var(--text-color);
+      margin-bottom: 20px;
     }
 
-    .fields-list {
-      .el-tag {
-        margin-right: 6px;
-        margin-bottom: 6px;
+    .info-group {
+      margin-bottom: 20px;
+      &:last-child { margin-bottom: 0; }
+
+      label { display: block; color: #909399; font-size: 12px; margin-bottom: 8px; }
+      
+      .tags-wrapper {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .contact-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #606266;
       }
     }
 
-    p {
-      margin: 4px 0;
-      color: var(--text-light);
-      font-size: 14px;
-      line-height: 1.5;
+    .co-authors-list {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
 
-      .el-icon {
-        margin-right: 6px;
+      .co-author-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        
+        .info {
+          .name { font-weight: 500; color: #303133; font-size: 14px; }
+          .inst { font-size: 12px; color: #909399; }
+        }
       }
     }
   }
-}
 
-.scholar-content {
-  .papers-list {
-    .papers-header {
+  .content-card {
+    padding: 20px;
+    min-height: 500px;
+
+    .tab-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 20px;
-
-      .papers-count {
-        font-size: 14px;
-        color: var(--text-light);
-      }
+      color: #909399;
+      font-size: 14px;
     }
 
-    .papers-grid {
+    .paper-list-item {
       display: flex;
-      flex-direction: column;
-      gap: 20px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid #ebeef5;
 
-      .paper-item {
-        padding: 16px;
-        border: 1px solid var(--border-color);
-        border-radius: var(--border-radius);
-        transition: all 0.3s ease;
+      &:last-child { border-bottom: none; }
 
-        &:hover {
-          box-shadow: var(--shadow-medium);
-        }
+      .paper-main {
+        flex: 1;
+        padding-right: 20px;
 
         .paper-title {
           margin: 0 0 8px 0;
           font-size: 16px;
-
-          a {
-            color: var(--text-color);
-            text-decoration: none;
-
-            &:hover {
-              color: var(--primary-color);
-            }
-          }
+          color: #303133;
+          cursor: pointer;
+          &:hover { color: #409eff; }
         }
 
-        .paper-journal {
-          margin: 4px 0 8px 0;
+        .paper-meta {
           font-size: 13px;
-          color: var(--text-light);
+          color: #606266;
+          margin-bottom: 4px;
+          
+          .journal { font-style: italic; margin-right: 10px; }
         }
 
-        .paper-abstract {
-          margin: 8px 0 12px 0;
-          line-height: 1.5;
-          color: var(--text-color);
-          font-size: 14px;
+        .paper-authors {
+          font-size: 13px;
+          color: #909399;
         }
+      }
 
-        .paper-stats {
+      .paper-stats {
+        .citation-badge {
           display: flex;
-          gap: 16px;
-          font-size: 13px;
-          color: var(--text-light);
+          flex-direction: column;
+          align-items: center;
+          background: #f0f9eb;
+          color: #67c23a;
+          padding: 5px 10px;
+          border-radius: 6px;
+          min-width: 50px;
 
-          span {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          }
+          .count { font-weight: 700; font-size: 16px; }
+          .label { font-size: 10px; }
         }
       }
     }
   }
+}
 
-  .impact-chart {
-    padding: 20px 0;
-  }
-
-  .collaboration-network {
-    min-height: 300px;
-    display: flex;
+@media (max-width: 768px) {
+  .scholar-header-card .header-content {
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    text-align: center;
+    margin-top: -40px;
+
+    .info-section {
+      .name-row { justify-content: center; }
+      .institution { justify-content: center; }
+      .action-buttons { justify-content: center; }
+    }
   }
 }
 </style>

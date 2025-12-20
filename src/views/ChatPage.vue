@@ -1,631 +1,471 @@
 <template>
   <div class="chat-page">
+    <AppHeader />
     <div class="chat-container">
       <div class="chat-sidebar">
         <div class="sidebar-header">
-          <h3>私信</h3>
-          <el-button 
-            type="primary" 
-            size="small" 
-            @click="showNewChatDialog = true"
-          >
-            新建对话
-          </el-button>
+          <h3>消息中心</h3>
+          <el-button circle size="small" :icon="Plus" @click="showNewChatDialog = true" />
         </div>
-
-        <div class="conversations-list">
+        <div class="search-box">
+          <el-input v-model="searchQuery" placeholder="搜索联系人..." prefix-icon="Search" clearable />
+        </div>
+        <div class="conversation-list" v-loading="loadingConversations">
           <div
-            v-for="conversation in conversations"
-            :key="conversation.id"
+            v-for="conv in filteredConversations"
+            :key="conv.id"
             class="conversation-item"
-            :class="{ active: currentConversationId === conversation.id }"
-            @click="setCurrentConversation(conversation.id)"
+            :class="{ active: currentConversationId === conv.id }"
+            @click="selectConversation(conv)"
           >
-            <el-avatar :src="conversation.participantAvatar" :size="40">
-              {{ conversation.participantName.charAt(0) }}
-            </el-avatar>
-            <div class="conversation-info">
-              <div class="participant-name">{{ conversation.participantName }}</div>
-              <div class="last-message">
-                {{ conversation.lastMessage?.content || '暂无消息' }}
+            <el-badge :value="conv.unreadCount" :hidden="!conv.unreadCount" class="avatar-badge">
+              <el-avatar :src="conv.avatar || defaultAvatar" shape="square" />
+            </el-badge>
+            <div class="conv-info">
+              <div class="conv-top">
+                <span class="conv-name">{{ conv.name }}</span>
+                <span class="conv-time">{{ formatTime(conv.lastMessageTime) }}</span>
               </div>
+              <div class="conv-last-msg">{{ conv.lastMessage }}</div>
             </div>
-            <div class="conversation-meta">
-              <div class="time">{{ formatTime(conversation.lastActivity) }}</div>
-              <el-badge
-                v-if="conversation.unreadCount > 0"
-                :value="conversation.unreadCount"
-                class="unread-badge"
-              />
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-main">
+        <template v-if="currentConversationId">
+          <div class="chat-header">
+            <div class="header-info">
+              <span class="chat-title">{{ currentConversationName }}</span>
+              <span class="status-dot"></span>
+            </div>
+            <div class="header-actions">
+              <el-button circle :icon="MoreFilled" />
             </div>
           </div>
           
-          <div v-if="conversations.length === 0" class="empty-conversations">
-            <el-empty 
-              description="暂无对话" 
-              :image-size="100"
-            >
-              <el-button 
-                type="primary" 
-                @click="showNewChatDialog = true"
-              >
-                开始新对话
-              </el-button>
-            </el-empty>
-          </div>
-        </div>
-      </div>
-
-      <div class="chat-main" v-if="currentConversation">
-        <div class="chat-header">
-          <el-avatar :src="currentConversation.participantAvatar" :size="32">
-            {{ currentConversation.participantName.charAt(0) }}
-          </el-avatar>
-          <div class="header-info">
-            <span class="participant-name">{{ currentConversation.participantName }}</span>
-            <span class="status">在线</span>
-          </div>
-          <div class="header-actions">
-            <el-button size="small" @click="handleVideoCall">
-              <el-icon><VideoCamera /></el-icon>
-              视频通话
-            </el-button>
-            <el-button size="small" @click="handleDeleteConversation">
-              <el-icon><Delete /></el-icon>
-              删除对话
-            </el-button>
-          </div>
-        </div>
-
-        <div class="messages-container" ref="messagesContainer">
-          <div
-            v-for="message in currentMessages"
-            :key="message.id"
-            class="message-item"
-            :class="{ 'own-message': message.senderId === 'current-user' }"
-          >
-            <div class="message-content">
-              {{ message.content }}
-            </div>
-            <div class="message-time">
-              {{ formatTime(message.timestamp) }}
+          <div class="messages-area" ref="messagesArea">
+            <div v-for="msg in messages" :key="msg.id" class="message-row" :class="{ 'message-own': msg.isOwn }">
+              <el-avatar :src="msg.isOwn ? myAvatar : (currentConversationAvatar || defaultAvatar)" class="msg-avatar" size="small" />
+              <div class="message-content-wrapper">
+                <div class="message-bubble" v-html="renderMessage(msg.content)"></div>
+                <div class="message-time">{{ formatTime(msg.timestamp) }}</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="message-input">
-          <div v-if="!canSendMessage" class="message-limit-warning">
-            <el-alert
-              title="已达到连续发送消息上限"
-              description="请等待对方回复后再继续发送消息"
-              type="warning"
-              :closable="false"
-              show-icon
-            />
-          </div>
-          <div class="input-area">
+          <div class="chat-input-area">
+            <div class="toolbar">
+              <el-popover placement="top-start" :width="300" trigger="click">
+                <template #reference>
+                  <el-button circle text>😀</el-button>
+                </template>
+                <EmojiPicker @select="onSelectEmoji" />
+              </el-popover>
+              <el-button circle text :icon="Picture" />
+              <el-button circle text :icon="Paperclip" />
+            </div>
             <el-input
-              v-model="newMessage"
+              v-model="inputMessage"
               type="textarea"
               :rows="3"
-              placeholder="输入消息..."
-              :disabled="!canSendMessage"
-              @keydown.ctrl.enter="handleSendMessage"
+              placeholder="输入消息 (支持 Markdown)..."
+              @keydown.enter.prevent="handleSendMessage"
+              resize="none"
+              class="input-textarea"
             />
             <div class="input-actions">
-              <div class="input-tools">
-                <el-button size="small" text @click="handleSendFile">
-                  <el-icon><Paperclip /></el-icon>
-                  附件
-                </el-button>
-                <el-button size="small" text @click="handleSendImage">
-                  <el-icon><Picture /></el-icon>
-                  图片
-                </el-button>
-              </div>
-              <div class="send-area">
-                <span class="send-tip">Ctrl + Enter 发送</span>
-                <el-button
-                  type="primary"
-                  :disabled="!newMessage.trim() || !canSendMessage"
-                  @click="handleSendMessage"
-                >
-                  发送
-                </el-button>
-              </div>
+              <span class="tip">Enter 发送</span>
+              <el-button type="primary" @click="handleSendMessage" :loading="sending" round>发送</el-button>
             </div>
           </div>
+        </template>
+        <div v-else class="empty-chat">
+          <el-empty description="选择一个对话开始聊天" />
         </div>
       </div>
-
-      <div v-else class="chat-empty">
-        <el-empty 
-          description="选择一个对话开始聊天" 
-          :image-size="200"
-        >
-          <el-button 
-            type="primary" 
-            @click="showNewChatDialog = true"
-          >
-            开始新对话
-          </el-button>
-        </el-empty>
-      </div>
     </div>
-
-    <!-- 新建对话对话框 -->
-    <el-dialog
-      v-model="showNewChatDialog"
-      title="新建对话"
-      width="500px"
-      @close="resetNewChatForm"
-    >
-      <el-form :model="newChatForm" label-width="80px">
-        <el-form-item label="选择学者">
-          <el-select
-            v-model="newChatForm.participantId"
-            placeholder="请选择要私信的学者"
-            filterable
-            style="width: 100%"
-          >
-            <el-option
-              v-for="scholar in availableScholars"
-              :key="scholar.id"
-              :label="scholar.name"
-              :value="scholar.id"
-            >
-              <div class="scholar-option">
-                <el-avatar :src="scholar.avatar" :size="24">
-                  {{ scholar.name.charAt(0) }}
-                </el-avatar>
-                <span class="scholar-name">{{ scholar.name }}</span>
-                <span class="scholar-title">{{ scholar.title }}</span>
-              </div>
-            </el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="初始消息">
-          <el-input
-            v-model="newChatForm.initialMessage"
-            type="textarea"
-            :rows="3"
-            placeholder="输入您想说的话..."
-          />
-        </el-form-item>
-      </el-form>
-      
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showNewChatDialog = false">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="handleCreateNewChat"
-            :disabled="!newChatForm.participantId"
-          >
-            开始对话
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  VideoCamera, 
-  Delete, 
-  Paperclip, 
-  Picture 
-} from '@element-plus/icons-vue'
-import { useChatStore } from '../stores/chat'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import AppHeader from '../components/AppHeader.vue'
+import { getConversations, getMessages, sendMessage } from '../api/social'
+import { ElMessage } from 'element-plus'
+import { Search, Plus, MoreFilled, Picture, Paperclip } from '@element-plus/icons-vue'
+import { marked } from 'marked'
+import EmojiPicker from 'vue3-emoji-picker'
+import 'vue3-emoji-picker/css'
 
-const chatStore = useChatStore()
-const newMessage = ref('')
-const messagesContainer = ref<HTMLElement>()
+const loadingConversations = ref(false)
+const conversations = ref<any[]>([])
+const currentConversationId = ref<string | null>(null)
+const currentConversationName = ref('')
+const currentConversationAvatar = ref('')
+const messages = ref<any[]>([])
+const inputMessage = ref('')
+const sending = ref(false)
+const messagesArea = ref<HTMLElement | null>(null)
+const searchQuery = ref('')
 const showNewChatDialog = ref(false)
-const newChatForm = ref({
-  participantId: '',
-  initialMessage: ''
+let pollInterval: any = null
+
+const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+const myAvatar = 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'
+
+const filteredConversations = computed(() => {
+  if (!searchQuery.value) return conversations.value
+  return conversations.value.filter(c => c.name.toLowerCase().includes(searchQuery.value.toLowerCase()))
 })
 
-// 模拟可用学者数据
-const availableScholars = ref([
-  {
-    id: 'scholar-3',
-    name: '王教授',
-    title: '计算机科学教授',
-    avatar: 'https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=150'
-  },
-  {
-    id: 'scholar-4', 
-    name: '刘博士',
-    title: '人工智能研究员',
-    avatar: 'https://images.pexels.com/photos/3777931/pexels-photo-3777931.jpeg?auto=compress&cs=tinysrgb&w=150'
-  },
-  {
-    id: 'scholar-5',
-    name: '陈副教授',
-    title: '数据科学副教授',
-    avatar: 'https://images.pexels.com/photos/2379005/pexels-photo-2379005.jpeg?auto=compress&cs=tinysrgb&w=150'
+const fetchConversations = async () => {
+  loadingConversations.value = true
+  try {
+    const res = await getConversations()
+    conversations.value = (res as any).data || res
+  } catch (error) {
+    console.error(error)
+  } finally {
+    loadingConversations.value = false
   }
-])
-
-const conversations = computed(() => chatStore.conversations)
-const currentConversationId = computed(() => chatStore.currentConversationId)
-const currentConversation = computed(() => chatStore.currentConversation)
-const currentMessages = computed(() => chatStore.currentMessages)
-const canSendMessage = computed(() => chatStore.canSendMessage)
-
-const formatTime = (timestamp: string) => {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  return date.toLocaleDateString('zh-CN')
 }
 
-const setCurrentConversation = (conversationId: string) => {
-  chatStore.setCurrentConversation(conversationId)
-  nextTick(() => {
+const selectConversation = async (conv: any) => {
+  currentConversationId.value = conv.id
+  currentConversationName.value = conv.name
+  currentConversationAvatar.value = conv.avatar
+  await fetchMessages()
+}
+
+const fetchMessages = async () => {
+  if (!currentConversationId.value) return
+  try {
+    const res = await getMessages(currentConversationId.value)
+    messages.value = (res as any).data || res
     scrollToBottom()
-  })
+  } catch (error) {
+    console.error(error)
+  }
 }
 
-const handleSendMessage = () => {
-  if (!newMessage.value.trim() || !canSendMessage.value) return
+const handleSendMessage = async (e?: KeyboardEvent) => {
+  if (e && e.shiftKey) return // Shift+Enter for new line
   
-  const success = chatStore.sendMessage(newMessage.value.trim())
-  if (success) {
-    newMessage.value = ''
-    nextTick(() => {
-      scrollToBottom()
+  if (!inputMessage.value.trim() || !currentConversationId.value) return
+  
+  sending.value = true
+  try {
+    await sendMessage({
+      receiverId: currentConversationId.value,
+      content: inputMessage.value
     })
-  } else {
-    ElMessage.warning('发送失败，请稍后重试')
+    inputMessage.value = ''
+    await fetchMessages()
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('发送失败')
+  } finally {
+    sending.value = false
   }
 }
 
-const handleCreateNewChat = () => {
-  const scholar = availableScholars.value.find(s => s.id === newChatForm.value.participantId)
-  if (!scholar) return
-
-  const conversationId = chatStore.startConversation(
-    scholar.id,
-    scholar.name,
-    scholar.avatar
-  )
-
-  if (newChatForm.value.initialMessage.trim()) {
-    chatStore.sendMessage(newChatForm.value.initialMessage.trim())
-  }
-
-  showNewChatDialog.value = false
-  resetNewChatForm()
-  ElMessage.success('对话创建成功')
-  
-  nextTick(() => {
-    scrollToBottom()
-  })
+const onSelectEmoji = (emoji: any) => {
+  inputMessage.value += emoji.i
 }
 
-const resetNewChatForm = () => {
-  newChatForm.value = {
-    participantId: '',
-    initialMessage: ''
-  }
-}
-
-const handleVideoCall = () => {
-  ElMessage.info('视频通话功能开发中...')
-}
-
-const handleDeleteConversation = () => {
-  ElMessageBox.confirm(
-    '确定要删除这个对话吗？删除后无法恢复。',
-    '确认删除',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(() => {
-    ElMessage.success('对话已删除')
-    // 这里可以添加删除对话的逻辑
-  }).catch(() => {
-    // 用户取消删除
-  })
-}
-
-const handleSendFile = () => {
-  ElMessage.info('文件发送功能开发中...')
-}
-
-const handleSendImage = () => {
-  ElMessage.info('图片发送功能开发中...')
+const renderMessage = (content: string) => {
+  return marked(content)
 }
 
 const scrollToBottom = () => {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  nextTick(() => {
+    if (messagesArea.value) {
+      messagesArea.value.scrollTop = messagesArea.value.scrollHeight
+    }
+  })
+}
+
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return ''
+  const date = new Date(timeStr)
+  const now = new Date()
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
+  return date.toLocaleDateString()
 }
 
 onMounted(() => {
-  chatStore.initMockData()
+  fetchConversations()
+  pollInterval = setInterval(() => {
+    if (currentConversationId.value) {
+      fetchMessages()
+    }
+  }, 5000)
+})
+
+onUnmounted(() => {
+  if (pollInterval) clearInterval(pollInterval)
 })
 </script>
 
 <style scoped lang="scss">
 .chat-page {
-  min-height: calc(100vh - 64px);
-  background-color: #f5f5f5;
-  padding: 20px;
+  height: 100vh;
+  background-color: #f0f2f5;
+  display: flex;
+  flex-direction: column;
+}
 
-  .chat-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    height: calc(100vh - 104px);
+.chat-container {
+  flex: 1;
+  display: flex;
+  max-width: 1400px;
+  margin: 20px auto;
+  width: 95%;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  height: calc(100vh - 100px);
+}
+
+.chat-sidebar {
+  width: 320px;
+  border-right: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  background: #fcfcfc;
+
+  .sidebar-header {
+    padding: 20px;
     display: flex;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+    justify-content: space-between;
+    align-items: center;
+    h3 { margin: 0; font-size: 18px; color: #333; }
+  }
 
-    .chat-sidebar {
-      width: 320px;
-      border-right: 1px solid #e8e8e8;
-      display: flex;
-      flex-direction: column;
+  .search-box {
+    padding: 0 20px 15px;
+  }
 
-      .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid #e8e8e8;
+  .conversation-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .conversation-item {
+    padding: 15px 20px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+
+    &:hover {
+      background-color: #f5f7fa;
+    }
+
+    &.active {
+      background-color: #e6f7ff;
+      border-left-color: #1890ff;
+    }
+
+    .avatar-badge {
+      margin-right: 12px;
+    }
+
+    .conv-info {
+      flex: 1;
+      overflow: hidden;
+
+      .conv-top {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        background-color: #fafafa;
-
-        h3 {
-          margin: 0;
-          font-size: 18px;
+        margin-bottom: 4px;
+        
+        .conv-name {
           font-weight: 600;
           color: #333;
+          font-size: 15px;
+        }
+        
+        .conv-time {
+          font-size: 12px;
+          color: #999;
         }
       }
 
-      .conversations-list {
-        flex: 1;
-        overflow-y: auto;
-
-        .conversation-item {
-          display: flex;
-          align-items: center;
-          padding: 16px 20px;
-          cursor: pointer;
-          transition: all 0.2s;
-          border-bottom: 1px solid #f0f0f0;
-
-          &:hover {
-            background-color: #f8f9fa;
-          }
-
-          &.active {
-            background-color: var(--el-color-primary);
-            color: white;
-
-            .conversation-info .participant-name,
-            .conversation-info .last-message,
-            .conversation-meta .time {
-              color: white;
-            }
-          }
-
-          .conversation-info {
-            flex: 1;
-            margin-left: 12px;
-            min-width: 0;
-
-            .participant-name {
-              font-weight: 500;
-              margin-bottom: 4px;
-              font-size: 14px;
-            }
-
-            .last-message {
-              font-size: 12px;
-              color: #999;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-              line-height: 1.4;
-            }
-          }
-
-          .conversation-meta {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 4px;
-
-            .time {
-              font-size: 11px;
-              color: #999;
-            }
-          }
-        }
-
-        .empty-conversations {
-          padding: 40px 20px;
-          text-align: center;
-        }
+      .conv-last-msg {
+        font-size: 13px;
+        color: #666;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
     }
+  }
+}
 
-    .chat-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
 
-      .chat-header {
-        padding: 16px 20px;
-        border-bottom: 1px solid #e8e8e8;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background-color: #fafafa;
+  .chat-header {
+    padding: 15px 25px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
 
-        .header-info {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-
-          .participant-name {
-            font-weight: 500;
-            font-size: 16px;
-            margin-bottom: 2px;
-          }
-
-          .status {
-            font-size: 12px;
-            color: #52c41a;
-          }
-        }
-
-        .header-actions {
-          display: flex;
-          gap: 8px;
-        }
-      }
-
-      .messages-container {
-        flex: 1;
-        padding: 20px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        background-color: #fafafa;
-
-        .message-item {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
-
-          &.own-message {
-            align-items: flex-end;
-
-            .message-content {
-              background-color: var(--el-color-primary);
-              color: white;
-            }
-          }
-
-          .message-content {
-            max-width: 70%;
-            padding: 10px 16px;
-            background-color: white;
-            border-radius: 12px;
-            word-wrap: break-word;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            line-height: 1.5;
-          }
-
-          .message-time {
-            font-size: 11px;
-            color: #999;
-            margin-top: 6px;
-          }
-        }
-      }
-
-      .message-input {
-        border-top: 1px solid #e8e8e8;
-        background-color: white;
-
-        .message-limit-warning {
-          padding: 12px 20px;
-        }
-
-        .input-area {
-          padding: 20px;
-
-          .input-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 12px;
-
-            .input-tools {
-              display: flex;
-              gap: 8px;
-            }
-
-            .send-area {
-              display: flex;
-              align-items: center;
-              gap: 12px;
-
-              .send-tip {
-                font-size: 12px;
-                color: #999;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    .chat-empty {
-      flex: 1;
+    .header-info {
       display: flex;
       align-items: center;
-      justify-content: center;
-      background-color: #fafafa;
-    }
-  }
-}
-
-.scholar-option {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  .scholar-name {
-    font-weight: 500;
-  }
-
-  .scholar-title {
-    font-size: 12px;
-    color: #999;
-    margin-left: auto;
-  }
-}
-
-// 响应式设计
-@media (max-width: 768px) {
-  .chat-page {
-    padding: 10px;
-
-    .chat-container {
-      height: calc(100vh - 84px);
-
-      .chat-sidebar {
-        width: 100%;
-        position: absolute;
-        z-index: 10;
-        height: 100%;
-        background: white;
+      gap: 8px;
+      
+      .chat-title {
+        font-size: 18px;
+        font-weight: 600;
       }
-
-      .chat-main {
-        width: 100%;
+      
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #52c41a;
+        border-radius: 50%;
       }
     }
+  }
+
+  .messages-area {
+    flex: 1;
+    padding: 20px 30px;
+    overflow-y: auto;
+    background-color: #f5f7fa;
+    background-image: radial-gradient(#e6e6e6 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  .message-row {
+    display: flex;
+    margin-bottom: 24px;
+    align-items: flex-start;
+
+    .msg-avatar {
+      margin-right: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .message-content-wrapper {
+      max-width: 70%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message-bubble {
+      background: white;
+      padding: 12px 18px;
+      border-radius: 0 12px 12px 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      line-height: 1.6;
+      font-size: 15px;
+      color: #333;
+      
+      :deep(p) { margin: 0; }
+      :deep(code) { background: #f0f0f0; padding: 2px 4px; border-radius: 4px; }
+    }
+
+    .message-time {
+      font-size: 12px;
+      color: #999;
+      margin-top: 4px;
+      margin-left: 4px;
+    }
+
+    &.message-own {
+      flex-direction: row-reverse;
+
+      .msg-avatar {
+        margin-right: 0;
+        margin-left: 12px;
+      }
+
+      .message-content-wrapper {
+        align-items: flex-end;
+      }
+
+      .message-bubble {
+        background: #1890ff;
+        color: white;
+        border-radius: 12px 0 12px 12px;
+        
+        :deep(code) { background: rgba(255,255,255,0.2); color: white; }
+      }
+      
+      .message-time {
+        margin-right: 4px;
+        text-align: right;
+      }
+    }
+  }
+
+  .chat-input-area {
+    padding: 20px;
+    border-top: 1px solid #f0f0f0;
+    background: white;
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      
+      .el-button {
+        font-size: 20px;
+        color: #666;
+        &:hover { color: #1890ff; background: #f0f7ff; }
+      }
+    }
+
+    .input-textarea {
+      :deep(.el-textarea__inner) {
+        border: none;
+        background: #f5f7fa;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 14px;
+        
+        &:focus {
+          background: white;
+          box-shadow: 0 0 0 1px #1890ff inset;
+        }
+      }
+    }
+
+    .input-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 10px;
+      gap: 15px;
+
+      .tip {
+        font-size: 12px;
+        color: #999;
+      }
+    }
+  }
+
+  .empty-chat {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f9f9f9;
   }
 }
 </style>
