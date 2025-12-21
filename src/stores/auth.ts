@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '../types/user'
+import { login as apiLogin } from '../api/auth'
+import { get } from '../api/index'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -8,30 +10,49 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!user.value && !!token.value)
 
-  const login = async (username: string, password: string) => {
-    // Mock login
-    if (username === 'admin' && password === '123456') {
-      const userData = {
-        id: '1',
-        username: 'admin',
-        email: 'admin@example.com',
-        avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150',
-        name: '张教授',
-        title: '教授',
-        institution: '清华大学',
-        researchFields: ['人工智能', '机器学习', '深度学习'],
-        hIndex: 45,
-        citations: 1234,
-        papers: 89
-      }
+  // 设置用户信息
+  const setUser = (userData: Partial<User>) => {
+    user.value = {
+      id: userData.id || '',
+      username: userData.username || '',
+      email: userData.email || '',
+      role: userData.role || 'user',
+      avatar: userData.avatar,
+      name: userData.name,
+      title: userData.title,
+      institution: userData.institution,
+      researchFields: userData.researchFields || [],
+      hIndex: userData.hIndex,
+      citations: userData.citations,
+      papers: userData.papers
+    } as User
+    localStorage.setItem('user', JSON.stringify(user.value))
+  }
 
-      user.value = userData
-      token.value = 'mock-jwt-token'
-      localStorage.setItem('token', token.value)
-      localStorage.setItem('user', JSON.stringify(userData))
+  // 登录（保留兼容性，但实际由LoginPage调用API）
+  const login = async (account: string, password: string) => {
+    try {
+      const response = await apiLogin({ account, password })
+      token.value = response.token
+      localStorage.setItem('token', response.token)
+      
+      // 获取用户详细信息
+      await fetchUserInfo()
+      
       return { success: true }
+    } catch (error: any) {
+      return { success: false, message: error.message || '登录失败' }
     }
-    return { success: false, message: '用户名或密码错误' }
+  }
+
+  // 获取用户详细信息
+  const fetchUserInfo = async () => {
+    try {
+      const userInfo = await get<User>('/users/me')
+      setUser(userInfo)
+    } catch (error) {
+      console.error('获取用户信息失败:', error)
+    }
   }
 
   const logout = () => {
@@ -41,10 +62,17 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
-  const initAuth = () => {
+  const initAuth = async () => {
     const savedUser = localStorage.getItem('user')
     if (savedUser && token.value) {
-      user.value = JSON.parse(savedUser)
+      try {
+        user.value = JSON.parse(savedUser)
+        // 验证token是否有效，如果无效则清除
+        await fetchUserInfo()
+      } catch (error) {
+        // token可能已过期，清除本地数据
+        logout()
+      }
     }
   }
 
@@ -54,6 +82,8 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     login,
     logout,
-    initAuth
+    initAuth,
+    setUser,
+    fetchUserInfo
   }
 })

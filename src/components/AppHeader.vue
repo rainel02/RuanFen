@@ -45,19 +45,44 @@
               <el-menu-item index="/scholars">学者</el-menu-item>
               <el-menu-item index="/paper-guide" v-if="showPaperGuide">导读</el-menu-item>
               <el-menu-item index="/forum" v-if="showForum">论坛</el-menu-item>
-              <el-menu-item index="/chat">私信</el-menu-item>
               <el-menu-item index="/analytics">统计</el-menu-item>
-              <el-menu-item index="/profile">
-                <el-icon v-if="!isLoggedIn">
-                  <User />
-                </el-icon>
-                <el-avatar v-else :src="user?.avatar" :size="24">
-                  {{ user?.name?.charAt(0) }}
-                </el-avatar>
-                <span style="margin-left: 6px;">
-                  {{ isLoggedIn ? user?.name : '登录' }}
-                </span>
-              </el-menu-item>
+              
+              <!-- 未登录用户 -->
+              <template v-if="!isLoggedIn">
+                <el-menu-item index="/login">登录</el-menu-item>
+                <el-menu-item index="/register">注册</el-menu-item>
+              </template>
+              
+              <!-- 已登录用户 -->
+              <template v-else>
+                <el-menu-item index="/chat">私信</el-menu-item>
+                <el-sub-menu index="user-menu">
+                  <template #title>
+                    <el-avatar :src="user?.avatar" :size="24" style="margin-right: 8px;">
+                      {{ user?.name?.charAt(0) || user?.username?.charAt(0) }}
+                    </el-avatar>
+                    <span>{{ user?.name || user?.username }}</span>
+                  </template>
+                  <el-menu-item index="/profile">个人中心</el-menu-item>
+                  <el-menu-item index="/user/profile">个人信息设置</el-menu-item>
+                  <el-menu-item index="/user/certification" v-if="user?.role !== 'admin'">学者认证</el-menu-item>
+                  <el-menu-item index="/user/achievements" v-if="user?.role !== 'admin'">成果管理</el-menu-item>
+                  <el-menu-item index="/settings">系统设置</el-menu-item>
+                </el-sub-menu>
+                
+                <!-- 管理员菜单 -->
+                <el-sub-menu index="admin-menu" v-if="user?.role === 'admin'">
+                  <template #title>
+                    <el-icon><Setting /></el-icon>
+                    <span>管理后台</span>
+                  </template>
+                  <el-menu-item index="/admin">仪表盘</el-menu-item>
+                  <el-menu-item index="/admin/certifications">认证审核</el-menu-item>
+                  <el-menu-item index="/admin/appeals">申诉处理</el-menu-item>
+                  <el-menu-item index="/admin/achievements">成果审核</el-menu-item>
+                  <el-menu-item index="/admin/tasks">任务管理</el-menu-item>
+                </el-sub-menu>
+              </template>
             </el-menu>
           </div>
         </el-col>
@@ -72,7 +97,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePapersStore } from '../stores/papers'
 import { useSettingsStore } from '../stores/settings'
-import { Search, User, School } from '@element-plus/icons-vue'
+import { Search, User, School, Setting } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()

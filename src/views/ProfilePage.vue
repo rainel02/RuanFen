@@ -4,106 +4,18 @@
 
     <div class="page-content">
       <div class="container">
-        <div v-if="!isLoggedIn" class="auth-section">
-          <el-card class="auth-card">
-            <div class="auth-tabs">
-              <el-tabs v-model="authTab" class="auth-tabs-component">
-                <el-tab-pane label="登录" name="login">
-                  <el-form
-                    ref="loginFormRef"
-                    :model="loginForm"
-                    :rules="loginRules"
-                    label-width="80px"
-                  >
-                    <el-form-item label="用户名" prop="username">
-                      <el-input
-                        v-model="loginForm.username"
-                        placeholder="请输入用户名"
-                      />
-                    </el-form-item>
-
-                    <el-form-item label="密码" prop="password">
-                      <el-input
-                        v-model="loginForm.password"
-                        type="password"
-                        placeholder="请输入密码"
-                        show-password
-                      />
-                    </el-form-item>
-
-                    <el-form-item>
-                      <el-button
-                        type="primary"
-                        @click="handleLogin"
-                        :loading="loginLoading"
-                        style="width: 100%;"
-                      >
-                        登录
-                      </el-button>
-                    </el-form-item>
-                  </el-form>
-
-                  <div class="demo-info">
-                    <el-alert
-                      title="演示账号"
-                      type="info"
-                      :closable="false"
-                      show-icon
-                    >
-                      <template #default>
-                        用户名: admin，密码: 123456
-                      </template>
-                    </el-alert>
-                  </div>
-                </el-tab-pane>
-
-                <el-tab-pane label="注册" name="register">
-                  <el-form
-                    ref="registerFormRef"
-                    :model="registerForm"
-                    :rules="registerRules"
-                    label-width="80px"
-                  >
-                    <el-form-item label="姓名" prop="name">
-                      <el-input v-model="registerForm.name" placeholder="请输入真实姓名" />
-                    </el-form-item>
-
-                    <el-form-item label="邮箱" prop="email">
-                      <el-input v-model="registerForm.email" placeholder="请输入邮箱地址" />
-                    </el-form-item>
-
-                    <el-form-item label="密码" prop="password">
-                      <el-input
-                        v-model="registerForm.password"
-                        type="password"
-                        placeholder="请输入密码"
-                        show-password
-                      />
-                    </el-form-item>
-
-                    <el-form-item label="确认密码" prop="confirmPassword">
-                      <el-input
-                        v-model="registerForm.confirmPassword"
-                        type="password"
-                        placeholder="请再次输入密码"
-                        show-password
-                      />
-                    </el-form-item>
-
-                    <el-form-item>
-                      <el-button
-                        type="primary"
-                        @click="handleRegister"
-                        :loading="registerLoading"
-                        style="width: 100%;"
-                      >
-                        注册
-                      </el-button>
-                    </el-form-item>
-                  </el-form>
-                </el-tab-pane>
-              </el-tabs>
-            </div>
+        <div v-if="!isLoggedIn" class="not-logged-in">
+          <el-card class="auth-prompt-card">
+            <el-result
+              icon="warning"
+              title="请先登录"
+              sub-title="登录后即可查看和管理您的个人中心"
+            >
+              <template #extra>
+                <el-button type="primary" @click="$router.push('/login')">前往登录</el-button>
+                <el-button @click="$router.push('/register')">注册账号</el-button>
+              </template>
+            </el-result>
           </el-card>
         </div>
 
@@ -138,6 +50,48 @@
                 <div class="profile-actions">
                   <el-button @click="handleLogout">退出登录</el-button>
                   <el-button @click="$router.push('/settings')">个人设置</el-button>
+                </div>
+
+                <div class="profile-quick-links">
+                  <h4>快捷入口</h4>
+                  <div class="links-grid">
+                    <el-button 
+                      link 
+                      type="primary" 
+                      @click="$router.push('/user/profile')"
+                      class="quick-link"
+                    >
+                      <el-icon><User /></el-icon>
+                      个人信息设置
+                    </el-button>
+                    <el-button 
+                      link 
+                      type="primary" 
+                      @click="$router.push('/user/certification')"
+                      class="quick-link"
+                    >
+                      <el-icon><CircleCheck /></el-icon>
+                      学者认证
+                    </el-button>
+                    <el-button 
+                      link 
+                      type="primary" 
+                      @click="$router.push('/user/appeal')"
+                      class="quick-link"
+                    >
+                      <el-icon><Warning /></el-icon>
+                      申诉
+                    </el-button>
+                    <el-button 
+                      link 
+                      type="primary" 
+                      @click="$router.push('/user/achievements')"
+                      class="quick-link"
+                    >
+                      <el-icon><Document /></el-icon>
+                      成果管理
+                    </el-button>
+                  </div>
                 </div>
               </el-card>
             </el-col>
@@ -393,7 +347,11 @@ import {
   CircleCloseFilled,
   QuestionFilled,
   Edit,
-  ChatDotSquare
+  ChatDotSquare,
+  User,
+  CircleCheck,
+  Warning,
+  Document
 } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
@@ -402,10 +360,7 @@ import { useSettingsStore } from '../stores/settings'
 const authStore = useAuthStore()
 const settingsStore = useSettingsStore()
 
-const authTab = ref('login')
 const activeTab = ref('info')
-const loginLoading = ref(false)
-const registerLoading = ref(false)
 
 // 认证相关变量
 const verificationStatus = ref('unverified') // 'unverified' | 'pending' | 'verified' | 'rejected'
@@ -424,57 +379,11 @@ const codeCountdown = ref(0)
 let codeTimer: any = null
 const sentCode = ref('')
 
-const loginForm = ref({
-  username: '',
-  password: ''
-})
-
-const registerForm = ref({
-  name: '',
-  email: '',
-  password: '',
-  confirmPassword: ''
-})
 
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user)
 const settings = computed(() => settingsStore.settings)
 
-const loginRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }
-  ]
-}
-
-const registerRules = {
-  name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请确认密码', trigger: 'blur' },
-    {
-      validator: (_rule: any, value: string, callback: Function) => {
-        if (value !== registerForm.value.password) {
-          callback(new Error('两次输入的密码不一致'))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'blur'
-    }
-  ]
-}
 
 // 认证表单验证规则
 const verificationRules = {
@@ -500,31 +409,6 @@ const verificationRules = {
   ]
 }
 
-const handleLogin = async () => {
-  loginLoading.value = true
-  try {
-    const result = await authStore.login(loginForm.value.username, loginForm.value.password)
-    if (result.success) {
-      ElMessage.success('登录成功')
-    } else {
-      ElMessage.error(result.message || '登录失败')
-    }
-  } catch (error) {
-    ElMessage.error('登录失败')
-  } finally {
-    loginLoading.value = false
-  }
-}
-
-const handleRegister = async () => {
-  registerLoading.value = true
-  // Mock register
-  setTimeout(() => {
-    ElMessage.success('注册成功，请登录')
-    authTab.value = 'login'
-    registerLoading.value = false
-  }, 1000)
-}
 
 const handleLogout = () => {
   authStore.logout()
@@ -618,19 +502,15 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-.auth-section {
+.not-logged-in {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 60vh;
 
-  .auth-card {
+  .auth-prompt-card {
     width: 100%;
-    max-width: 400px;
-
-    .demo-info {
-      margin-top: 16px;
-    }
+    max-width: 600px;
   }
 }
 
@@ -680,6 +560,36 @@ onMounted(() => {
 
     .profile-actions {
       text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .profile-quick-links {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid #f0f0f0;
+
+      h4 {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-color);
+        margin: 0 0 12px 0;
+      }
+
+      .links-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        .quick-link {
+          justify-content: flex-start;
+          width: 100%;
+          padding: 8px 0;
+
+          .el-icon {
+            margin-right: 8px;
+          }
+        }
+      }
     }
   }
 

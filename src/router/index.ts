@@ -61,6 +61,82 @@ const routes: RouteRecordRaw[] = [
     name: 'Forum',
     component: () => import('../views/ForumPage.vue'),
     meta: { title: '学术论坛' }
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/LoginPage.vue'),
+    meta: { title: '登录' }
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('../views/RegisterPage.vue'),
+    meta: { title: '注册' }
+  },
+  {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/ForgotPasswordPage.vue'),
+    meta: { title: '忘记密码' }
+  },
+  {
+    path: '/reset-password',
+    redirect: '/forgot-password'
+  },
+  {
+    path: '/user/profile',
+    name: 'ProfileSettings',
+    component: () => import('../views/user/ProfileSettingsPage.vue'),
+    meta: { title: '个人信息设置' }
+  },
+  {
+    path: '/user/certification',
+    name: 'Certification',
+    component: () => import('../views/user/CertificationPage.vue'),
+    meta: { title: '学者认证' }
+  },
+  {
+    path: '/user/appeal',
+    name: 'Appeal',
+    component: () => import('../views/user/AppealPage.vue'),
+    meta: { title: '申诉' }
+  },
+  {
+    path: '/user/achievements',
+    name: 'Achievements',
+    component: () => import('../views/user/AchievementsPage.vue'),
+    meta: { title: '成果管理' }
+  },
+  {
+    path: '/admin',
+    name: 'AdminDashboard',
+    component: () => import('../views/admin/DashboardPage.vue'),
+    meta: { title: '管理后台', requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/certifications',
+    name: 'AdminCertifications',
+    component: () => import('../views/admin/CertificationsPage.vue'),
+    meta: { title: '认证审核', requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/appeals',
+    name: 'AdminAppeals',
+    component: () => import('../views/admin/AppealsPage.vue'),
+    meta: { title: '申诉处理', requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/tasks',
+    name: 'AdminTasks',
+    component: () => import('../views/admin/TasksPage.vue'),
+    meta: { title: '任务管理', requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/achievements',
+    name: 'AdminAchievements',
+    component: () => import('../views/admin/AchievementsPage.vue'),
+    meta: { title: '成果审核', requiresAuth: true, requiresAdmin: true }
   }
 ]
 
@@ -74,6 +150,36 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   document.title = `${to.meta.title} - 学术成果分享平台`
+  
+  // 检查是否需要登录
+  if (to.meta.requiresAuth) {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      next({ path: '/login', query: { redirect: to.fullPath } })
+      return
+    }
+  }
+  
+  // 检查是否需要管理员权限
+  if (to.meta.requiresAdmin) {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr)
+        if (user.role !== 'admin') {
+          next({ path: '/', replace: true })
+          return
+        }
+      } catch (e) {
+        next({ path: '/login', query: { redirect: to.fullPath } })
+        return
+      }
+    } else {
+      next({ path: '/login', query: { redirect: to.fullPath } })
+      return
+    }
+  }
+  
   next()
 })
 
