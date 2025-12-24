@@ -123,7 +123,8 @@ const fetchConversations = async () => {
   loadingConversations.value = true
   try {
     const res = await getConversations()
-    conversations.value = (res as any).data || res
+    // API returns { conversations: [...] }
+    conversations.value = (res as any).conversations || (res as any).data || res
   } catch (error) {
     console.error(error)
   } finally {
@@ -142,7 +143,8 @@ const fetchMessages = async () => {
   if (!currentConversationId.value) return
   try {
     const res = await getMessages(currentConversationId.value)
-    messages.value = (res as any).data || res
+    // API returns { messages: [...] }
+    messages.value = (res as any).messages || (res as any).data || res
     scrollToBottom()
   } catch (error) {
     console.error(error)

@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const service = axios.create({
-  baseURL: '/api/v1', // Proxy should be set in vite.config.ts or use absolute URL
+  baseURL: 'http://127.0.0.1:4523/m1/7413325-7146674-6711292/api',
   timeout: 10000
 })
 

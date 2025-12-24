@@ -206,7 +206,8 @@ const fetchPosts = async () => {
   loading.value = true
   try {
     const res = await getPosts()
-    allPosts.value = (res as any).data || res
+    // API returns { posts: [...] }
+    allPosts.value = (res as any).posts || (res as any).data || res
   } catch (error) {
     console.error(error)
     ElMessage.error('获取帖子列表失败')

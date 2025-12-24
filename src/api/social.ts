@@ -19,7 +19,10 @@ export const sendMessage = (data: { receiverId: string; content: string }) => {
   return request({
     url: '/social/dms',
     method: 'post',
-    data
+    data: {
+      recipientId: data.receiverId,
+      content: data.content
+    }
   })
 }
 

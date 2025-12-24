@@ -73,7 +73,8 @@ const fetchFollowing = async () => {
   loading.value = true
   try {
     const res = await getFollowing(currentUserId)
-    followingList.value = (res as any).data || res
+    // API returns { following: [...], total: ... }
+    followingList.value = (res as any).following || (res as any).data || res
   } catch (error) {
     console.error(error)
     // Mock
@@ -90,7 +91,8 @@ const fetchFollowers = async () => {
   loading.value = true
   try {
     const res = await getFollowers(currentUserId)
-    followersList.value = (res as any).data || res
+    // API returns { followers: [...], total: ... }
+    followersList.value = (res as any).followers || (res as any).data || res
   } catch (error) {
     console.error(error)
     // Mock

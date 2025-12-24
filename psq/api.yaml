@@ -4,8 +4,8 @@ info:
   description: 基于资源倒推团队分工的详细 RESTful API 接口文档 (v1)
   version: 1.0.0
 servers:
-  - url: /api/v1
-    description: V1 版本接口
+  - url: /api
+    description:  版本接口
 
 components:
   securitySchemes:
