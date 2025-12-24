@@ -122,17 +122,7 @@
 
                   <el-tab-pane label="合作者网络" name="network">
                     <div class="collaboration-network">
-                      <div v-if="loadingNetwork" class="network-loading">
-                        <el-skeleton :rows="3" animated />
-                      </div>
-                      <v-chart
-                        v-else-if="networkData"
-                        :option="networkChartOptions"
-                        autoresize
-                        style="height: 500px; width: 100%;"
-                        @click="handleNodeClick"
-                      />
-                      <el-empty v-else description="暂无合作网络数据" />
+                      <el-empty description="合作者网络图开发中..." />
                     </div>
                   </el-tab-pane>
                 </el-tabs>
@@ -159,29 +149,27 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { Plus, Message, Document, Star } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, GraphChart } from 'echarts/charts'
-import { TitleComponent, TooltipComponent, GridComponent, LegendComponent } from 'echarts/components'
+import { LineChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent, GridComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import AppHeader from '@/components/AppHeader.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
-import { mockScholars } from '@/mock/scholars'
-import { mockPapers } from '@/mock/papers'
 import { useChatStore } from '../stores/chat'
+import * as scholarApi from '../api/scholar'
 
 use([
   CanvasRenderer,
   LineChart,
-  GraphChart,
   TitleComponent,
   TooltipComponent,
-  GridComponent,
-  LegendComponent
+  GridComponent
 ])
 
 const route = useRoute()
@@ -193,8 +181,6 @@ const showChatWindow = ref(false)
 const activeTab = ref('papers')
 const papersSortBy = ref('date')
 const scholarPapers = ref([])
-const networkData = ref(null)
-const loadingNetwork = ref(false)
 
 const sortedScholarPapers = computed(() => {
   const papers = [...scholarPapers.value]
@@ -268,140 +254,44 @@ const handleCloseChatWindow = () => {
   showChatWindow.value = false
 }
 
-const loadCollaborationNetwork = async () => {
-  if (!scholar.value) return
-  
-  loadingNetwork.value = true
+const loadScholarDetail = async () => {
+  const scholarId = route.params.id as string
   try {
-    // 调用API获取合作网络数据
-    const { get } = await import('@/api/index')
-    const data = await get(`/scholars/${scholar.value.id}/collaboration-network`)
-    networkData.value = data
-  } catch (error: any) {
-    console.error('加载合作网络失败:', error)
-    // 使用模拟数据
-    networkData.value = {
-      nodes: [
-        { id: scholar.value.id, name: scholar.value.name, category: 0 },
-        { id: '2', name: '李教授', category: 1 },
-        { id: '3', name: '王教授', category: 1 },
-        { id: '4', name: '张教授', category: 1 },
-        { id: '5', name: '刘教授', category: 1 }
-      ],
-      links: [
-        { source: scholar.value.id, target: '2', value: 5 },
-        { source: scholar.value.id, target: '3', value: 3 },
-        { source: scholar.value.id, target: '4', value: 2 },
-        { source: '2', target: '5', value: 1 }
-      ]
+    const response = await scholarApi.getScholarDetail(scholarId)
+    scholar.value = {
+      id: response.scholarId,
+      name: response.name,
+      institution: response.organization,
+      title: '',
+      avatar: '',
+      bio: response.bio,
+      fields: response.researchFields || [],
+      achievements: response.achievements || [],
+      hIndex: 0,
+      citations: 0,
+      papers: 0,
+      isFollowed: false
     }
-  } finally {
-    loadingNetwork.value = false
-  }
-}
-
-const networkChartOptions = computed(() => {
-  if (!networkData.value) return null
-
-  const categories = [
-    { name: '当前学者' },
-    { name: '合作者' }
-  ]
-
-  return {
-    tooltip: {
-      trigger: 'item',
-      formatter: (params: any) => {
-        if (params.dataType === 'node') {
-          return `${params.data.name}<br/>点击查看详情`
-        }
-        return `${params.data.source} → ${params.data.target}`
-      }
-    },
-    legend: {
-      data: categories.map(c => c.name),
-      top: 'bottom'
-    },
-    series: [
-      {
-        type: 'graph',
-        layout: 'force',
-        data: networkData.value.nodes.map((node: any) => ({
-          ...node,
-          symbolSize: node.id === scholar.value?.id ? 50 : 30,
-          itemStyle: {
-            color: node.id === scholar.value?.id ? '#667eea' : '#48bb78'
-          },
-          label: {
-            show: true,
-            position: 'right',
-            fontSize: 12
-          }
-        })),
-        links: networkData.value.links.map((link: any) => ({
-          ...link,
-          lineStyle: {
-            width: link.value || 1,
-            curveness: 0.3
-          }
-        })),
-        categories,
-        roam: true,
-        label: {
-          show: true,
-          position: 'right',
-          formatter: '{b}'
-        },
-        labelLayout: {
-          hideOverlap: true
-        },
-        lineStyle: {
-          color: 'source',
-          curveness: 0.3
-        },
-        emphasis: {
-          focus: 'adjacency',
-          lineStyle: {
-            width: 4
-          }
-        },
-        force: {
-          repulsion: 200,
-          gravity: 0.1,
-          edgeLength: 100,
-          layoutAnimation: true
-        }
-      }
-    ]
-  }
-})
-
-const handleNodeClick = (params: any) => {
-  if (params.dataType === 'node' && params.data.id !== scholar.value?.id) {
-    router.push(`/scholar/${params.data.id}`)
+    
+    // 获取论文列表（从achievements中提取）
+    if (response.achievements) {
+      scholarPapers.value = response.achievements.map((ach: any) => ({
+        id: ach.id || ach.achievementId,
+        title: ach.title,
+        authors: ach.authors || [],
+        journal: ach.journal || '',
+        publishDate: ach.publishDate || ach.year,
+        citations: ach.citations || 0,
+        abstract: ach.abstract || ''
+      }))
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载学者详情失败')
   }
 }
 
 onMounted(() => {
-  const scholarId = route.params.id
-  scholar.value = mockScholars.find(s => s.id === scholarId)
-
-  if (scholar.value) {
-    // 获取该学者的论文（模拟数据）
-    scholarPapers.value = mockPapers
-      .filter(paper => paper.authors.some(author => author.name === scholar.value.name))
-      .slice(0, 10)
-    
-    // 加载合作网络
-    loadCollaborationNetwork()
-  }
-})
-
-// 监听tab切换，切换到网络tab时加载数据
-watch(() => activeTab.value, (newTab) => {
-  if (newTab === 'network' && !networkData.value && !loadingNetwork.value) {
-    loadCollaborationNetwork()
-  }
+  loadScholarDetail()
 })
 </script>
 

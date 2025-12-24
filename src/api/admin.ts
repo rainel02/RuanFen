@@ -1,163 +1,97 @@
-import { get, post, put } from './index'
+import request from './request'
 
-// 认证申请类型
-export interface CertificationApplication {
-  appId: string
-  userId: string
-  username: string
-  email: string
-  realName: string
-  organization: string
-  orgEmail: string
-  title: string
-  proofMaterials: string[]
-  submittedAt: string
-  status: 'pending' | 'approved' | 'rejected'
+// 管理员相关接口
+
+/**
+ * 获取待审核的学者认证列表
+ */
+export const getCertifications = (params?: {
+  status?: string
+}) => {
+  return request.get('/admin/certifications', { params })
 }
 
-// 认证申请列表响应
-export interface CertificationApplicationsResponse {
-  applications: CertificationApplication[]
+/**
+ * 批准学者认证
+ */
+export const approveCertification = (appId: string) => {
+  return request.post(`/admin/certifications/${appId}/approve`)
 }
 
-// 申诉类型
-export interface Appeal {
-  caseId: string
-  userId: string
-  username: string
-  appealType: 'identity_stolen' | 'achievement_stolen'
-  targetId: string
+/**
+ * 驳回学者认证
+ */
+export const rejectCertification = (appId: string, data: {
   reason: string
-  evidenceMaterials: string[]
-  submittedAt: string
-  status: 'pending' | 'approved' | 'rejected'
-  processedAt?: string
-  processorId?: string
+}) => {
+  return request.post(`/admin/certifications/${appId}/reject`, data)
 }
 
-// 申诉列表响应
-export interface AppealsResponse {
-  appeals: Appeal[]
+/**
+ * 获取待处理的申诉列表
+ */
+export const getAppeals = (params?: {
+  status?: string
+}) => {
+  return request.get('/admin/appeals', { params })
 }
 
-// 成果类型
-export interface PendingAchievement {
-  achId: string
-  scholarId: string
-  scholarName: string
-  title: string
-  authors: string[]
-  journal?: string
-  year: number
-  doi?: string
-  abstract?: string
-  submittedAt: string
-  status: 'pending' | 'approved' | 'rejected'
+/**
+ * 处理申诉（批准或驳回）
+ */
+export const processAppeal = (caseId: string, data: {
+  action: 'approve' | 'reject'
+  reason?: string
+}) => {
+  return request.post(`/admin/appeals/${caseId}/process`, data)
 }
 
-// 待审核成果列表响应
-export interface PendingAchievementsResponse {
-  pendingAchievements: PendingAchievement[]
+/**
+ * 获取待审核的学者提交成果
+ */
+export const getPendingAchievements = () => {
+  return request.get('/admin/achievements/pending')
 }
 
-// 任务类型
-export interface Task {
-  taskId: string
-  name: string
-  cron: string
-  status: 'enabled' | 'disabled'
-  lastRun: string
-  nextRun?: string
-  description?: string
-  params?: Record<string, any>
+/**
+ * 批准学者提交的成果
+ */
+export const approveAchievement = (achId: string) => {
+  return request.post(`/admin/achievements/${achId}/approve`)
 }
 
-// 任务列表响应
-export interface TasksResponse {
-  tasks: Task[]
+/**
+ * 驳回学者提交的成果
+ */
+export const rejectAchievement = (achId: string, data: {
+  reason: string
+}) => {
+  return request.post(`/admin/achievements/${achId}/reject`, data)
 }
 
-// 更新任务请求
-export interface UpdateTaskRequest {
+/**
+ * 查看所有定时任务
+ */
+export const getTasks = () => {
+  return request.get('/admin/tasks')
+}
+
+/**
+ * 配置定时任务
+ */
+export const updateTask = (taskId: string, data: {
   cron?: string
   status?: 'enabled' | 'disabled'
-  params?: Record<string, any>
+  params?: object
+}) => {
+  return request.put(`/admin/tasks/${taskId}`, data)
 }
 
-// 统计数据类型
-export interface DashboardStats {
-  totalUsers: number
-  totalScholars: number
-  totalPapers: number
-  pendingCertifications: number
-  pendingAppeals: number
-  pendingAchievements: number
-  recentUsers?: Array<{ userId: string; username: string; createdAt: string }>
+/**
+ * 手动触发一次任务
+ */
+export const runTask = (taskId: string) => {
+  return request.post(`/admin/tasks/${taskId}/run`)
 }
 
-// 获取认证申请列表
-export function getCertificationApplications(status?: string): Promise<CertificationApplicationsResponse> {
-  const url = status ? `/admin/certifications?status=${status}` : '/admin/certifications'
-  return get<CertificationApplicationsResponse>(url)
-}
-
-// 批准认证申请
-export function approveCertification(appId: string): Promise<{ message: string }> {
-  return post<{ message: string }>(`/admin/certifications/${appId}/approve`)
-}
-
-// 驳回认证申请
-export function rejectCertification(appId: string, reason: string): Promise<{ message: string }> {
-  return post<{ message: string }>(`/admin/certifications/${appId}/reject`, { reason })
-}
-
-// 获取申诉列表
-export function getAppeals(status?: string): Promise<AppealsResponse> {
-  const url = status ? `/admin/appeals?status=${status}` : '/admin/appeals'
-  return get<AppealsResponse>(url)
-}
-
-// 处理申诉
-export function processAppeal(
-  caseId: string,
-  action: 'approve' | 'reject',
-  reason?: string
-): Promise<{ message: string }> {
-  return post<{ message: string }>(`/admin/appeals/${caseId}/process`, { action, reason })
-}
-
-// 获取待审核成果列表
-export function getPendingAchievements(): Promise<PendingAchievementsResponse> {
-  return get<PendingAchievementsResponse>('/admin/achievements/pending')
-}
-
-// 批准成果
-export function approveAchievement(achId: string): Promise<{ message: string }> {
-  return post<{ message: string }>(`/admin/achievements/${achId}/approve`)
-}
-
-// 驳回成果
-export function rejectAchievement(achId: string, reason: string): Promise<{ message: string }> {
-  return post<{ message: string }>(`/admin/achievements/${achId}/reject`, { reason })
-}
-
-// 获取任务列表
-export function getTasks(): Promise<TasksResponse> {
-  return get<TasksResponse>('/admin/tasks')
-}
-
-// 更新任务配置
-export function updateTask(taskId: string, data: UpdateTaskRequest): Promise<Task> {
-  return put<Task>(`/admin/tasks/${taskId}`, data)
-}
-
-// 手动触发任务
-export function runTask(taskId: string): Promise<{ message: string }> {
-  return post<{ message: string }>(`/admin/tasks/${taskId}/run`)
-}
-
-// 获取仪表盘统计数据（假设接口，根据实际情况调整）
-export function getDashboardStats(): Promise<DashboardStats> {
-  return get<DashboardStats>('/admin/dashboard/stats')
-}
 

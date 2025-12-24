@@ -1,63 +1,47 @@
-import { post } from './index'
+import request from './request'
 
-// 登录响应类型
-export interface LoginResponse {
-  token: string
-  user: {
-    userId: string
-    username: string
-    role: string
-  }
-}
+// 认证相关接口
 
-// 注册响应类型
-export interface RegisterResponse {
-  userId: string
-  username: string
-  email: string
-}
-
-// 成功消息响应类型
-export interface SuccessMessage {
-  message: string
-}
-
-// 错误响应类型
-export interface ErrorResponse {
-  message: string
-  code?: string
-}
-
-// 用户注册
-export function register(data: {
+/**
+ * 用户注册
+ */
+export const register = (data: {
   username: string
   email: string
   password: string
-}): Promise<RegisterResponse> {
-  return post<RegisterResponse>('/auth/register', data)
+  role?: 'user' | 'admin' | 'administrator'
+}) => {
+  return request.post('/auth/register', data)
 }
 
-// 用户登录
-export function login(data: {
-  account: string
+/**
+ * 用户登录
+ */
+export const login = (data: {
+  account: string // 用户名/邮箱
   password: string
-}): Promise<LoginResponse> {
-  return post<LoginResponse>('/auth/login', data)
+}) => {
+  return request.post('/auth/login', data)
 }
 
-// 忘记密码 - 发送验证码
-export function forgotPassword(data: {
+/**
+ * 忘记密码 - 发送验证码
+ */
+export const forgotPassword = (data: {
   email: string
-}): Promise<SuccessMessage> {
-  return post<SuccessMessage>('/auth/forgot-password', data)
+}) => {
+  return request.post('/auth/forgot-password', data)
 }
 
-// 重置密码
-export function resetPassword(data: {
+/**
+ * 重置密码
+ */
+export const resetPassword = (data: {
   email: string
   verificationCode: string
   newPassword: string
-}): Promise<SuccessMessage> {
-  return post<SuccessMessage>('/auth/reset-password', data)
+}) => {
+  return request.post('/auth/reset-password', data)
 }
+
 

@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '../types/user'
-import { login as apiLogin } from '../api/auth'
-import { get } from '../api/index'
+import * as authApi from '../api/auth'
+import * as userApi from '../api/user'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -10,48 +10,34 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!user.value && !!token.value)
 
-  // 设置用户信息
-  const setUser = (userData: Partial<User>) => {
-    user.value = {
-      id: userData.id || '',
-      username: userData.username || '',
-      email: userData.email || '',
-      role: userData.role || 'user',
-      avatar: userData.avatar,
-      name: userData.name,
-      title: userData.title,
-      institution: userData.institution,
-      researchFields: userData.researchFields || [],
-      hIndex: userData.hIndex,
-      citations: userData.citations,
-      papers: userData.papers
-    } as User
-    localStorage.setItem('user', JSON.stringify(user.value))
-  }
-
-  // 登录（保留兼容性，但实际由LoginPage调用API）
   const login = async (account: string, password: string) => {
     try {
-      const response = await apiLogin({ account, password })
-      token.value = response.token
-      localStorage.setItem('token', response.token)
+      console.log('开始登录请求，参数:', { account, password })
+      const response = await authApi.login({ account, password })
+      console.log('登录响应:', response)
       
-      // 获取用户详细信息
-      await fetchUserInfo()
-      
-      return { success: true }
+      if (response && response.token && response.user) {
+        token.value = response.token
+        user.value = response.user as User
+        localStorage.setItem('token', response.token)
+        localStorage.setItem('user', JSON.stringify(response.user))
+        return { success: true }
+      }
+      console.warn('登录响应格式不正确:', response)
+      return { success: false, message: '登录失败：响应格式不正确' }
     } catch (error: any) {
-      return { success: false, message: error.message || '登录失败' }
+      console.error('登录请求失败:', error)
+      const errorMessage = error.message || '登录失败'
+      return { success: false, message: errorMessage }
     }
   }
 
-  // 获取用户详细信息
-  const fetchUserInfo = async () => {
+  const register = async (username: string, email: string, password: string, role?: 'user' | 'admin' | 'administrator') => {
     try {
-      const userInfo = await get<User>('/users/me')
-      setUser(userInfo)
-    } catch (error) {
-      console.error('获取用户信息失败:', error)
+      const response = await authApi.register({ username, email, password, role })
+      return { success: true, data: response }
+    } catch (error: any) {
+      return { success: false, message: error.message || '注册失败' }
     }
   }
 
@@ -63,16 +49,28 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const initAuth = async () => {
-    const savedUser = localStorage.getItem('user')
-    if (savedUser && token.value) {
+    const savedToken = localStorage.getItem('token')
+    if (savedToken) {
+      token.value = savedToken
       try {
-        user.value = JSON.parse(savedUser)
-        // 验证token是否有效，如果无效则清除
-        await fetchUserInfo()
+        // 获取当前用户信息
+        const userData = await userApi.getCurrentUser()
+        user.value = userData as User
+        localStorage.setItem('user', JSON.stringify(userData))
       } catch (error) {
-        // token可能已过期，清除本地数据
+        // token可能已过期，清除
         logout()
       }
+    }
+  }
+
+  const refreshUserInfo = async () => {
+    try {
+      const userData = await userApi.getCurrentUser()
+      user.value = userData as User
+      localStorage.setItem('user', JSON.stringify(userData))
+    } catch (error) {
+      console.error('获取用户信息失败', error)
     }
   }
 
@@ -81,9 +79,9 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isLoggedIn,
     login,
+    register,
     logout,
     initAuth,
-    setUser,
-    fetchUserInfo
+    refreshUserInfo
   }
 })

@@ -5,10 +5,12 @@
         <el-col :span="6">
           <div class="logo">
             <router-link to="/" class="logo-link">
-              <el-icon size="28" color="#1890ff">
-                <School />
-              </el-icon>
-              <span class="logo-text">学术平台</span>
+              <img 
+                :src="logoImage"
+                alt="HuggingPapers"
+                class="logo-image"
+              />
+              <span class="logo-text">HuggingPapers</span>
             </router-link>
           </div>
         </el-col>
@@ -45,44 +47,22 @@
               <el-menu-item index="/scholars">学者</el-menu-item>
               <el-menu-item index="/paper-guide" v-if="showPaperGuide">导读</el-menu-item>
               <el-menu-item index="/forum" v-if="showForum">论坛</el-menu-item>
+              <el-menu-item index="/chat">私信</el-menu-item>
               <el-menu-item index="/analytics">统计</el-menu-item>
-              
-              <!-- 未登录用户 -->
-              <template v-if="!isLoggedIn">
-                <el-menu-item index="/login">登录</el-menu-item>
-                <el-menu-item index="/register">注册</el-menu-item>
-              </template>
-              
-              <!-- 已登录用户 -->
-              <template v-else>
-                <el-menu-item index="/chat">私信</el-menu-item>
-                <el-sub-menu index="user-menu">
-                  <template #title>
-                    <el-avatar :src="user?.avatar" :size="24" style="margin-right: 8px;">
-                      {{ user?.name?.charAt(0) || user?.username?.charAt(0) }}
-                    </el-avatar>
-                    <span>{{ user?.name || user?.username }}</span>
-                  </template>
-                  <el-menu-item index="/profile">个人中心</el-menu-item>
-                  <el-menu-item index="/user/profile">个人信息设置</el-menu-item>
-                  <el-menu-item index="/user/certification" v-if="user?.role !== 'admin'">学者认证</el-menu-item>
-                  <el-menu-item index="/user/achievements" v-if="user?.role !== 'admin'">成果管理</el-menu-item>
-                  <el-menu-item index="/settings">系统设置</el-menu-item>
-                </el-sub-menu>
-                
-                <!-- 管理员菜单 -->
-                <el-sub-menu index="admin-menu" v-if="user?.role === 'admin'">
-                  <template #title>
-                    <el-icon><Setting /></el-icon>
-                    <span>管理后台</span>
-                  </template>
-                  <el-menu-item index="/admin">仪表盘</el-menu-item>
-                  <el-menu-item index="/admin/certifications">认证审核</el-menu-item>
-                  <el-menu-item index="/admin/appeals">申诉处理</el-menu-item>
-                  <el-menu-item index="/admin/achievements">成果审核</el-menu-item>
-                  <el-menu-item index="/admin/tasks">任务管理</el-menu-item>
-                </el-sub-menu>
-              </template>
+              <el-menu-item index="/admin" v-if="isAdmin" class="admin-menu-item">
+                <span>管理后台</span>
+              </el-menu-item>
+              <el-menu-item index="/profile" class="user-menu-item">
+                <div class="user-avatar-wrapper" @click="goToProfile">
+                  <el-avatar 
+                    :src="(isLoggedIn && user?.avatar) ? user.avatar : defaultAvatar" 
+                    :size="32"
+                    class="user-avatar"
+                  >
+                    {{ isLoggedIn && user?.name ? user.name.charAt(0) : '' }}
+                  </el-avatar>
+                </div>
+              </el-menu-item>
             </el-menu>
           </div>
         </el-col>
@@ -97,7 +77,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePapersStore } from '../stores/papers'
 import { useSettingsStore } from '../stores/settings'
-import { Search, User, School, Setting } from '@element-plus/icons-vue'
+import { Search, User, School } from '@element-plus/icons-vue'
+import defaultAvatar from '@/assets/profile.png'
+import logoImage from '@/assets/logo.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -111,6 +93,7 @@ const activeIndex = computed(() => route.path + '') // 保证为字符串
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user)
 const showSearch = computed(() => route.path === '/')
+const isAdmin = computed(() => user.value?.role === 'admin' || user.value?.role === 'administrator')
 
 // 根据设置显示功能
 const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
@@ -119,6 +102,14 @@ const showForum = computed(() => settingsStore.settings.enableForum)
 const handleSelect = (index: string) => {
   if (index !== route.path) {
     router.push(index)
+  }
+}
+
+const goToProfile = () => {
+  if (isLoggedIn.value) {
+    router.push('/profile')
+  } else {
+    router.push('/profile')
   }
 }
 
@@ -155,9 +146,28 @@ watch(() => route.path, () => {
     text-decoration: none;
     color: var(--text-color);
     font-weight: 600;
+    gap: 10px;
+
+    .logo-image {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .logo-avatar {
+      cursor: pointer;
+      border: 2px solid var(--primary-color);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+
+      &:hover {
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
 
     .logo-text {
-      margin-left: 8px;
       font-size: 18px;
       color: var(--primary-color);
     }
@@ -196,5 +206,46 @@ watch(() => route.path, () => {
 .nav-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.user-menu-item {
+  :deep(.el-menu-item__content) {
+    display: flex;
+    align-items: center;
+  }
+
+  .user-avatar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    .user-icon {
+      font-size: 24px;
+      color: var(--text-color);
+    }
+
+    .user-avatar {
+      border: 2px solid var(--primary-color);
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    .user-name {
+      font-weight: 500;
+      color: var(--text-color);
+      white-space: nowrap;
+    }
+  }
 }
 </style>

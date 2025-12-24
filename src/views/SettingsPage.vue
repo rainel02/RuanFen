@@ -2,6 +2,9 @@
   <div class="settings-page">
     <AppHeader />
 
+    <!-- Vanta.js Birds 背景 -->
+    <div id="vanta-birds-settings-bg" class="vanta-background"></div>
+
     <div class="page-content">
       <div class="container">
         <div class="settings-header">
@@ -326,12 +329,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Lock, Bell, User, Setting } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useSettingsStore } from '../stores/settings'
 import type { UserSettings } from '../types/chat'
+
+declare global {
+  interface Window {
+    VANTA: {
+      BIRDS: (options: any) => any
+    }
+  }
+}
+
+let vantaEffect: any = null
 
 const settingsStore = useSettingsStore()
 const activeSection = ref('personalization')
@@ -406,12 +419,68 @@ const handlePasswordChange = () => {
 onMounted(() => {
   settingsStore.loadSettings()
   Object.assign(localSettings, settingsStore.settings)
+  
+  // 初始化 Vanta.js Birds 背景
+  setTimeout(() => {
+    if (typeof window !== 'undefined' && window.VANTA) {
+      vantaEffect = window.VANTA.BIRDS({
+        el: '#vanta-birds-settings-bg',
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        backgroundColor: 0xf9f7ec,
+        colorMode: "lerpGradient",
+        color1: 0xff0000,
+        color2: 0xd1ff,
+        birdSize: 1.40,
+        quantity: 4.00,
+        wingSpan: 30.00,
+        speedLimit: 5.00,
+        separation: 20.00,
+        alignment: 20.00,
+        cohesion: 20.00
+      })
+    }
+  }, 100)
+})
+
+onUnmounted(() => {
+  // 清理 Vanta.js 实例
+  if (vantaEffect) {
+    vantaEffect.destroy()
+  }
 })
 </script>
 
 <style scoped lang="scss">
 .settings-page {
   min-height: 100vh;
+  position: relative;
+
+  .vanta-background {
+    position: fixed;
+    top: 64px; // 导航栏高度
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 64px);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .page-content {
+    position: relative;
+    z-index: 1;
+
+    .settings-menu,
+    .settings-content {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+    }
+  }
 }
 
 .settings-header {
