@@ -1,73 +1,24 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { mockPapers } from '../mock/papers'
 import type { Paper, SearchFilters } from '../types/paper'
+import api from '../api'
 
 export const usePapersStore = defineStore('papers', () => {
-  const papers = ref<Paper[]>(mockPapers)
+  const papers = ref<Paper[]>([])
   const loading = ref(false)
   const currentPage = ref(1)
   const pageSize = ref(12)
   const searchQuery = ref('')
+  const author = ref('')
+  const institution = ref('')
   const selectedFields = ref<string[]>([])
   const timeRange = ref('all')
   const sortBy = ref('latest')
+  const startDate = ref('')
+  const endDate = ref('')
+  const total = ref(0)
 
-  const filteredPapers = computed(() => {
-    let result = [...papers.value]
-
-    // 搜索过滤
-    if (searchQuery.value.trim()) {
-      const query = searchQuery.value.toLowerCase()
-      result = result.filter(paper =>
-        paper.title.toLowerCase().includes(query) ||
-        paper.authors.some(author => author.name.toLowerCase().includes(query)) ||
-        paper.keywords.some(keyword => keyword.toLowerCase().includes(query))
-      )
-    }
-
-    // 领域过滤
-    if (selectedFields.value.length > 0) {
-      result = result.filter(paper =>
-        selectedFields.value.some(field => paper.fields.includes(field))
-      )
-    }
-
-    // 时间过滤
-    if (timeRange.value !== 'all') {
-      const now = new Date()
-      const filterDate = new Date()
-
-      switch (timeRange.value) {
-        case 'week':
-          filterDate.setDate(now.getDate() - 7)
-          break
-        case 'month':
-          filterDate.setMonth(now.getMonth() - 1)
-          break
-        case 'year':
-          filterDate.setFullYear(now.getFullYear() - 1)
-          break
-      }
-
-      result = result.filter(paper => new Date(paper.publishDate) >= filterDate)
-    }
-
-    // 排序
-    switch (sortBy.value) {
-      case 'latest':
-        result.sort((a, b) => new Date(b.publishDate).getTime() - new Date(a.publishDate).getTime())
-        break
-      case 'citations':
-        result.sort((a, b) => b.citations - a.citations)
-        break
-      case 'favorites':
-        result.sort((a, b) => b.favorites - a.favorites)
-        break
-    }
-
-    return result
-  })
+  const filteredPapers = computed(() => papers.value)
 
   const paginatedPapers = computed(() => {
     const start = (currentPage.value - 1) * pageSize.value
@@ -75,36 +26,80 @@ export const usePapersStore = defineStore('papers', () => {
     return filteredPapers.value.slice(start, end)
   })
 
-  const totalPages = computed(() =>
-    Math.ceil(filteredPapers.value.length / pageSize.value)
-  )
+  const totalPages = computed(() => Math.ceil((total.value || filteredPapers.value.length) / pageSize.value))
 
-  const searchPapers = (query: string) => {
+  const searchPapers = async (query: string) => {
     searchQuery.value = query
     currentPage.value = 1
+    await fetchPapers()
   }
 
-  const setFilters = (filters: Partial<SearchFilters>) => {
+  const setFilters = async (filters: Partial<SearchFilters>) => {
     if (filters.fields !== undefined) selectedFields.value = filters.fields
     if (filters.timeRange !== undefined) timeRange.value = filters.timeRange
     if (filters.sortBy !== undefined) sortBy.value = filters.sortBy
+    // accept q (search), author, institution, startDate, endDate
+    if ((filters as any).q !== undefined) searchQuery.value = (filters as any).q
+    if ((filters as any).author !== undefined) author.value = (filters as any).author
+    if ((filters as any).institution !== undefined) institution.value = (filters as any).institution
+    if ((filters as any).startDate !== undefined) startDate.value = (filters as any).startDate
+    if ((filters as any).endDate !== undefined) endDate.value = (filters as any).endDate
     currentPage.value = 1
+    await fetchPapers()
+  }
+
+  const fetchPapers = async () => {
+    loading.value = true
+    try {
+      const params: Record<string, any> = {}
+      // optional filters
+      if (searchQuery.value) params.q = searchQuery.value
+      if (author.value) params.author = author.value
+      if (institution.value) params.institution = institution.value
+      if (selectedFields.value.length) params.field = selectedFields.value[0]
+      if (startDate.value) params.startDate = startDate.value
+      if (endDate.value) params.endDate = endDate.value
+      // pagination: API expects 0-based page, UI uses 1-based currentPage
+      params.page = Math.max(0, currentPage.value - 1)
+      params.size = pageSize.value
+      if (sortBy.value === 'citations') params.sort_by = 'citations'
+      if (sortBy.value === 'latest') params.sort_by = 'time'
+
+      const data = await api.searchAchievements(params)
+      // api returns { results, total }
+      papers.value = data.results || []
+      total.value = data.total ?? papers.value.length
+    } catch (e) {
+      console.error('fetchPapers error', e)
+    } finally {
+      loading.value = false
+    }
   }
 
   const toggleFavorite = (paperId: string) => {
     const paper = papers.value.find(p => p.id === paperId)
     if (paper) {
-      paper.isFavorited = !paper.isFavorited
-      paper.favorites += paper.isFavorited ? 1 : -1
+      paper.isfavorited = !paper.isfavorited
+      console.log('Toggled favorite for paper', paperId, 'to', paper.isfavorited)
+      paper.favoriteCount += paper.isfavorited ? 1 : -1
+      // call collection API
+      if (paper.isfavorited) {
+        api.addToCollections(paper.id).catch(() => {})
+      } else {
+        api.removeFromCollections(paper.id).catch(() => {})
+      }
     }
   }
 
   return {
     papers,
+    total,
     loading,
     currentPage,
     pageSize,
     searchQuery,
+    author,
+    institution,
     selectedFields,
     timeRange,
     sortBy,
@@ -113,6 +108,7 @@ export const usePapersStore = defineStore('papers', () => {
     totalPages,
     searchPapers,
     setFilters,
-    toggleFavorite
+    toggleFavorite,
+    fetchPapers
   }
 })

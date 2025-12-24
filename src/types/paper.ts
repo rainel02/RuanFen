@@ -7,21 +7,27 @@ export interface Author {
 export interface Paper {
   id: string
   title: string
-  authors: Author[]
+  authorships: Author[]
+  publication_date: string
   abstract: string
-  publishDate: string
-  journal: string
+  citationCount: number
+  favoriteCount: number
+  readCount: number
+  isfavorited: boolean
+  publication: string // 刊物
+  institution: string // 机构
+  keyword: string[]
   fields: string[]
-  keywords: string[]
-  citations: number
-  favorites: number
-  isFavorited: boolean
-  pdfUrl?: string
   doi?: string
+  url?: string
 }
 
 export interface SearchFilters {
   fields: string[]
   timeRange: string
   sortBy: string
+  author?: string
+  organization?: string
+  time_start?: string
+  time_end?: string
 }

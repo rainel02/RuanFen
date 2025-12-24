@@ -1,399 +1,611 @@
 <template>
   <div class="home-page">
     <AppHeader />
-    
-    <!-- Hero Section -->
-    <div class="hero-section">
-      <div class="hero-content">
-        <h1 class="hero-title">探索学术前沿，连接智慧火花</h1>
-        <p class="hero-subtitle">汇聚全球顶尖科研成果，助您洞察学术趋势</p>
-        <div class="search-box-wrapper glass-panel">
-          <el-input
-            v-model="searchQuery"
-            placeholder="搜索论文标题、作者、关键词..."
-            class="hero-search-input"
-            clearable
-            @keyup.enter="handleSearch"
-          >
-            <template #prefix>
-              <el-icon class="search-icon"><Search /></el-icon>
-            </template>
-            <template #append>
-              <el-button type="primary" @click="handleSearch">搜索</el-button>
-            </template>
-          </el-input>
-        </div>
-      </div>
-    </div>
-
+<!--    <div>正常渲染</div>-->
     <div class="page-content">
       <div class="container">
-        <el-row :gutter="24">
-          <el-col :lg="6" :md="8" :sm="24" :xs="24">
-            <div class="sidebar-wrapper glass-panel">
-              <FilterSidebar />
-            </div>
-          </el-col>
-
-          <el-col :lg="18" :md="16" :sm="24" :xs="24">
-            <div class="main-content">
-              <!-- Recommendation Section -->
-              <div v-if="showPaperGuide && !searchQuery" class="recommendation-section glass-panel">
-                <div class="section-header">
-                  <h3><el-icon><StarFilled /></el-icon> 为您推荐</h3>
-                  <el-button link @click="router.push('/paper-guide')">
-                    查看更多 <el-icon><ArrowRight /></el-icon>
+        <div class="main-content">
+          <div class="swiss-search-section">
+            <div class="search-wrapper">
+              <el-input
+                v-model="searchQueryLocal"
+                placeholder="Search for papers..."
+                class="swiss-input-lg"
+                clearable
+                @keyup.enter="onSearch"
+              >
+                <template #prefix>
+                  <el-icon class="search-icon"><Search /></el-icon>
+                </template>
+                <template #append>
+                  <el-button class="swiss-search-btn" @click="onSearch">
+                    Search
                   </el-button>
-                </div>
-                <div class="rec-grid">
-                  <div
-                    v-for="paper in recommendedPapers"
-                    :key="`rec-${paper.id}`"
-                    class="rec-card"
-                    @click="router.push(`/paper/${paper.id}`)"
-                  >
-                    <div class="rec-tag">{{ paper.recommendationReason }}</div>
-                    <h4 class="rec-title">{{ paper.title }}</h4>
-                    <div class="rec-meta">
-                      <span>{{ paper.authors[0]?.name }}</span>
-                      <span class="dot">·</span>
-                      <span>{{ paper.year }}</span>
+                </template>
+              </el-input>
+            </div>
+
+            <div class="advanced-toggle-wrapper">
+              <el-collapse v-model="advancedActive" class="swiss-collapse">
+                <el-collapse-item name="1">
+                  <template #title>
+                    <div class="toggle-label">
+                      <el-icon><Operation /></el-icon>
+                      <span>高级搜索</span>
+                      <el-icon class="arrow-icon" :class="{ 'is-active': advancedActive.includes('1') }"><ArrowDown /></el-icon>
+                    </div>
+                  </template>
+                  
+                  <div class="swiss-advanced-panel">
+                    <div class="filter-grid">
+                      <div class="filter-item">
+                        <label>Author</label>
+                        <el-input v-model="author" placeholder="e.g. Hinton" />
+                      </div>
+                      <div class="filter-item">
+                        <label>Organization</label>
+                        <el-input v-model="organization" placeholder="e.g. Google" />
+                      </div>
+                      <div class="filter-item">
+                        <label>Date Range</label>
+                        <el-date-picker 
+                          v-model="timeRangeLocal" 
+                          type="daterange" 
+                          range-separator="-"
+                          start-placeholder="Start" 
+                          end-placeholder="End"
+                          style="width: 100%"
+                        />
+                      </div>
+                      <div class="filter-item">
+                        <label>Field</label>
+                        <el-select v-model="fieldLocal" placeholder="Select Field" clearable>
+                          <el-option v-for="f in fields" :key="f" :label="f" :value="f" />
+                        </el-select>
+                      </div>
+                      <div class="filter-item">
+                        <label>Sort By</label>
+                        <el-select v-model="sortLocal" placeholder="Relevance" clearable>
+                          <el-option label="Citations" value="citations" />
+                          <el-option label="Date" value="time" />
+                        </el-select>
+                      </div>
+                      <div class="filter-actions">
+                        <el-button class="btn-reset" @click="onClearAdvanced">Reset</el-button>
+                        <el-button type="primary" class="btn-apply" @click="applyAdvanced">Apply Filters</el-button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <!-- Results Header -->
-              <div class="results-header glass-panel">
-                <div class="left">
-                  <span class="count">共找到 {{ filteredPapers.length }} 篇论文</span>
-                  <el-tag v-if="searchQuery" closable @close="clearSearch">{{ searchQuery }}</el-tag>
-                </div>
-                <div class="right">
-                  <el-radio-group v-model="sortBy" size="small">
-                    <el-radio-button label="relevance">相关度</el-radio-button>
-                    <el-radio-button label="date">最新</el-radio-button>
-                    <el-radio-button label="citations">引用</el-radio-button>
-                  </el-radio-group>
-                </div>
-              </div>
-
-              <!-- Papers List -->
-              <div v-loading="loading" class="papers-list">
-                <transition-group name="list">
-                  <div
-                    v-for="paper in paginatedPapers"
-                    :key="paper.id"
-                    class="paper-item-wrapper"
-                  >
-                    <PaperCard :paper="paper" />
-                  </div>
-                </transition-group>
-              </div>
-
-              <div v-if="paginatedPapers.length === 0 && !loading" class="empty-state glass-panel">
-                <el-empty description="没有找到相关论文，换个关键词试试？" />
-              </div>
-
-              <div v-if="totalPages > 1" class="pagination-wrapper glass-panel">
-                <el-pagination
-                  v-model:current-page="currentPage"
-                  :page-size="pageSize"
-                  :total="filteredPapers.length"
-                  :page-sizes="[10, 20, 50]"
-                  layout="total, sizes, prev, pager, next, jumper"
-                  @size-change="handleSizeChange"
-                  @current-change="handleCurrentChange"
-                />
-              </div>
+                </el-collapse-item>
+              </el-collapse>
             </div>
-          </el-col>
-        </el-row>
+          </div>
+          <!-- 论文收藏区域 -->
+          <div v-if="showPaperGuide && !searchQuery" class="paper-guide-section">
+            <router-link to="/collections" class="guide-link-wrapper">
+              <VantaBanner>
+                <div class="guide-banner-content">
+                  <div class="guide-title">我的收藏</div>
+                  <div class="guide-arrow-wrapper">
+                    <div class="obtuse-arrow arrow-1"></div>
+                    <div class="obtuse-arrow arrow-2"></div>
+                    <div class="obtuse-arrow arrow-3"></div>
+                  </div>
+                </div>
+              </VantaBanner>
+            </router-link>
+            <!-- <el-card class="guide-card">
+              <template #header>
+                <div class="guide-header">
+                  <h4>
+                    <el-icon><Star /></el-icon>
+                    个性化推荐
+                  </h4>
+                  <router-link to="/paper-guide" class="view-all-link">
+                    查看全部 <el-icon><ArrowRight /></el-icon>
+                  </router-link>
+                </div>
+              </template>
+
+              <div class="recommended-papers">
+                <el-carousel height="120px">
+                  <el-carousel-item v-for="paper in recommendedPapers" :key="paper.id">
+                    <div class="recommended-paper">
+                      <div class="paper-info">
+                        <h5 class="paper-title">
+                          <router-link :to="`/paper/${paper.id}`">{{ paper.title }}</router-link>
+                        </h5>
+                        <p class="paper-meta">
+                          {{ paper.authorships.slice(0, 2).map((a: any) => a.name).join(', ') }} - {{ paper.publication }}
+                        </p>
+                      </div>
+                    </div>
+                  </el-carousel-item>
+                </el-carousel>
+              </div>
+            </el-card> -->
+          </div>
+
+          <div class="content-header">
+            <div class="results-info">
+              <span class="results-count">
+                找到 {{ papersStoreTotal }} 篇相关论文
+              </span>
+              <span v-if="searchQuery" class="search-query">
+                "{{ searchQuery }}"
+              </span>
+            </div>
+          </div>
+
+          <div v-loading="loading" class="papers-grid">
+            <template v-if="loading">
+              <div
+                v-for="n in (pageSize || 12)"
+                :key="`skeleton-${n}`"
+                class="paper-item"
+              >
+                <div class="skeleton-card">
+                  <el-skeleton :rows="6" animated />
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div
+                v-for="paper in paginatedPapers"
+                :key="paper.id"
+                class="paper-item"
+              >
+                <PaperCard :paper="paper" />
+              </div>
+            </template>
+          </div>
+
+          <div v-if="paginatedPapers.length === 0 && !loading" class="empty-state">
+            <el-empty description="暂无符合条件的论文" />
+          </div>
+
+          <div v-if="totalPages > 1" class="pagination-wrapper">
+            <el-pagination
+              v-model:current-page="currentPage"
+              :page-size="pageSize"
+              :total="papersStoreTotal"
+              :page-sizes="[12, 24, 48]"
+              :small="false"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleSizeChange"
+              @current-change="handleCurrentChange"
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import AppHeader from '@/components/AppHeader.vue'
-import FilterSidebar from '@/components/FilterSidebar.vue'
-import PaperCard from '@/components/PaperCard.vue'
-import { usePapersStore } from '@/stores/papers'
-import { Search, StarFilled, ArrowRight } from '@element-plus/icons-vue'
+import { computed, ref, onMounted, nextTick } from 'vue'
+import AppHeader from '../components/AppHeader.vue'
+import PaperCard from '../components/PaperCard.vue'
+import VantaBanner from '../components/VantaBanner.vue'
+import { usePapersStore } from '../stores/papers'
+import { useSettingsStore } from '../stores/settings'
 
-const router = useRouter()
-const route = useRoute()
 const papersStore = usePapersStore()
-
-const searchQuery = ref('')
-const currentPage = ref(1)
-const pageSize = ref(10)
-const sortBy = ref('relevance')
-const showPaperGuide = ref(true)
+const settingsStore = useSettingsStore()
 
 const loading = computed(() => papersStore.loading)
+const paginatedPapers = computed(() => papersStore.paginatedPapers)
 const filteredPapers = computed(() => papersStore.filteredPapers)
-const recommendedPapers = computed(() => papersStore.papers.slice(0, 3).map(p => ({
-  ...p,
-  year: new Date(p.publishDate).getFullYear(),
-  recommendationReason: '基于您的浏览历史'
-})))
-
-const paginatedPapers = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredPapers.value.slice(start, end)
+const searchQuery = computed(() => papersStore.searchQuery)
+const currentPage = computed({
+  get: () => papersStore.currentPage,
+  set: (value) => { papersStore.currentPage = value }
 })
+const pageSize = computed({
+  get: () => papersStore.pageSize,
+  set: (value) => { papersStore.pageSize = value }
+})
+const totalPages = computed(() => papersStore.totalPages)
+const papersStoreTotal = computed(() => (papersStore.total ?? filteredPapers.value.length))
 
-const totalPages = computed(() => Math.ceil(filteredPapers.value.length / pageSize.value))
+// 显示论文导读功能
+const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
 
-const handleSearch = () => {
-  papersStore.searchPapers(searchQuery.value)
+// // 推荐论文（简化版）
+// const recommendedPapers = computed(() => {
+//   return filteredPapers.value.slice(0, 3).map(paper => ({
+//     ...paper,
+//     recommendationReason: '基于兴趣推荐'
+//   }))
+// })
+
+const handleSizeChange = (size: number) => {
+  papersStore.pageSize = size
+  papersStore.currentPage = 1
 }
 
-const clearSearch = () => {
-  searchQuery.value = ''
-  papersStore.searchPapers('')
+const handleCurrentChange = (page: number) => {
+  papersStore.currentPage = page
 }
 
-const handleSizeChange = (val: number) => {
-  pageSize.value = val
-  currentPage.value = 1
+// local search & advanced
+const searchQueryLocal = ref(searchQuery.value)
+const advancedActive = ref<string[]>([])
+const author = ref('')
+const organization = ref('')
+const timeRangeLocal = ref([] as any[])
+const fieldLocal = ref('')
+const sortLocal = ref('')
+const fields = [
+  '人工智能', '机器学习', '计算机视觉', '自然语言处理', '数据挖掘'
+]
+
+const onSearch = async () => {
+  await papersStore.searchPapers(searchQueryLocal.value)
 }
 
-const handleCurrentChange = (val: number) => {
-  currentPage.value = val
-  window.scrollTo({ top: 400, behavior: 'smooth' })
+const applyAdvanced = async () => {
+  await papersStore.setFilters({
+    fields: fieldLocal.value ? [fieldLocal.value] : [],
+    sortBy: sortLocal.value || 'latest',
+    author: author.value
+  })
 }
 
-watch(() => route.query.q, (newQ) => {
-  if (newQ) {
-    searchQuery.value = newQ as string
-    papersStore.searchPapers(newQ as string)
-  }
-}, { immediate: true })
+const onClearAdvanced = async () => {
+  author.value = ''
+  organization.value = ''
+  timeRangeLocal.value = []
+  fieldLocal.value = ''
+  sortLocal.value = ''
+  await papersStore.setFilters({ fields: [], sortBy: 'latest' })
+}
 
 onMounted(() => {
+  // initial load
+  papersStore.fetchPapers()
 })
+
+
 </script>
 
 <style scoped lang="scss">
+@mixin mobile { @media (max-width: 767px) { @content; } }
+@mixin tablet { @media (min-width: 768px) and (max-width: 1199px) { @content; } }
+@mixin desktop { @media (min-width: 1200px) { @content; } }
+
 .home-page {
   min-height: 100vh;
-  background-color: #f0f2f5;
-}
-
-.hero-section {
-  height: 400px;
-  background: linear-gradient(135deg, #1c2434 0%, #2c3e50 100%);
-  position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
-    background-size: cover;
-    background-position: center;
-    opacity: 0.2;
-  }
-
-  .hero-content {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    width: 100%;
-    max-width: 800px;
-    padding: 0 20px;
-
-    .hero-title {
-      font-size: 42px;
-      color: #fff;
-      margin-bottom: 15px;
-      font-weight: 700;
-      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-    }
-
-    .hero-subtitle {
-      font-size: 18px;
-      color: rgba(255,255,255,0.8);
-      margin-bottom: 40px;
-    }
-
-    .search-box-wrapper {
-      padding: 10px;
-      border-radius: 12px;
-      
-      .hero-search-input {
-        :deep(.el-input__wrapper) {
-          background: #fff;
-          box-shadow: none;
-          padding: 8px 15px;
-          font-size: 16px;
-        }
-        :deep(.el-input-group__append) {
-          background-color: #409eff;
-          color: white;
-          border: none;
-          font-weight: 600;
-          &:hover { background-color: #66b1ff; }
-        }
-      }
-    }
-  }
+  flex-direction: column;
+  background: var(--bg);
 }
 
 .page-content {
-  margin-top: -60px;
-  padding-bottom: 40px;
-  position: relative;
-  z-index: 2;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.glass-panel {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-}
-
-.sidebar-wrapper {
-  padding: 20px;
-  height: fit-content;
-  margin-bottom: 20px;
+  flex: 1;
+  padding: var(--space-xl) 0;
 }
 
 .main-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-lg);
 }
 
-.recommendation-section {
-  padding: 20px;
-  
-  .section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    h3 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 8px; color: #303133; }
+/* --- Swiss Search Section --- */
+.swiss-search-section {
+  margin-bottom: var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.search-wrapper {
+  width: 100%;
+  position: relative;
+  margin-bottom: var(--space-md);
+}
+
+/* Customizing the large search input */
+:deep(.swiss-input-lg) {
+  .el-input__wrapper {
+    background: var(--surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    box-shadow: var(--shadow-md) !important;
+    border-radius: var(--radius-full) !important; /* Pill shape */
+    padding: 8px 24px !important;
+    height: 64px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: var(--border-light) !important;
+      background: var(--surface-hover) !important;
+      transform: translateY(-1px);
+    }
+
+    &.is-focus {
+      border-color: var(--primary) !important;
+      box-shadow: var(--shadow-lg), 0 0 0 1px var(--primary-dim) !important;
+      background: var(--surface-active) !important;
+    }
   }
 
-  .rec-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
+  .el-input__inner {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text-primary);
+    height: 100%;
+    
+    &::placeholder {
+      color: var(--text-tertiary);
+    }
+  }
 
-    .rec-card {
-      background: #f5f7fa;
-      padding: 15px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s;
-      border: 1px solid transparent;
+  .search-icon {
+    font-size: 20px;
+    color: var(--text-tertiary);
+    margin-right: 8px;
+  }
+}
 
-      &:hover {
-        background: #fff;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border-color: #409eff;
-        transform: translateY(-2px);
-      }
+.swiss-search-btn {
+  border-radius: var(--radius-full) !important;
+  padding: 0 24px !important;
+  height: 48px !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  margin-left: 8px;
+  background: var(--primary) !important;
+  border: none !important;
+  color: #fff !important;
+  
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 63, 129, 0.4);
+  }
+}
 
-      .rec-tag {
-        font-size: 12px;
-        color: #e6a23c;
-        margin-bottom: 8px;
-        font-weight: 600;
-      }
+/* --- Advanced Toggle & Panel --- */
+.advanced-toggle-wrapper {
+  width: 100%;
+}
 
-      .rec-title {
-        margin: 0 0 10px 0;
-        font-size: 14px;
-        line-height: 1.4;
-        color: #303133;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        height: 40px;
-      }
+.swiss-collapse {
+  border: none;
+  background: transparent;
+  
+  :deep(.el-collapse-item__header) {
+    background: transparent;
+    border: none;
+    height: auto;
+    justify-content: center;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+    
+    &:hover {
+      color: var(--primary);
+    }
 
-      .rec-meta {
-        font-size: 12px;
-        color: #909399;
-        .dot { margin: 0 4px; }
-      }
+    .el-collapse-item__arrow {
+      display: none; /* Hide default arrow */
+    }
+  }
+  
+  :deep(.el-collapse-item__wrap) {
+    background: transparent;
+    border: none;
+  }
+  
+  :deep(.el-collapse-item__content) {
+    padding-bottom: 0;
+    color: var(--text-secondary);
+  }
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  transition: background 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .arrow-icon {
+    font-size: 12px;
+    margin-left: 4px;
+    transition: transform 0.3s;
+    
+    &.is-active {
+      transform: rotate(180deg);
     }
   }
 }
 
-.results-header {
-  padding: 15px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.swiss-advanced-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-top: var(--space-md);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(10px);
+}
 
-  .left {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    .count { color: #606266; font-size: 14px; }
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+  
+  @include mobile {
+    grid-template-columns: 1fr;
   }
 }
 
-.papers-list {
+.filter-item {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 8px;
+  
+  label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    font-weight: 600;
+  }
 }
 
-.paper-item-wrapper {
-  transition: all 0.3s ease;
+.filter-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
 }
 
+.btn-reset {
+  color: var(--text-secondary) !important;
+  &:hover { color: var(--text-primary) !important; }
+}
+
+.btn-apply {
+  min-width: 120px;
+}
+
+/* --- Results Info --- */
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  padding: 0 var(--space-sm);
+}
+
+.results-info {
+  font-size: 14px;
+  color: var(--text-secondary);
+  
+  .search-query {
+    color: var(--primary);
+    font-weight: 600;
+  }
+}
+
+/* --- Grid & Cards --- */
+.papers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-lg);
+}
+
+.paper-item {
+  height: 100%;
+}
+
+/* --- Empty State --- */
 .empty-state {
-  padding: 40px;
-  text-align: center;
+  padding: var(--space-xl) 0;
+  
+  :deep(.el-empty__description) {
+    color: var(--text-tertiary);
+  }
 }
 
+/* --- Pagination --- */
 .pagination-wrapper {
-  padding: 15px;
+  margin-top: var(--space-xl);
   display: flex;
   justify-content: center;
 }
 
-/* Transitions */
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.5s ease;
-}
-.list-enter-from,
-.list-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
+/* --- Paper Guide (Collections) --- */
+.paper-guide-section {
+  margin-bottom: var(--space-lg);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  transition: transform 0.3s ease;
+  
+  &:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-light);
+  }
+
+  /* Center content vertically in the banner */
+  :deep(.vanta-banner) {
+    display: flex !important;
+    align-items: center !important;
+  }
+  
+  :deep(.vanta-content) {
+    width: 100%;
+  }
 }
 
-@media (max-width: 768px) {
-  .rec-grid {
-    grid-template-columns: 1fr !important;
+.guide-banner-content {
+  padding: var(--space-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.guide-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.guide-arrow-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px; /* Increased spacing */
+}
+
+.obtuse-arrow {
+  width: 12px;
+  height: 12px;
+  border-top: 3px solid #fff;
+  border-right: 3px solid #fff;
+  /* Positive skew makes the angle obtuse (>90deg) */
+  transform: rotate(45deg) skew(10deg, 10deg);
+  transform-origin: center;
+  animation: arrow-wave 1.5s infinite ease-in-out;
+}
+
+.arrow-1 {
+  opacity: 0.3;
+  animation-delay: 0s;
+}
+
+.arrow-2 {
+  opacity: 0.6;
+  animation-delay: 0.2s;
+}
+
+.arrow-3 {
+  opacity: 1;
+  animation-delay: 0.4s;
+}
+
+@keyframes arrow-wave {
+  0%, 100% {
+    transform: rotate(45deg) skew(10deg, 10deg) translate(0, 0);
   }
-  .hero-section {
-    height: 300px;
-    .hero-title { font-size: 28px; }
+  50% {
+    /* Move diagonally to follow the arrow direction */
+    transform: rotate(45deg) skew(10deg, 10deg) translate(4px, -4px);
   }
 }
 </style>
