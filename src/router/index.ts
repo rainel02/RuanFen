@@ -63,6 +63,7 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '学术论坛' }
   },
   {
+
     path: '/forum/post/:id',
     name: 'ForumPostDetail',
     component: () => import('../views/ForumPostDetailPage.vue'),
@@ -73,6 +74,28 @@ const routes: RouteRecordRaw[] = [
     name: 'Social',
     component: () => import('../views/SocialPage.vue'),
     meta: { title: '我的社交' }
+    path: '/admin',
+    name: 'AdminDashboard',
+    component: () => import('../views/admin/AdminDashboard.vue'),
+    meta: { title: '管理后台' }
+  },
+  {
+    path: '/admin/certifications',
+    name: 'AdminCertifications',
+    component: () => import('../views/admin/AdminCertificationsPage.vue'),
+    meta: { title: '认证审核' }
+  },
+  {
+    path: '/admin/appeals',
+    name: 'AdminAppeals',
+    component: () => import('../views/admin/AdminAppealsPage.vue'),
+    meta: { title: '申诉处理' }
+  },
+  {
+    path: '/admin/tasks',
+    name: 'AdminTasks',
+    component: () => import('../views/admin/AdminTasksPage.vue'),
+    meta: { title: '系统任务' }
   }
 ]
 
@@ -85,7 +108,7 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
-  document.title = `${to.meta.title} - 学术成果分享平台`
+  document.title = `${to.meta.title} - HuggingPapers`
   next()
 })
 

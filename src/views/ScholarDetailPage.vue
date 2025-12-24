@@ -159,14 +159,26 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
+import { ElMessage } from 'element-plus'
+import { Plus, Message, Document, Star } from '@element-plus/icons-vue'
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { LineChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent, GridComponent } from 'echarts/components'
+import VChart from 'vue-echarts'
 import AppHeader from '@/components/AppHeader.vue'
-import { 
-  Plus, Check, ChatLineRound, Share, School, 
-  Message, Select 
-} from '@element-plus/icons-vue'
-import { getScholarDetail } from '../api/scholars' // Need to ensure this exists or mock it
-import { mockScholars } from '../mock/scholars'
-import { mockPapers } from '../mock/papers'
+import ChatWindow from '@/components/ChatWindow.vue'
+import { useChatStore } from '../stores/chat'
+import * as scholarApi from '../api/scholar'
+
+use([
+  CanvasRenderer,
+  LineChart,
+  TitleComponent,
+  TooltipComponent,
+  GridComponent
+])
 
 const route = useRoute()
 const router = useRouter()
@@ -225,8 +237,45 @@ const formatNumber = (num: number) => {
   return num > 1000 ? (num / 1000).toFixed(1) + 'k' : num
 }
 
+
+const loadScholarDetail = async () => {
+  const scholarId = route.params.id as string
+  try {
+    const response = await scholarApi.getScholarDetail(scholarId)
+    scholar.value = {
+      id: response.scholarId,
+      name: response.name,
+      institution: response.organization,
+      title: '',
+      avatar: '',
+      bio: response.bio,
+      fields: response.researchFields || [],
+      achievements: response.achievements || [],
+      hIndex: 0,
+      citations: 0,
+      papers: 0,
+      isFollowed: false
+    }
+    
+    // 获取论文列表（从achievements中提取）
+    if (response.achievements) {
+      scholarPapers.value = response.achievements.map((ach: any) => ({
+        id: ach.id || ach.achievementId,
+        title: ach.title,
+        authors: ach.authors || [],
+        journal: ach.journal || '',
+        publishDate: ach.publishDate || ach.year,
+        citations: ach.citations || 0,
+        abstract: ach.abstract || ''
+      }))
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载学者详情失败')
+  }
+}
+
 onMounted(() => {
-  fetchScholarDetail()
+  loadScholarDetail()
 })
 </script>
 

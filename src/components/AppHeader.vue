@@ -6,6 +6,7 @@
         <div class="logo-section" @click="router.push('/')">
           <div class="logo-icon">
             <el-icon><School /></el-icon>
+
           </div>
           <span class="logo-text">ScholarHub</span>
         </div>
@@ -46,6 +47,7 @@
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </template>
@@ -56,7 +58,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { usePapersStore } from '../stores/papers'
 import { useSettingsStore } from '../stores/settings'
-import { Search, School } from '@element-plus/icons-vue'
+
+import { Search, User, School } from '@element-plus/icons-vue'
+import defaultAvatar from '@/assets/profile.png'
+import logoImage from '@/assets/logo.png'
+
 
 const route = useRoute()
 const router = useRouter()
@@ -69,6 +75,11 @@ const searchInput = ref('')
 const isHomePage = computed(() => route.path === '/')
 const isLoggedIn = computed(() => authStore.isAuthenticated)
 const user = computed(() => authStore.user)
+
+const showSearch = computed(() => route.path === '/')
+const isAdmin = computed(() => user.value?.role === 'admin' || user.value?.role === 'administrator')
+
+// 根据设置显示功能
 const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
 const showForum = computed(() => settingsStore.settings.enableForum)
 
@@ -82,13 +93,19 @@ const handleSearchSubmit = () => {
 }
 </script>
 
-<style scoped lang="scss">
-.app-header {
-  height: 64px;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  transition: all 0.3s ease;
+
+const goToProfile = () => {
+  if (isLoggedIn.value) {
+    router.push('/profile')
+  } else {
+    router.push('/profile')
+  }
+}
+
+const handleSearch = (value: string) => {
+  if (route.path === '/') {
+    papersStore.searchPapers(value)
+  }
 }
 
 .glass-header {
@@ -125,17 +142,35 @@ const handleSearchSubmit = () => {
     border-radius: 8px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 20px;
-  }
 
-  .logo-text {
-    font-size: 20px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #303133, #606266);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 600;
+    gap: 10px;
+
+    .logo-image {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .logo-avatar {
+      cursor: pointer;
+      border: 2px solid var(--primary-color);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+
+      &:hover {
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    .logo-text {
+      font-size: 18px;
+      color: var(--primary-color);
+    }
   }
 }
 
@@ -215,5 +250,46 @@ const handleSearchSubmit = () => {
   .search-section { display: none; }
   .nav-section { gap: 15px; }
   .nav-item { font-size: 14px; }
+}
+
+.user-menu-item {
+  :deep(.el-menu-item__content) {
+    display: flex;
+    align-items: center;
+  }
+
+  .user-avatar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    .user-icon {
+      font-size: 24px;
+      color: var(--text-color);
+    }
+
+    .user-avatar {
+      border: 2px solid var(--primary-color);
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      }
+    }
+
+    .user-name {
+      font-weight: 500;
+      color: var(--text-color);
+      white-space: nowrap;
+    }
+  }
 }
 </style>

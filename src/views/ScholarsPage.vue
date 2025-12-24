@@ -77,28 +77,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+
+import { ref, computed, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import AppHeader from '@/components/AppHeader.vue'
 import ScholarCard from '@/components/ScholarCard.vue'
-import { mockScholars } from '../mock/scholars'
+import ChatWindow from '@/components/ChatWindow.vue'
 import { useChatStore } from '../stores/chat'
-import { UserFilled, School, Collection, Sort } from '@element-plus/icons-vue'
+import * as scholarApi from '../api/scholar'
 
-const router = useRouter()
-const scholars = ref(mockScholars)
+const scholars = ref<any[]>([])
+
 const chatStore = useChatStore()
 const selectedInstitution = ref('')
 const selectedField = ref('')
 const sortBy = ref('hIndex')
+const loading = ref(false)
 
 const institutions = computed(() => {
-  const allInstitutions = scholars.value.map(s => s.institution)
+  const allInstitutions = scholars.value.map((s: any) => s.organization || s.institution)
   return [...new Set(allInstitutions)]
 })
 
 const fields = computed(() => {
-  const allFields = scholars.value.flatMap(s => s.fields)
+  const allFields = scholars.value.flatMap((s: any) => s.researchFields || s.fields || [])
   return [...new Set(allFields)]
 })
 
@@ -106,29 +108,70 @@ const filteredScholars = computed(() => {
   let result = scholars.value
 
   if (selectedInstitution.value) {
-    result = result.filter(s => s.institution === selectedInstitution.value)
+    result = result.filter((s: any) => (s.organization || s.institution) === selectedInstitution.value)
   }
 
   if (selectedField.value) {
-    result = result.filter(s => s.fields.includes(selectedField.value))
+    result = result.filter((s: any) => (s.researchFields || s.fields || []).includes(selectedField.value))
   }
 
-  result = [...result].sort((a, b) => {
-    if (sortBy.value === 'hIndex') return b.stats.hIndex - a.stats.hIndex
-    if (sortBy.value === 'citations') return b.stats.citations - a.stats.citations
-    if (sortBy.value === 'papers') return b.stats.papers - a.stats.papers
-    return 0
+
+  // 排序
+  result.sort((a: any, b: any) => {
+    const key = sortBy.value
+    return (b[key] || 0) - (a[key] || 0)
   })
 
   return result
 })
+
+
+const loadScholars = async () => {
+  loading.value = true
+  try {
+    const params: any = {}
+    if (selectedInstitution.value) params.organization = selectedInstitution.value
+    if (selectedField.value) params.field = selectedField.value
+    
+    const response = await scholarApi.searchScholars(params)
+    if (response.results) {
+      scholars.value = response.results.map((item: any) => ({
+        id: item.scholarId,
+        name: item.name,
+        institution: item.organization,
+        title: item.title,
+        avatar: item.avatarUrl,
+        fields: item.researchFields || [],
+        hIndex: 0,
+        citations: 0,
+        papers: 0,
+        isFollowed: false
+      }))
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '加载学者列表失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleStartChat = (participantId: string, participantName: string, participantAvatar?: string) => {
+  chatStore.startConversation(participantId, participantName, participantAvatar)
+  showChatWindow.value = true
+}
 
 const handleStartChat = (scholarId: string) => {
   // In a real app, we would create a conversation or get existing one
   // For now, just navigate to chat page
   router.push('/chat')
 }
+
+
+onMounted(() => {
+  loadScholars()
+})
 </script>
+
 
 <style scoped lang="scss">
 .scholars-page {

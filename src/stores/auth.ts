@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { User } from '../types/user'
+import * as authApi from '../api/auth'
+import * as userApi from '../api/user'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -8,30 +10,35 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!user.value && !!token.value)
 
-  const login = async (username: string, password: string) => {
-    // Mock login
-    if (username === 'admin' && password === '123456') {
-      const userData = {
-        id: '1',
-        username: 'admin',
-        email: 'admin@example.com',
-        avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150',
-        name: '张教授',
-        title: '教授',
-        institution: '清华大学',
-        researchFields: ['人工智能', '机器学习', '深度学习'],
-        hIndex: 45,
-        citations: 1234,
-        papers: 89
+  const login = async (account: string, password: string) => {
+    try {
+      console.log('开始登录请求，参数:', { account, password })
+      const response = await authApi.login({ account, password })
+      console.log('登录响应:', response)
+      
+      if (response && response.token && response.user) {
+        token.value = response.token
+        user.value = response.user as User
+        localStorage.setItem('token', response.token)
+        localStorage.setItem('user', JSON.stringify(response.user))
+        return { success: true }
       }
-
-      user.value = userData
-      token.value = 'mock-jwt-token'
-      localStorage.setItem('token', token.value)
-      localStorage.setItem('user', JSON.stringify(userData))
-      return { success: true }
+      console.warn('登录响应格式不正确:', response)
+      return { success: false, message: '登录失败：响应格式不正确' }
+    } catch (error: any) {
+      console.error('登录请求失败:', error)
+      const errorMessage = error.message || '登录失败'
+      return { success: false, message: errorMessage }
     }
-    return { success: false, message: '用户名或密码错误' }
+  }
+
+  const register = async (username: string, email: string, password: string, role?: 'user' | 'admin' | 'administrator') => {
+    try {
+      const response = await authApi.register({ username, email, password, role })
+      return { success: true, data: response }
+    } catch (error: any) {
+      return { success: false, message: error.message || '注册失败' }
+    }
   }
 
   const logout = () => {
@@ -41,10 +48,29 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('user')
   }
 
-  const initAuth = () => {
-    const savedUser = localStorage.getItem('user')
-    if (savedUser && token.value) {
-      user.value = JSON.parse(savedUser)
+  const initAuth = async () => {
+    const savedToken = localStorage.getItem('token')
+    if (savedToken) {
+      token.value = savedToken
+      try {
+        // 获取当前用户信息
+        const userData = await userApi.getCurrentUser()
+        user.value = userData as User
+        localStorage.setItem('user', JSON.stringify(userData))
+      } catch (error) {
+        // token可能已过期，清除
+        logout()
+      }
+    }
+  }
+
+  const refreshUserInfo = async () => {
+    try {
+      const userData = await userApi.getCurrentUser()
+      user.value = userData as User
+      localStorage.setItem('user', JSON.stringify(userData))
+    } catch (error) {
+      console.error('获取用户信息失败', error)
     }
   }
 
@@ -53,7 +79,9 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     isLoggedIn,
     login,
+    register,
     logout,
-    initAuth
+    initAuth,
+    refreshUserInfo
   }
 })
