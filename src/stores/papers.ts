@@ -9,9 +9,13 @@ export const usePapersStore = defineStore('papers', () => {
   const currentPage = ref(1)
   const pageSize = ref(12)
   const searchQuery = ref('')
+  const author = ref('')
+  const institution = ref('')
   const selectedFields = ref<string[]>([])
   const timeRange = ref('all')
   const sortBy = ref('latest')
+  const startDate = ref('')
+  const endDate = ref('')
   const total = ref(0)
 
   const filteredPapers = computed(() => papers.value)
@@ -34,7 +38,12 @@ export const usePapersStore = defineStore('papers', () => {
     if (filters.fields !== undefined) selectedFields.value = filters.fields
     if (filters.timeRange !== undefined) timeRange.value = filters.timeRange
     if (filters.sortBy !== undefined) sortBy.value = filters.sortBy
-    if (filters.author !== undefined) (searchQuery.value = filters.author)
+    // accept q (search), author, institution, startDate, endDate
+    if ((filters as any).q !== undefined) searchQuery.value = (filters as any).q
+    if ((filters as any).author !== undefined) author.value = (filters as any).author
+    if ((filters as any).institution !== undefined) institution.value = (filters as any).institution
+    if ((filters as any).startDate !== undefined) startDate.value = (filters as any).startDate
+    if ((filters as any).endDate !== undefined) endDate.value = (filters as any).endDate
     currentPage.value = 1
     await fetchPapers()
   }
@@ -43,8 +52,16 @@ export const usePapersStore = defineStore('papers', () => {
     loading.value = true
     try {
       const params: Record<string, any> = {}
+      // optional filters
       if (searchQuery.value) params.q = searchQuery.value
+      if (author.value) params.author = author.value
+      if (institution.value) params.institution = institution.value
       if (selectedFields.value.length) params.field = selectedFields.value[0]
+      if (startDate.value) params.startDate = startDate.value
+      if (endDate.value) params.endDate = endDate.value
+      // pagination: API expects 0-based page, UI uses 1-based currentPage
+      params.page = Math.max(0, currentPage.value - 1)
+      params.size = pageSize.value
       if (sortBy.value === 'citations') params.sort_by = 'citations'
       if (sortBy.value === 'latest') params.sort_by = 'time'
 
@@ -81,6 +98,8 @@ export const usePapersStore = defineStore('papers', () => {
     currentPage,
     pageSize,
     searchQuery,
+    author,
+    institution,
     selectedFields,
     timeRange,
     sortBy,
