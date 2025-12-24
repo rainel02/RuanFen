@@ -27,6 +27,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '个人中心' }
   },
   {
+    path: '/collections',
+    name: 'Collections',
+    component: () => import('../views/CollectionsPage.vue'),
+    meta: { title: '我的收藏' }
+  },
+  {
     path: '/paper/:id',
     name: 'PaperDetail',
     component: () => import('../views/PaperDetailPage.vue'),

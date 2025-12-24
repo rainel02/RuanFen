@@ -167,7 +167,7 @@ onMounted(() => {
 .chat-window {
   display: flex;
   height: 600px;
-  background: white;
+  background: var(--surface);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-medium);
   overflow: hidden;
@@ -204,7 +204,7 @@ onMounted(() => {
         transition: background-color 0.2s;
 
         &:hover {
-          background-color: #f5f5f5;
+          background-color: rgba(255,255,255,0.02);
         }
 
         &.active {
@@ -294,7 +294,8 @@ onMounted(() => {
         .message-content {
           max-width: 70%;
           padding: 8px 12px;
-          background-color: #f0f0f0;
+          background-color: var(--surface);
+          color: var(--text-color);
           border-radius: 12px;
           word-wrap: break-word;
         }

@@ -92,14 +92,14 @@
                   <div class="paper-meta">
                     <span class="authors">{{ paper.authors.slice(0, 3).map(a => a.name).join(', ') }}</span>
                     <span class="venue">{{ paper.journal }}</span>
-                    <span class="year">{{ new Date(paper.publishDate).getFullYear() }}</span>
+                    <span class="year">{{ paper.year || (paper.publishDate ? new Date(paper.publishDate).getFullYear() : '') }}</span>
                   </div>
 
                   <p class="paper-abstract">{{ paper.abstract.substring(0, 200) }}...</p>
 
                   <div class="paper-tags">
                     <el-tag
-                      v-for="keyword in paper.keywords.slice(0, 3)"
+                      v-for="keyword in paper.keyword.slice(0, 3)"
                       :key="keyword"
                       size="small"
                       effect="plain"
@@ -231,11 +231,12 @@ const recommendations = ref<(Paper & {
       { id: 'author2', name: 'Noam Shazeer', institution: 'Google Brain' }
     ],
     publishDate: '2024-01-15',
+    year: 2024,
     journal: 'Nature Machine Intelligence',
     fields: ['Natural Language Processing', 'Deep Learning'],
     citations: 1250,
     favorites: 89,
-    isFavorited: false,
+    isfavorited: false,
     keywords: ['Transformer', 'Attention', 'Deep Learning', 'NLP'],
     recommendationReason: '领域匹配',
     matchScore: 95,
@@ -251,12 +252,13 @@ const recommendations = ref<(Paper & {
       { id: 'author4', name: 'Daniel Ramage', institution: 'Google Research' }
     ],
     publishDate: '2024-02-20',
+    year: 2024,
     journal: 'Journal of Machine Learning Research',
     fields: ['Machine Learning', 'Privacy'],
     citations: 890,
     favorites: 67,
-    isFavorited: true,
-    keywords: ['Federated Learning', 'Privacy', 'Distributed Systems'],
+    isfavorited: true,
+    keyword: ['Federated Learning', 'Privacy', 'Distributed Systems'],
     recommendationReason: '难度适配',
     matchScore: 88,
     explanation: '适合您当前的学习阶段，内容由浅入深',
@@ -271,12 +273,13 @@ const recommendations = ref<(Paper & {
       { id: 'author6', name: 'Chen Wang', institution: 'MIT CSAIL' }
     ],
     publishDate: '2024-03-10',
+    year: 2024,
     journal: 'Nature Medicine',
     fields: ['Computer Vision', 'Healthcare'],
     citations: 567,
     favorites: 34,
-    isFavorited: false,
-    keywords: ['Computer Vision', 'Healthcare', 'Medical Imaging'],
+    isfavorited: false,
+    keyword: ['Computer Vision', 'Healthcare', 'Medical Imaging'],
     recommendationReason: '交叉领域',
     matchScore: 82,
     explanation: '结合了您感兴趣的计算机视觉和新兴应用领域',
@@ -381,9 +384,9 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.paper-guide-page {
+  .paper-guide-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--bg);
 
   .guide-header {
     margin-bottom: 24px;
@@ -395,12 +398,12 @@ onMounted(() => {
         margin: 0 0 8px 0;
         font-size: 24px;
         font-weight: 600;
-        color: #333;
+        color: var(--text-color);
       }
 
       p {
         margin: 0;
-        color: #666;
+        color: var(--muted);
         font-size: 14px;
       }
     }
@@ -422,7 +425,7 @@ onMounted(() => {
       gap: 12px;
 
       .info-icon {
-        color: var(--el-color-primary);
+        color: var(--primary-color);
         font-size: 20px;
         margin-top: 2px;
       }
@@ -436,13 +439,13 @@ onMounted(() => {
           font-weight: 500;
         }
 
-        p {
+          p {
           margin: 0;
-          color: #666;
+          color: var(--muted);
           line-height: 1.5;
 
           a {
-            color: var(--el-color-primary);
+            color: var(--primary-color);
             text-decoration: none;
 
             &:hover {
@@ -497,9 +500,9 @@ onMounted(() => {
             flex-direction: column;
             gap: 4px;
 
-            .match-score {
+              .match-score {
               font-size: 12px;
-              color: #666;
+              color: var(--muted);
             }
           }
 
@@ -516,30 +519,30 @@ onMounted(() => {
             line-height: 1.4;
 
             a {
-              color: #333;
+              color: var(--text-color);
               text-decoration: none;
 
               &:hover {
-                color: var(--el-color-primary);
+                color: var(--primary-color);
               }
             }
           }
 
-          .paper-meta {
+            .paper-meta {
             display: flex;
             gap: 12px;
             margin-bottom: 12px;
             font-size: 12px;
-            color: #666;
+            color: var(--muted);
 
             .authors {
               font-weight: 500;
             }
           }
 
-          .paper-abstract {
+            .paper-abstract {
             margin: 12px 0;
-            color: #666;
+            color: var(--muted);
             line-height: 1.5;
             font-size: 14px;
           }
@@ -551,16 +554,16 @@ onMounted(() => {
             flex-wrap: wrap;
           }
 
-          .recommendation-explanation {
+            .recommendation-explanation {
             display: flex;
             align-items: center;
             gap: 6px;
             margin-top: 12px;
             padding: 8px;
-            background-color: #f8f9fa;
+            background-color: rgba(255,255,255,0.02);
             border-radius: 4px;
             font-size: 12px;
-            color: #666;
+            color: var(--muted);
 
             .el-icon {
               color: var(--el-color-warning);
@@ -573,7 +576,7 @@ onMounted(() => {
           gap: 8px;
           margin-top: 16px;
           padding-top: 16px;
-          border-top: 1px solid #f0f0f0;
+          border-top: 1px solid var(--border-color);
         }
       }
     }
@@ -598,13 +601,13 @@ onMounted(() => {
             display: block;
             font-size: 24px;
             font-weight: 600;
-            color: var(--el-color-primary);
+            color: var(--primary-color);
             margin-bottom: 4px;
           }
 
           .stat-label {
             font-size: 12px;
-            color: #666;
+            color: var(--muted);
           }
         }
       }

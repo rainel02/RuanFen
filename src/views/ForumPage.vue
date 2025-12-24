@@ -504,9 +504,9 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.forum-page {
+  .forum-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--bg);
 
   .forum-header {
     display: flex;
@@ -536,11 +536,11 @@ onMounted(() => {
         margin-bottom: 8px;
 
         &:hover {
-          background-color: #f8f9fa;
+          background-color: rgba(255,255,255,0.02);
         }
 
         &.active {
-          background-color: var(--el-color-primary);
+          background-color: var(--primary-color);
           color: white;
 
           .category-info .category-desc,
@@ -561,7 +561,7 @@ onMounted(() => {
           .category-desc {
             display: block;
             font-size: 12px;
-            color: #666;
+            color: var(--muted);
           }
         }
 
@@ -572,12 +572,12 @@ onMounted(() => {
             display: block;
             font-size: 18px;
             font-weight: 600;
-            color: var(--el-color-primary);
+            color: var(--primary-color);
           }
 
           .label {
             font-size: 11px;
-            color: #999;
+            color: var(--muted);
           }
         }
 
@@ -623,14 +623,14 @@ onMounted(() => {
 
     .topics-list {
       .topic-item {
-        display: flex;
-        padding: 16px;
-        border-bottom: 1px solid #f0f0f0;
-        cursor: pointer;
-        transition: background-color 0.2s;
+      display: flex;
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background-color 0.2s;
 
         &:hover {
-          background-color: #f8f9fa;
+          background-color: rgba(255,255,255,0.02);
         }
 
         &:last-child {
@@ -655,7 +655,7 @@ onMounted(() => {
               margin: 0;
               font-size: 16px;
               font-weight: 500;
-              color: #333;
+              color: var(--text-color);
               flex: 1;
               overflow: hidden;
               text-overflow: ellipsis;
@@ -670,7 +670,7 @@ onMounted(() => {
 
           .topic-preview {
             margin: 8px 0;
-            color: #666;
+            color: var(--muted);
             line-height: 1.5;
             font-size: 14px;
           }
@@ -679,11 +679,11 @@ onMounted(() => {
             display: flex;
             gap: 16px;
             font-size: 12px;
-            color: #999;
+            color: var(--muted);
 
             .author {
               font-weight: 500;
-              color: var(--el-color-primary);
+              color: var(--primary-color);
             }
           }
         }
@@ -700,7 +700,7 @@ onMounted(() => {
             align-items: center;
             gap: 4px;
             font-size: 12px;
-            color: #666;
+            color: var(--muted);
 
             .el-icon {
               font-size: 14px;

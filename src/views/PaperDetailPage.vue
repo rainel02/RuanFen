@@ -13,40 +13,41 @@
 
             <div class="paper-actions">
               <el-button
-                :type="paper.isFavorited ? 'primary' : 'default'"
+                :type="paper.isfavorited ? 'primary' : 'default'"
                 :icon="Star"
                 @click="toggleFavorite"
               >
-                {{ paper.isFavorited ? '已收藏' : '收藏' }}
+                {{ paper.isfavorited ? '已收藏' : '收藏' }}
               </el-button>
-              <el-button :icon="Share">分享</el-button>
-              <el-button :icon="Download" v-if="paper.pdfUrl">下载PDF</el-button>
+              <!-- <el-button :icon="Share">分享</el-button> -->
+              <!-- <el-button :icon="Download" v-if="paper.url">下载PDF</el-button> -->
+              <el-button
+                v-if="paper.url"
+                @click.prevent="openExternal(paper.url)"
+              >
+                查看原文
+              </el-button>
             </div>
           </div>
 
           <el-row :gutter="24">
             <el-col :lg="18" :md="24" :sm="24" :xs="24">
               <el-card class="main-content">
-                <h1 class="paper-title">{{ paper.title }}</h1>
+                <div class="paper-title-row">
+                  <h1 class="paper-title">{{ paper.title }}</h1>
+                </div>
 
                 <div class="paper-meta">
-                  <div class="authors">
-                    <span class="meta-label">作者：</span>
-                    <router-link
-                      v-for="(author, index) in paper.authors"
-                      :key="author.id"
-                      :to="`/scholar/${author.id}`"
-                      class="author-link"
-                    >
-                      {{ author.name }}{{ index < paper.authors.length - 1 ? ', ' : '' }}
-                    </router-link>
+                  <div class="publication-info">
+                    <span class="meta-label">刊物：</span>
+                    <span>{{ paper.publication }}</span>
+                    <span class="meta-label" style="margin-left: 20px;">机构：</span>
+                    <span>{{ paper.institution }}</span>
                   </div>
 
                   <div class="publication-info">
-                    <span class="meta-label">发表于：</span>
-                    <span>{{ paper.journal }}</span>
-                    <span class="separator">|</span>
-                    <span>{{ formatDate(paper.publishDate) }}</span>
+                    <span class="meta-label">发表日期：</span>
+                    <span>{{ formatDate(paper.publication_date) }}</span>
                   </div>
 
                   <div class="doi" v-if="paper.doi">
@@ -75,11 +76,11 @@
                   <h3>关键词</h3>
                   <div class="keywords-list">
                     <el-tag
-                      v-for="keyword in paper.keywords"
+                      v-for="keyword in paper.keyword"
                       :key="keyword"
-                      type="info"
                       effect="plain"
                       size="small"
+                      style="padding-left: 5px; padding-right: 5px;"
                     >
                       {{ keyword }}
                     </el-tag>
@@ -87,12 +88,12 @@
                 </div>
               </el-card>
 
-              <el-card class="comments-section">
+              <!-- <el-card class="comments-section">
                 <template #header>
                   <h3>评论与讨论</h3>
                 </template>
                 <el-empty description="暂无评论，来发表第一个评论吧！" />
-              </el-card>
+              </el-card> -->
             </el-col>
 
             <el-col :lg="6" :md="24" :sm="24" :xs="24">
@@ -104,17 +105,17 @@
                   <div class="stat-item">
                     <el-icon><Star /></el-icon>
                     <span class="stat-label">收藏数</span>
-                    <span class="stat-value">{{ paper.favorites }}</span>
+                    <span class="stat-value">{{ paper.favoriteCount }}</span>
                   </div>
                   <div class="stat-item">
                     <el-icon><Document /></el-icon>
                     <span class="stat-label">引用数</span>
-                    <span class="stat-value">{{ paper.citations }}</span>
+                    <span class="stat-value">{{ paper.citationCount }}</span>
                   </div>
                   <div class="stat-item">
                     <el-icon><View /></el-icon>
                     <span class="stat-label">浏览数</span>
-                    <span class="stat-value">{{ Math.floor(Math.random() * 1000) + 100 }}</span>
+                    <span class="stat-value">{{ paper.readCount }}</span>
                   </div>
                 </el-card>
 
@@ -122,21 +123,22 @@
                   <template #header>
                     <h4>作者信息</h4>
                   </template>
-                  <div class="authors-list">
-                    <div
-                      v-for="author in paper.authors"
-                      :key="author.id"
-                      class="author-item"
-                    >
-                      <el-avatar :size="40">{{ author.name.charAt(0) }}</el-avatar>
-                      <div class="author-info">
-                        <router-link :to="`/scholar/${author.id}`" class="author-name">
-                          {{ author.name }}
-                        </router-link>
-                        <p class="author-institution">{{ author.institution }}</p>
+                    <div class="authors-list">
+                      <div
+                        v-for="(author, idx) in (paper.authorships || [])"
+                        :key="authorKey(author, idx)"
+                        class="author-item"
+                      >
+                        <el-avatar :size="40">{{ authorInitial(author) }}</el-avatar>
+                        <div class="author-info">
+                          <router-link v-if="author && author.id" :to="`/scholar/${author.id}`" class="author-name">
+                            {{ authorLabel(author) }}
+                          </router-link>
+                          <span v-else class="author-name">{{ authorLabel(author) }}</span>
+                          <p class="author-institution">{{ typeof author === 'string' ? '' : (author.institution || '') }}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
                 </el-card>
 
                 <el-card class="related-papers">
@@ -152,7 +154,7 @@
                       <router-link :to="`/paper/${relatedPaper.id}`" class="related-title">
                         {{ relatedPaper.title }}
                       </router-link>
-                      <p class="related-authors">{{ relatedPaper.authors.map(a => a.name).join(', ') }}</p>
+                      <p class="related-authors">{{ (relatedPaper.authorships || []).map(a => authorLabel(a)).join(', ') }}</p>
                     </div>
                   </div>
                 </el-card>
@@ -169,258 +171,383 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, computed } from 'vue'
+<script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
+import type { Paper } from '@/types/paper'
 import { useRoute } from 'vue-router'
 import { Star, Share, Download, Document, View } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
-import { mockPapers } from '@/mock/papers'
-import { usePapersStore } from '../stores/papers'
+import api from '@/api'
+// import { usePapersStore } from '../stores/papers'
 
 const route = useRoute()
-const papersStore = usePapersStore()
 
-const paper = ref(null)
-const relatedPapers = ref([])
+const paper = ref<Paper | null>(null)
+const relatedPapers = ref<Paper[]>([])
 
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
+
+
+const authorKey = (author: any, idx: number) => {
+  if (!author) return String(idx)
+  if (typeof author === 'string') return `${author}-${idx}`
+  return `${author.id ?? author.name ?? idx}-${idx}`
 }
 
-const toggleFavorite = () => {
-  if (paper.value) {
-    papersStore.toggleFavorite(paper.value.id)
-    paper.value.isFavorited = !paper.value.isFavorited
-    paper.value.favorites += paper.value.isFavorited ? 1 : -1
+const authorLabel = (author: any) => (typeof author === 'string' ? author : (author?.name ?? ''))
+
+const authorInitial = (author: any) => {
+  const name = authorLabel(author)
+  return name ? name.charAt(0) : '?'
+}
+
+const formatDate = (dateStringOrYear?: string | number) => {
+  if (dateStringOrYear === undefined || dateStringOrYear === null) return ''
+  if (typeof dateStringOrYear === 'number') return String(dateStringOrYear)
+  const s = String(dateStringOrYear)
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/)
+  if (m) {
+    const y = m[1]
+    const mm = m[2].padStart(2, '0')
+    const dd = m[3].padStart(2, '0')
+    return `${y}-${mm}-${dd}`
+  }
+  const d = new Date(s)
+  if (!isNaN(d.getTime())) {
+    const y = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${y}-${mm}-${dd}`
+  }
+  return s
+}
+
+const toggleFavorite = async () => {
+  if (!paper.value) return
+  const id = paper.value.id
+  if (!paper.value.isfavorited) {
+    const res = await api.addToCollections(id).catch(() => null)
+    if (res && (res.status === 201 || res.ok)) {
+      paper.value.isfavorited = true
+      paper.value.favoriteCount = (paper.value.favoriteCount || 0) + 1
+    }
+  } else {
+    const res = await api.removeFromCollections(id).catch(() => null)
+    if (res && (res.status === 204 || res.ok)) {
+      paper.value.isfavorited = false
+      paper.value.favoriteCount = Math.max(0, (paper.value.favoriteCount || 1) - 1)
+    }
   }
 }
 
-onMounted(() => {
-  const paperId = route.params.id
-  paper.value = mockPapers.find(p => p.id === paperId)
+const loadPaper = async (paperId: string) => {
+  if (!paperId) return
+  try {
+    const data = await api.getAchievement(paperId)
+    paper.value = data
+    relatedPapers.value = data.relatedPapers || []
+    // optional: scroll to top when navigating to another paper
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } catch (e) {
+    console.error('load paper error', e)
+  }
+}
 
-  if (paper.value) {
-    // 获取相关论文（同领域的其他论文）
-    relatedPapers.value = mockPapers
-      .filter(p => p.id !== paperId && p.fields.some(field => paper.value.fields.includes(field)))
-      .slice(0, 5)
+function openExternal(url?: string): void {
+  if (!url) return
+  try {
+    window.open(url, '_blank')
+  } catch (e) {
+    const a = document.createElement('a')
+    a.href = url as string
+    a.target = '_blank'
+    a.rel = 'noopener noreferrer'
+    a.click()
+  }
+}
+
+onMounted(async () => {
+  await loadPaper(String(route.params.id))
+})
+
+// When route param changes (navigating to another paper via router-link), reload data
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    loadPaper(String(newId))
   }
 })
 </script>
 
 <style scoped lang="scss">
+@mixin mobile { @media (max-width: 767px) { @content; } }
+
 .paper-detail-page {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
 }
 
+.page-content {
+  flex: 1;
+  padding: var(--space-xl) 0;
+}
+
+.container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+/* Breadcrumb & Header */
 .paper-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-
-  .paper-actions {
-    display: flex;
-    gap: 12px;
-
-    @include mobile {
-      flex-direction: column;
-      width: 100%;
-      margin-top: 16px;
-    }
-  }
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
 
   @include mobile {
     flex-direction: column;
     align-items: flex-start;
+    gap: var(--space-md);
   }
 }
 
+:deep(.el-breadcrumb__inner) {
+  color: var(--text-tertiary) !important;
+  font-weight: 500;
+  
+  &.is-link:hover {
+    color: var(--primary) !important;
+  }
+}
+
+:deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
+  color: var(--text-secondary) !important;
+}
+
+.paper-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+/* Main Content Card */
 .main-content {
-  margin-bottom: 24px;
-
-  .paper-title {
-    font-size: 28px;
-    font-weight: 600;
-    line-height: 1.4;
-    margin: 0 0 20px 0;
-    color: var(--text-color);
-  }
-
-  .paper-meta {
-    margin-bottom: 20px;
-
-    > div {
-      margin-bottom: 8px;
-      color: var(--text-color);
-
-      .meta-label {
-        font-weight: 600;
-        color: var(--text-light);
-      }
-
-      .author-link {
-        color: var(--primary-color);
-        text-decoration: none;
-
-        &:hover {
-          text-decoration: underline;
-        }
-      }
-
-      .separator {
-        margin: 0 12px;
-        color: var(--text-light);
-      }
-
-      a {
-        color: var(--primary-color);
-        text-decoration: none;
-
-        &:hover {
-          text-decoration: underline;
-        }
-      }
-    }
-  }
-
-  .paper-fields {
-    margin-bottom: 24px;
-
-    .el-tag {
-      margin-right: 8px;
-      margin-bottom: 8px;
-    }
-  }
-
-  .paper-abstract {
-    margin-bottom: 24px;
-
-    h3 {
-      margin-bottom: 12px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    p {
-      line-height: 1.8;
-      font-size: 16px;
-      color: var(--text-color);
-    }
-  }
-
-  .paper-keywords {
-    h3 {
-      margin-bottom: 12px;
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    .keywords-list {
-      .el-tag {
-        margin-right: 8px;
-        margin-bottom: 8px;
-      }
-    }
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-lg);
+  
+  /* Override Element Plus Card styles if needed, but class is on el-card */
+  :deep(.el-card__body) {
+    padding: 0;
   }
 }
 
-.sidebar {
-  .stats-card, .authors-card, .related-papers {
-    margin-bottom: 20px;
+.paper-title {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-lg) 0;
+}
 
+.paper-meta {
+  display: grid;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  
+  .publication-info {
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .meta-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  
+  a {
+    color: var(--primary);
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+.paper-fields {
+  margin-bottom: var(--space-lg);
+  
+  .el-tag {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: var(--border-subtle);
+    color: var(--text-secondary);
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
+}
+
+.paper-abstract {
+  margin-bottom: var(--space-xl);
+
+  h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-md);
+    font-weight: 600;
+  }
+
+  p {
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    text-align: justify;
+  }
+}
+
+.paper-keywords {
+  h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-md);
+    font-weight: 600;
+  }
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.stats-card, .authors-card, .related-papers {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  
+  :deep(.el-card__header) {
+    border-bottom: 1px solid var(--border-subtle);
+    padding: var(--space-md) var(--space-lg);
+    
     h4 {
       margin: 0;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
+      color: var(--text-primary);
     }
   }
+  
+  :deep(.el-card__body) {
+    padding: var(--space-lg);
+  }
+}
 
-  .stat-item {
+.stat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  
+  &:last-child { margin-bottom: 0; }
+
+  .stat-label {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 12px;
+    font-size: 14px;
+  }
+  
+  .stat-value {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+}
 
-    .stat-label {
-      flex: 1;
-      color: var(--text-light);
-    }
+.author-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  
+  &:last-child { margin-bottom: 0; }
+  
+  .el-avatar {
+    background: var(--surface-hover);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-subtle);
+  }
 
-    .stat-value {
+  .author-info {
+    display: flex;
+    flex-direction: column;
+    
+    .author-name {
+      font-size: 14px;
       font-weight: 600;
-      color: var(--primary-color);
+      color: var(--text-primary);
+      text-decoration: none;
+      transition: color 0.2s;
+      
+      &:hover { color: var(--primary); }
     }
-  }
-
-  .authors-list {
-    .author-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-
-      .author-info {
-        flex: 1;
-
-        .author-name {
-          color: var(--primary-color);
-          text-decoration: none;
-          font-weight: 500;
-
-          &:hover {
-            text-decoration: underline;
-          }
-        }
-
-        .author-institution {
-          margin: 2px 0 0 0;
-          font-size: 12px;
-          color: var(--text-light);
-        }
-      }
-    }
-  }
-
-  .related-list {
-    .related-item {
-      margin-bottom: 16px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid var(--border-color);
-
-      &:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
-      }
-
-      .related-title {
-        display: block;
-        color: var(--text-color);
-        text-decoration: none;
-        font-weight: 500;
-        line-height: 1.4;
-        margin-bottom: 4px;
-
-        &:hover {
-          color: var(--primary-color);
-        }
-      }
-
-      .related-authors {
-        margin: 0;
-        font-size: 12px;
-        color: var(--text-light);
-      }
+    
+    .author-institution {
+      font-size: 12px;
+      color: var(--text-tertiary);
+      margin: 2px 0 0 0;
     }
   }
 }
 
-.loading-state, .comments-section {
-  margin-bottom: 24px;
+.related-item {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+  
+  .related-title {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin-bottom: 4px;
+    transition: color 0.2s;
+    
+    &:hover { color: var(--primary); }
+  }
+  
+  .related-authors {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin: 0;
+  }
 }
 </style>

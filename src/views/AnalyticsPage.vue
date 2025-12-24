@@ -178,7 +178,7 @@ const institutionChartOptions = computed(() => ({
       type: 'bar',
       data: analyticsData.institutions.map(item => item.papers),
       itemStyle: {
-        color: '#1890ff'
+        color: '#ff3f81'
       }
     }
   ]
@@ -250,7 +250,7 @@ const trendChartOptions = computed(() => ({
       data: analyticsData.trends.map(item => item.papers),
       smooth: true,
       itemStyle: {
-        color: '#1890ff'
+        color: '#ff3f81'
       }
     },
     {
@@ -260,7 +260,7 @@ const trendChartOptions = computed(() => ({
       data: analyticsData.trends.map(item => item.citations),
       smooth: true,
       itemStyle: {
-        color: '#52c41a'
+        color: 'var(--primary-color)'
       }
     }
   ]
@@ -317,7 +317,6 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-@import "../styles/main.scss";
 
 .analytics-page {
   min-height: 100vh;

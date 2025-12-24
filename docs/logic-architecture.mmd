@@ -1,0 +1,90 @@
+flowchart LR
+  %% 客户端与用户角色
+  subgraph Client[用户端]
+    A[浏览器 (SPA - Vue3 + Pinia + Vue-Router)]
+    Users[用户角色: 学者 / 管理员 (RBAC)]
+  end
+
+  %% 边缘层：CDN 与网关 (Nginx + WAF/DDoS)
+  subgraph Edge[边缘层]
+    CDN[CDN / 静态资源缓存]
+    NGINX[Nginx (反向代理, TLS, WAF, DDoS 防护)]
+  end
+
+  %% 应用层：单体 Spring Boot（容器化部署）
+  subgraph AppCluster[应用层 - 单体容器组]
+    LB[负载均衡]
+    APP[Spring Boot 单体应用\n(Controller / Service / Repository)\n无状态, JWT 鉴权]
+  end
+
+  %% 数据服务：Redis 主从、MySQL、Elasticsearch、对象存储
+  subgraph DataServices[后端支撑服务]
+    RedisMaster[Redis 主 (AOF + RDB 持久化)]
+    RedisSlave[Redis 从 (只读)]
+    MySQL[MySQL (关系型存储, 备份/主从)]
+    ES[Elasticsearch 集群 (全文检索)]
+    FileStore[对象存储 (文件/附件/备份)]
+  end
+
+  %% 运维与可观测（使用泛化节点，移除具体技术名）
+  subgraph Infra[运维 & 可观测]
+    K8S[Kubernetes / Docker (部署 & 编排)]
+    Monitoring[监控与日志收集 (指标/日志/告警)]
+    Backup[定期备份 (异地/云存储)]
+  end
+
+  %% 流程与交互
+  A -->|1. 请求静态资源 (HTML/CSS/JS)| CDN
+  CDN -->|回源| NGINX
+  A -->|2. API 请求 (HTTPS, Authorization: Bearer <JWT>)| NGINX
+  Users -.->|登录/注册| APP
+  NGINX --> LB
+  LB --> APP
+
+  %% 应用与缓存/存储交互
+  APP -->|读写缓存| RedisMaster
+  RedisMaster -->|异步复制| RedisSlave
+  APP -->|事务性存储| MySQL
+  APP -->|索引/查询| ES
+  APP -->|上传/下载| FileStore
+
+  %% 持久化与备份
+  RedisMaster -->|AOF/RDB 持久化| Backup
+  MySQL -->|定期备份 / 快照| Backup
+  FileStore --> Backup
+
+  %% 监控与日志（泛化）
+  APP -->|指标/日志/告警| Monitoring
+  Monitoring -->|日志/指标归档| Backup
+
+  %% Kubernetes 与基础设施
+  K8S --- AppCluster
+  K8S --- DataServices
+  K8S --- Infra
+
+  %% 认证/权限
+  subgraph AuthNote[认证 & 权限]
+    JWT[JWT 签发与验证 (Spring Boot)]
+    RBAC[基于角色的访问控制]
+  end
+  APP --> JWT
+  APP --> RBAC
+  Users -->|持有 token| JWT
+
+  %% 实时通信（Chat）为可选模块
+  subgraph Realtime[实时通信]
+    WS[WebSocket (可选, ChatPage)]
+  end
+  A -->|实时连接| WS
+  WS --> APP
+
+  classDef infra fill:#f9f,stroke:#333,stroke-width:1px;
+  class Infra,DataServices,K8S infra
+
+  %% 图例
+  classDef legend fill:#fff,stroke:#000,stroke-width:0.5px;
+  subgraph Legend [说明]
+    L1[HTTPS / REST]:::legend
+    L2[WAF / DDoS 在 Nginx 层防护]:::legend
+    L3[Redis: 主从复制 + AOF/RDB 持久化]:::legend
+  end

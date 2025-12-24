@@ -361,40 +361,40 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.chat-page {
+  .chat-page {
   min-height: calc(100vh - 64px);
-  background-color: #f5f5f5;
+  background-color: var(--bg);
   padding: 20px;
 
   .chat-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    height: calc(100vh - 104px);
-    display: flex;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
+  max-width: 1200px;
+  margin: 0 auto;
+  height: calc(100vh - 104px);
+  display: flex;
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: var(--shadow-light);
+  overflow: hidden;
 
     .chat-sidebar {
-      width: 320px;
-      border-right: 1px solid #e8e8e8;
-      display: flex;
-      flex-direction: column;
+    width: 320px;
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
 
       .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid #e8e8e8;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #fafafa;
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: var(--surface);
 
         h3 {
           margin: 0;
           font-size: 18px;
           font-weight: 600;
-          color: #333;
+          color: var(--text-color);
         }
       }
 
@@ -408,14 +408,14 @@ onMounted(() => {
           padding: 16px 20px;
           cursor: pointer;
           transition: all 0.2s;
-          border-bottom: 1px solid #f0f0f0;
+          border-bottom: 1px solid var(--border-color);
 
           &:hover {
-            background-color: #f8f9fa;
+            background-color: rgba(255,255,255,0.02);
           }
 
           &.active {
-            background-color: var(--el-color-primary);
+            background-color: var(--primary-color);
             color: white;
 
             .conversation-info .participant-name,
@@ -438,7 +438,7 @@ onMounted(() => {
 
             .last-message {
               font-size: 12px;
-              color: #999;
+              color: var(--muted);
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
@@ -454,7 +454,7 @@ onMounted(() => {
 
             .time {
               font-size: 11px;
-              color: #999;
+              color: var(--muted);
             }
           }
         }
@@ -473,11 +473,11 @@ onMounted(() => {
 
       .chat-header {
         padding: 16px 20px;
-        border-bottom: 1px solid #e8e8e8;
+        border-bottom: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         gap: 12px;
-        background-color: #fafafa;
+        background-color: var(--surface);
 
         .header-info {
           flex: 1;
@@ -492,7 +492,7 @@ onMounted(() => {
 
           .status {
             font-size: 12px;
-            color: #52c41a;
+            color: var(--primary-color);
           }
         }
 
@@ -509,7 +509,7 @@ onMounted(() => {
         display: flex;
         flex-direction: column;
         gap: 16px;
-        background-color: #fafafa;
+        background-color: var(--surface);
 
         .message-item {
           display: flex;
@@ -520,15 +520,16 @@ onMounted(() => {
             align-items: flex-end;
 
             .message-content {
-              background-color: var(--el-color-primary);
+              background-color: var(--primary-color);
               color: white;
             }
           }
 
-          .message-content {
+            .message-content {
             max-width: 70%;
             padding: 10px 16px;
-            background-color: white;
+            background-color: var(--surface);
+            color: var(--text-color);
             border-radius: 12px;
             word-wrap: break-word;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -537,15 +538,15 @@ onMounted(() => {
 
           .message-time {
             font-size: 11px;
-            color: #999;
+            color: var(--muted);
             margin-top: 6px;
           }
         }
       }
 
       .message-input {
-        border-top: 1px solid #e8e8e8;
-        background-color: white;
+        border-top: 1px solid var(--border-color);
+        background-color: var(--surface);
 
         .message-limit-warning {
           padding: 12px 20px;
@@ -572,7 +573,7 @@ onMounted(() => {
 
               .send-tip {
                 font-size: 12px;
-                color: #999;
+                color: var(--muted);
               }
             }
           }
@@ -585,7 +586,7 @@ onMounted(() => {
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #fafafa;
+      background-color: var(--surface);
     }
   }
 }
@@ -601,7 +602,7 @@ onMounted(() => {
 
   .scholar-title {
     font-size: 12px;
-    color: #999;
+    color: var(--muted);
     margin-left: auto;
   }
 }
@@ -619,7 +620,7 @@ onMounted(() => {
         position: absolute;
         z-index: 10;
         height: 100%;
-        background: white;
+        background: var(--surface);
       }
 
       .chat-main {

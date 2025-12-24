@@ -99,7 +99,7 @@
                           <h4 class="paper-title">
                             <router-link :to="`/paper/${paper.id}`">{{ paper.title }}</router-link>
                           </h4>
-                          <p class="paper-journal">{{ paper.journal }} | {{ formatDate(paper.publishDate) }}</p>
+                          <p class="paper-journal">{{ paper.journal }} | {{ paper.year || (paper.publishDate ? new Date(paper.publishDate).getFullYear() : '') }}</p>
                           <p class="paper-abstract">{{ paper.abstract.substring(0, 150) }}...</p>
                           <div class="paper-stats">
                             <span><el-icon><Document /></el-icon> {{ paper.citations }} 引用</span>
@@ -149,7 +149,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus, Message, Document, Star } from '@element-plus/icons-vue'
@@ -161,7 +161,7 @@ import VChart from 'vue-echarts'
 import AppHeader from '@/components/AppHeader.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
 import { mockScholars } from '@/mock/scholars'
-import { mockPapers } from '@/mock/papers'
+import api from '@/api'
 import { useChatStore } from '../stores/chat'
 
 use([
@@ -176,18 +176,18 @@ const route = useRoute()
 const router = useRouter()
 const chatStore = useChatStore()
 
-const scholar = ref(null)
+const scholar = ref<any | null>(null)
 const showChatWindow = ref(false)
 const activeTab = ref('papers')
-const papersSortBy = ref('date')
-const scholarPapers = ref([])
+const papersSortBy = ref<string>('date')
+const scholarPapers = ref<any[]>([])
 
 const sortedScholarPapers = computed(() => {
   const papers = [...scholarPapers.value]
   if (papersSortBy.value === 'citations') {
     return papers.sort((a, b) => b.citations - a.citations)
   }
-  return papers.sort((a, b) => new Date(b.publishDate) - new Date(a.publishDate))
+  return papers.sort((a, b) => (b.year || (b.publishDate ? new Date(b.publishDate).getFullYear() : 0)) - (a.year || (a.publishDate ? new Date(a.publishDate).getFullYear() : 0)))
 })
 
 const impactChartOptions = computed(() => ({
@@ -215,7 +215,7 @@ const impactChartOptions = computed(() => ({
       type: 'line',
       data: [32, 35, 38, 41, 43, scholar.value?.hIndex || 45],
       smooth: true,
-      itemStyle: { color: '#1890ff' }
+      itemStyle: { color: '#ff3f81' }
     },
     {
       name: '年引用数',
@@ -223,14 +223,12 @@ const impactChartOptions = computed(() => ({
       yAxisIndex: 1,
       data: [156, 234, 312, 387, 445, 520],
       smooth: true,
-      itemStyle: { color: '#52c41a' }
+      itemStyle: { color: 'var(--primary-color)' }
     }
   ]
 }))
 
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('zh-CN')
-}
+
 
 const toggleFollow = () => {
   if (scholar.value) {
@@ -259,10 +257,12 @@ onMounted(() => {
   scholar.value = mockScholars.find(s => s.id === scholarId)
 
   if (scholar.value) {
-    // 获取该学者的论文（模拟数据）
-    scholarPapers.value = mockPapers
-      .filter(paper => paper.authors.some(author => author.name === scholar.value.name))
-      .slice(0, 10)
+    // 从 API 获取该学者的论文
+    api.searchAchievements({ author: scholar.value.name }).then((data: any) => {
+      scholarPapers.value = (data.results || []).slice(0, 10)
+    }).catch(() => {
+      scholarPapers.value = []
+    })
   }
 })
 </script>

@@ -258,7 +258,7 @@
                   <el-tab-pane label="认证管理" name="verification" v-if="verificationStatus === 'verified'">
                     <div class="verification-management">
                       <div class="verification-header">
-                        <h4>学术专家认证管理</h4>
+                        <h4>学术专家n</h4>
                         <el-tag type="success">已认证</el-tag>
                       </div>
 
@@ -282,7 +282,7 @@
                             <div class="paper-info">
                               <h6 class="paper-title">{{ paper.title }}</h6>
                               <p class="paper-meta">
-                                {{ paper.journal }} - {{ new Date(paper.publishDate).getFullYear() }}
+                                {{ paper.journal }} - {{ paper.year || (paper.publishDate ? new Date(paper.publishDate).getFullYear() : '') }}
                               </p>
                               <div class="paper-stats">
                                 <span>引用: {{ paper.citations }}</span>
@@ -722,7 +722,7 @@ onMounted(() => {
     .verification-section {
       margin-top: 24px;
       padding-top: 24px;
-      border-top: 1px solid #f0f0f0;
+      border-top: 1px solid var(--border-color);
 
       h4 {
         margin-bottom: 16px;
@@ -767,7 +767,7 @@ onMounted(() => {
 
       .verification-desc {
         font-size: 12px;
-        color: #666;
+        color: var(--muted);
         margin: 8px 0 0 0;
       }
     }
@@ -792,13 +792,13 @@ onMounted(() => {
           font-weight: 500;
         }
 
-        .papers-list {
+            .papers-list {
           .managed-paper-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 16px;
-            border: 1px solid #f0f0f0;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
             margin-bottom: 12px;
 
@@ -814,14 +814,14 @@ onMounted(() => {
               .paper-meta {
                 margin: 4px 0;
                 font-size: 14px;
-                color: #666;
+                color: var(--muted);
               }
 
-              .paper-stats {
+                .paper-stats {
                 display: flex;
                 gap: 16px;
                 font-size: 12px;
-                color: #999;
+                color: var(--muted);
                 margin-top: 8px;
               }
             }
@@ -845,7 +845,7 @@ onMounted(() => {
   .verification-form {
     .upload-section {
       .el-upload__tip {
-        color: #666;
+        color: var(--muted);
         font-size: 12px;
         line-height: 1.4;
         margin-top: 8px;

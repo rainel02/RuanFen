@@ -102,7 +102,7 @@ const clearFilters = () => {
 
 <style scoped lang="scss">
 .filter-sidebar {
-  background: white;
+  background: var(--surface);
   border-radius: var(--border-radius);
   padding: 20px;
   box-shadow: var(--shadow-light);

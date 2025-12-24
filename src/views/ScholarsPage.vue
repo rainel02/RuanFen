@@ -134,7 +134,6 @@ const handleCloseChatWindow = () => {
 
 
 <style scoped lang="scss">
-@import "../styles/main.scss";
 .scholars-page {
   min-height: 100vh;
 }

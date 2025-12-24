@@ -59,6 +59,7 @@ export const mockPapers: Paper[] = Array.from({ length: 50 }, (_, i) => {
     })),
     abstract: `这是一篇关于${randomFields.join('、')}的重要研究论文。本研究提出了一种新的算法框架，通过结合最新的深度学习技术和传统方法，在多个基准数据集上取得了显著的性能提升。实验结果表明，该方法在准确性、效率和可解释性方面都有明显优势。研究成果为相关领域的发展提供了新的思路和技术支撑，具有重要的理论价值和应用前景。`,
     publishDate: new Date(2023, Math.floor(Math.random() * 12), Math.floor(Math.random() * 28) + 1).toISOString().split('T')[0],
+    year: 2023 + Math.floor(Math.random() * 2),
     journal: journals[Math.floor(Math.random() * journals.length)],
     fields: randomFields,
     keywords: randomKeywords,

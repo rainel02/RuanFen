@@ -1,0 +1,146 @@
+# -------------------- 4. 学术成果 (Achievements) --------------------/achievements:
+get:
+  tags: [Achievements]
+  summary: 检索学术成果（普通/高级检索）
+  security: []
+  parameters:
+    - name: q
+      in: query
+      description: 关键词 - 普通检索
+      schema: { type: string }
+    - name: author
+      in: query
+      description: 高级检索
+      schema: { type: string }
+    - name: organization
+      in: query
+      description: 高级检索
+      schema: { type: string }
+    - name: time_start
+      in: query
+      schema: { type: string }
+    - name: time_end
+      in: query
+      schema: { type: string }
+    - name: field
+      in: query
+      schema: { type: string }
+    - name: sort_by
+      in: query
+      schema: { type: string, enum: [citations, time] }
+  responses:
+    200:
+      description: 检索结果
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              results:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    title: { type: string }
+                    authors: { type: array, items: { type: string } }
+                    year: { type: integer }
+                    abstract: { type: string }
+                    citationCount: { type: integer }
+              total: { type: integer }
+    400:
+      description: 请输入检索内容
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+/achievements/{id}:
+  get:
+    tags: [Achievements]
+    summary: 浏览学术成果详情
+    security: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      200:
+        description: 成果详情
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id: { type: string, format: uuid }
+                title: { type: string }
+                authors: { type: array, items: { type: string } }
+                abstract: { type: string }
+                doi: { type: string }
+                publication: { type: string }
+                year: { type: integer }
+      404:
+        description: 内容暂不可用
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+
+/users/me/collections:
+  get:
+    tags: [Achievements]
+    summary: 查看“我”的收藏夹
+    responses:
+      200:
+        description: 收藏列表
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                collections:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      title: { type: string }
+                      authors: { type: array, items: { type: string } }
+                      year: { type: integer }
+  post:
+    tags: [Achievements]
+    summary: 收藏一项学术成果
+    requestBody:
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              achievementId: { type: string, format: uuid }
+    responses:
+      201:
+        description: 收藏成功
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SuccessMessage'
+      400:
+        description: 已在收藏夹中
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Error'
+
+/users/me/collections/{achievementId}:
+  delete:
+    tags: [Achievements]
+    summary: 取消收藏一项学术成果
+    parameters:
+      - name: achievementId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      204:
+        description: No Content

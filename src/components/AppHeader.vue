@@ -2,37 +2,37 @@
   <div class="page-header">
     <div class="container">
       <el-row align="middle" justify="space-between" style="height: 64px;">
-        <el-col :span="6">
-          <div class="logo">
-            <router-link to="/" class="logo-link">
-              <el-icon size="28" color="#1890ff">
-                <School />
-              </el-icon>
-              <span class="logo-text">学术平台</span>
-            </router-link>
+        <el-col :span="12">
+          <div class="left-area">
+            <div class="logo">
+              <router-link to="/" class="logo-link">
+                <el-icon size="28" color="#1890ff">
+                  <School />
+                </el-icon>
+                <span class="logo-text">学术平台</span>
+              </router-link>
+            </div>
+
+            <div class="search-wrapper" v-if="showSearch">
+              <el-input
+                v-model="searchInput"
+                placeholder="搜索论文、作者、关键词..."
+                size="large"
+                clearable
+                @input="handleSearch"
+                @keyup.enter="handleSearchSubmit"
+              >
+                <template #prefix>
+                  <el-icon>
+                    <Search />
+                  </el-icon>
+                </template>
+              </el-input>
+            </div>
           </div>
         </el-col>
 
         <el-col :span="12">
-          <div class="search-wrapper" v-if="showSearch">
-            <el-input
-              v-model="searchInput"
-              placeholder="搜索论文、作者、关键词..."
-              size="large"
-              clearable
-              @input="handleSearch"
-              @keyup.enter="handleSearchSubmit"
-            >
-              <template #prefix>
-                <el-icon>
-                  <Search />
-                </el-icon>
-              </template>
-            </el-input>
-          </div>
-        </el-col>
-
-        <el-col :span="6">
           <div class="nav-actions">
             <el-menu
               mode="horizontal"
@@ -42,6 +42,7 @@
               router
             >
               <el-menu-item index="/">论文</el-menu-item>
+              <el-menu-item index="/collections">收藏</el-menu-item>
               <el-menu-item index="/scholars">学者</el-menu-item>
               <el-menu-item index="/paper-guide" v-if="showPaperGuide">导读</el-menu-item>
               <el-menu-item index="/forum" v-if="showForum">论坛</el-menu-item>
@@ -122,48 +123,61 @@ watch(() => route.path, () => {
 </script>
 
 <style scoped lang="scss">
+.page-header {
+  background: rgba(20, 22, 25, 0.8); /* Glass effect fallback */
+  backdrop-filter: blur(var(--backdrop-blur));
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
 
 .logo {
   .logo-link {
     display: flex;
     align-items: center;
     text-decoration: none;
-    color: var(--text-color);
+    color: var(--text-primary);
     font-weight: 600;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 0.9;
+    }
 
     .logo-text {
-      margin-left: 8px;
+      margin-left: 10px;
       font-size: 18px;
-      color: var(--primary-color);
+      letter-spacing: -0.02em;
+      color: var(--text-primary); /* Keep it clean white */
     }
   }
+}
+
+.left-area {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
 }
 
 .search-wrapper {
-  max-width: 500px;
+  width: 320px;
+  transition: width 0.3s ease;
+  
+  &:focus-within {
+    width: 400px;
+  }
 
   :deep(.el-input__wrapper) {
-    border-radius: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-}
-
-.nav-menu {
-  border: none;
-  background: transparent;
-
-  :deep(.el-menu-item) {
-    border: none;
-    color: var(--text-color);
-    font-weight: 500;
-
-    &.is-active {
-      color: var(--primary-color);
-      border-bottom: 2px solid var(--primary-color);
-    }
-
-    &:hover {
-      color: var(--primary-color);
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    box-shadow: none;
+    border-radius: var(--radius-full);
+    padding-left: 16px;
+    
+    &.is-focus {
+      border-color: var(--primary);
+      background: var(--surface-active);
     }
   }
 }
@@ -171,5 +185,36 @@ watch(() => route.path, () => {
 .nav-actions {
   display: flex;
   justify-content: flex-end;
+}
+
+.nav-menu {
+  border: none;
+  background: transparent;
+  height: 64px;
+  align-items: center;
+
+  :deep(.el-menu-item) {
+    border: none;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 14px;
+    padding: 0 16px;
+    height: 40px;
+    line-height: 40px;
+    margin: 0 4px;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+
+    &.is-active {
+      color: var(--text-primary);
+      background: var(--surface-hover);
+      font-weight: 600;
+    }
+
+    &:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.03);
+    }
+  }
 }
 </style>
