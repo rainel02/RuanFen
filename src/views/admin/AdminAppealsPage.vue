@@ -96,9 +96,7 @@ import * as adminApi from '../../api/admin'
 
 declare global {
   interface Window {
-    VANTA: {
-      GLOBE: (options: any) => any
-    }
+    VANTA: any
   }
 }
 

@@ -59,10 +59,7 @@ import { useAuthStore } from '../stores/auth'
 import { usePapersStore } from '../stores/papers'
 import { useSettingsStore } from '../stores/settings'
 
-import { Search, User, School } from '@element-plus/icons-vue'
-import defaultAvatar from '@/assets/profile.png'
-import logoImage from '@/assets/logo.png'
-
+import { Search, School } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -73,11 +70,8 @@ const settingsStore = useSettingsStore()
 const searchInput = ref('')
 
 const isHomePage = computed(() => route.path === '/')
-const isLoggedIn = computed(() => authStore.isAuthenticated)
+const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user)
-
-const showSearch = computed(() => route.path === '/')
-const isAdmin = computed(() => user.value?.role === 'admin' || user.value?.role === 'administrator')
 
 // 根据设置显示功能
 const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
@@ -85,28 +79,16 @@ const showForum = computed(() => settingsStore.settings.enableForum)
 
 const handleSearchSubmit = () => {
   if (searchInput.value.trim()) {
-    papersStore.setSearchQuery(searchInput.value)
+    papersStore.searchPapers(searchInput.value)
     if (route.path !== '/') {
       router.push({ path: '/', query: { q: searchInput.value } })
     }
   }
 }
+
 </script>
 
-
-const goToProfile = () => {
-  if (isLoggedIn.value) {
-    router.push('/profile')
-  } else {
-    router.push('/profile')
-  }
-}
-
-const handleSearch = (value: string) => {
-  if (route.path === '/') {
-    papersStore.searchPapers(value)
-  }
-}
+<style>
 
 .glass-header {
   background: rgba(255, 255, 255, 0.85);

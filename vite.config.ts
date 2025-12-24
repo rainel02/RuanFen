@@ -7,8 +7,15 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(process.cwd(), 'src'),
     },
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@import "@/styles/mixins.scss";`
+      }
+    }
   },
   server: {
     proxy: {

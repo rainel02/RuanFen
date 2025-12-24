@@ -31,24 +31,8 @@ body {
   padding: 0 20px;
 }
 
-// 响应式断点
-@mixin mobile {
-  @media (max-width: 767px) {
-    @content;
-  }
-}
+@import './mixins.scss';
 
-@mixin tablet {
-  @media (min-width: 768px) and (max-width: 1199px) {
-    @content;
-  }
-}
-
-@mixin desktop {
-  @media (min-width: 1200px) {
-    @content;
-  }
-}
 
 // 卡片样式
 .paper-card, .scholar-card {
@@ -92,7 +76,14 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
+.glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  border-radius: var(--border-radius);
+}
 .text-ellipsis-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;

@@ -24,6 +24,7 @@
     "vue3-emoji-picker": "^1.1.8"
   },
   "devDependencies": {
+    "@types/node": "^25.0.3",
     "@vitejs/plugin-vue": "^5.1.3",
     "sass-embedded": "^1.92.1",
     "typescript": "^5.5.3",

@@ -137,6 +137,7 @@ const loading = computed(() => papersStore.loading)
 const filteredPapers = computed(() => papersStore.filteredPapers)
 const recommendedPapers = computed(() => papersStore.papers.slice(0, 3).map(p => ({
   ...p,
+  year: new Date(p.publishDate).getFullYear(),
   recommendationReason: '基于您的浏览历史'
 })))
 
@@ -149,12 +150,12 @@ const paginatedPapers = computed(() => {
 const totalPages = computed(() => Math.ceil(filteredPapers.value.length / pageSize.value))
 
 const handleSearch = () => {
-  papersStore.setSearchQuery(searchQuery.value)
+  papersStore.searchPapers(searchQuery.value)
 }
 
 const clearSearch = () => {
   searchQuery.value = ''
-  papersStore.setSearchQuery('')
+  papersStore.searchPapers('')
 }
 
 const handleSizeChange = (val: number) => {
@@ -170,12 +171,11 @@ const handleCurrentChange = (val: number) => {
 watch(() => route.query.q, (newQ) => {
   if (newQ) {
     searchQuery.value = newQ as string
-    papersStore.setSearchQuery(newQ as string)
+    papersStore.searchPapers(newQ as string)
   }
 }, { immediate: true })
 
 onMounted(() => {
-  papersStore.fetchPapers()
 })
 </script>
 

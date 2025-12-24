@@ -117,7 +117,6 @@ import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from
 import VChart from 'vue-echarts'
 import 'echarts-wordcloud'
 import { getHotTopics, getInfluenceRanking, getInfluenceTrend } from '../api/analysis'
-import { Trophy, DataLine, UserFilled, StarFilled } from '@element-plus/icons-vue'
 import * as echarts from 'echarts/core'
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent])

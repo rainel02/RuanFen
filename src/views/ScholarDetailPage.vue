@@ -33,7 +33,7 @@
                   >
                     {{ scholar.isFollowed ? '已关注' : '关注' }}
                   </el-button>
-                  <el-button round :icon="ChatLineRound" @click="handleStartChat">私信</el-button>
+                  <el-button round :icon="ChatDotRound" @click="handleStartChat">私信</el-button>
                   <el-button circle :icon="Share" />
                 </div>
               </div>
@@ -161,15 +161,12 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { ElMessage } from 'element-plus'
-import { Plus, Message, Document, Star } from '@element-plus/icons-vue'
+import { Plus, Message, Check, Share, Select, School, ChatDotRound } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, GridComponent } from 'echarts/components'
-import VChart from 'vue-echarts'
 import AppHeader from '@/components/AppHeader.vue'
-import ChatWindow from '@/components/ChatWindow.vue'
-import { useChatStore } from '../stores/chat'
 import * as scholarApi from '../api/scholar'
 
 use([
@@ -186,32 +183,8 @@ const scholar = ref<any>(null)
 const activeTab = ref('papers')
 const papersSortBy = ref('date')
 
-// Mock data fetching
-const fetchScholarDetail = async () => {
-  const id = route.params.id as string
-  // In real app: const res = await getScholarDetail(id)
-  // For now, find in mock
-  const found = mockScholars.find(s => s.id === id)
-  if (found) {
-    scholar.value = {
-      ...found,
-      stats: found.stats || { hIndex: 0, citations: 0, papers: 0 }, // Ensure stats exist
-      bio: '致力于人工智能与计算机视觉领域的研究，在顶级会议发表多篇论文。',
-      isVerified: true,
-      email: 'scholar@university.edu'
-    }
-  }
-}
 
-const scholarPapers = computed(() => {
-  // Filter mock papers for this scholar (mock logic)
-  return mockPapers.slice(0, 5).map(p => ({
-    ...p,
-    year: 2023,
-    journal: 'Nature Machine Intelligence',
-    citations: Math.floor(Math.random() * 100)
-  }))
-})
+const scholarPapers = ref<any[]>([])
 
 const sortedScholarPapers = computed(() => {
   let papers = [...scholarPapers.value]

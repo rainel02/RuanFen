@@ -73,6 +73,8 @@
         </div>
       </div>
     </div>
+    
+    <ChatWindow v-if="showChatWindow" @close="showChatWindow = false" />
   </div>
 </template>
 
@@ -80,6 +82,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { UserFilled, School, Collection, Sort } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ScholarCard from '@/components/ScholarCard.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
@@ -93,6 +96,7 @@ const selectedInstitution = ref('')
 const selectedField = ref('')
 const sortBy = ref('hIndex')
 const loading = ref(false)
+const showChatWindow = ref(false)
 
 const institutions = computed(() => {
   const allInstitutions = scholars.value.map((s: any) => s.organization || s.institution)

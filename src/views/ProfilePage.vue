@@ -18,10 +18,10 @@
         ></div>
         <!-- 原始图片 -->
         <div 
-          v-for="(image, index) in loginImages" 
+          v-for="(_image, index) in loginImages" 
           :key="index" 
           class="carousel-item"
-          :style="{ backgroundImage: `url(${image})` }"
+          :style="{ backgroundImage: `url(${loginImages[index]})` }"
         ></div>
         <!-- 第一张的副本（放在最后面，用于从最后一张向右滑动） -->
         <div 
@@ -32,7 +32,7 @@
       <!-- 指示器 -->
       <div class="carousel-indicators">
         <span 
-          v-for="(image, index) in loginImages" 
+          v-for="(_, index) in loginImages" 
           :key="index"
           class="indicator"
           :class="{ active: getDisplayIndex() === index }"
@@ -138,103 +138,10 @@
                 </el-tab-pane>
               </el-tabs>
             </div>
-            
-            <el-tabs v-model="authTab" class="auth-tabs" stretch>
-              <el-tab-pane label="登录" name="login">
-                <el-form
-                  ref="loginFormRef"
-                  :model="loginForm"
-                  :rules="loginRules"
-                  label-position="top"
-                  size="large"
-                >
-                  <el-form-item label="用户名" prop="username">
-                    <el-input
-                      v-model="loginForm.username"
-                      placeholder="请输入用户名"
-                      :prefix-icon="User"
-                    />
-                  </el-form-item>
-
-                  <el-form-item label="密码" prop="password">
-                    <el-input
-                      v-model="loginForm.password"
-                      type="password"
-                      placeholder="请输入密码"
-                      show-password
-                      :prefix-icon="Lock"
-                    />
-                  </el-form-item>
-
-                  <el-form-item>
-                    <el-button
-                      type="primary"
-                      @click="handleLogin"
-                      :loading="loginLoading"
-                      class="submit-btn"
-                      round
-                    >
-                      立即登录
-                    </el-button>
-                  </el-form-item>
-                </el-form>
-
-                <div class="demo-info">
-                  <el-alert
-                    title="演示账号: admin / 123456"
-                    type="info"
-                    :closable="false"
-                    show-icon
-                    center
-                  />
-                </div>
-              </el-tab-pane>
-
-              <el-tab-pane label="注册" name="register">
-                <el-form
-                  ref="registerFormRef"
-                  :model="registerForm"
-                  :rules="registerRules"
-                  label-position="top"
-                  size="large"
-                >
-                  <el-form-item label="姓名" prop="name">
-                    <el-input v-model="registerForm.name" placeholder="真实姓名" :prefix-icon="User" />
-                  </el-form-item>
-
-                  <el-form-item label="邮箱" prop="email">
-                    <el-input v-model="registerForm.email" placeholder="邮箱地址" :prefix-icon="Message" />
-                  </el-form-item>
-
-                  <el-form-item label="密码" prop="password">
-                    <el-input
-                      v-model="registerForm.password"
-                      type="password"
-                      placeholder="设置密码"
-                      show-password
-                      :prefix-icon="Lock"
-                    />
-                  </el-form-item>
-
-                  <el-form-item>
-                    <el-button
-                      type="primary"
-                      @click="handleRegister"
-                      :loading="registerLoading"
-                      class="submit-btn"
-                      round
-                    >
-                      注册账号
-                    </el-button>
-                  </el-form-item>
-                </el-form>
-              </el-tab-pane>
-            </el-tabs>
-          </div>
+          </el-card>
         </div>
 
-
-        <div v-else class="profile-content">
+        <div v-if="isLoggedIn" class="profile-content">
           <el-row :gutter="24">
             <el-col :md="8" :sm="24" :xs="24">
               <el-card class="profile-card">
@@ -248,14 +155,25 @@
                 </div>
                 <p class="email"><el-icon><Message /></el-icon> {{ user.email }}</p>
                 <p class="bio">{{ user.bio || '这个人很懒，什么都没有写...' }}</p>
-              </div>
+              </el-card>
 
               <div class="actions-section">
                 <el-button type="primary" plain round @click="showEditDialog = true">编辑资料</el-button>
+                <el-button 
+                  v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'"
+                  type="success" 
+                  plain 
+                  round 
+                  @click="showVerificationDialog = true"
+                >
+                  申请认证
+                </el-button>
+                <el-tag v-else-if="verificationStatus === 'pending'" type="warning" class="status-tag">认证审核中</el-tag>
+                <el-tag v-else-if="verificationStatus === 'verified'" type="success" class="status-tag">已认证学者</el-tag>
                 <el-button type="danger" plain round @click="handleLogout">退出登录</el-button>
               </div>
-            </div>
-          </div>
+            </el-col>
+          </el-row>
 
           <el-row :gutter="24">
             <el-col :span="16">
@@ -329,6 +247,49 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- Verification Dialog -->
+    <el-dialog v-model="showVerificationDialog" title="学者身份认证" width="500px">
+      <el-form 
+        ref="verificationFormRef"
+        :model="verificationForm" 
+        :rules="verificationRules"
+        label-position="top"
+      >
+        <el-form-item label="真实姓名" prop="realName">
+          <el-input v-model="verificationForm.realName" placeholder="请输入真实姓名" />
+        </el-form-item>
+        
+        <el-form-item label="教育邮箱" prop="email">
+          <el-input v-model="verificationForm.email" placeholder="请输入edu邮箱">
+            <template #append>
+              <el-button 
+                @click="handleSendCode" 
+                :disabled="codeSending || codeCountdown > 0"
+              >
+                {{ codeCountdown > 0 ? `${codeCountdown}s` : '发送验证码' }}
+              </el-button>
+            </template>
+          </el-input>
+        </el-form-item>
+
+        <el-form-item label="验证码" prop="code" :rules="[{ required: true, message: '请输入验证码', trigger: 'blur' }]">
+          <el-input v-model="verificationForm.code" placeholder="请输入验证码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="showVerificationDialog = false">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleSubmitVerification" 
+            :loading="submittingVerification"
+          >
+            提交申请
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -339,12 +300,8 @@ import type { FormRules, FormInstance } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
-  CircleCheckFilled,
-  Clock,
-  CircleCloseFilled,
-  QuestionFilled,
-  Edit,
-  ChatDotSquare
+ 
+  Message
 } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
@@ -403,11 +360,11 @@ const getCarouselStyle = () => {
 }
 
 const router = useRouter()
+const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
 
 const isLoggedIn = computed(() => authStore.isLoggedIn)
-const user = computed(() => authStore.user || {})
-
+const user = computed(() => authStore.user || ({} as any))
 const authTab = ref('login')
 const activeTab = ref('favorites')
 const showEditDialog = ref(false)
@@ -436,6 +393,20 @@ const editForm = reactive({
   interests: []
 })
 
+const verificationForm = ref({
+  email: '',
+  realName: '',
+  code: ''
+})
+const verificationFormRef = ref<FormInstance>()
+const verificationStatus = ref('unverified')
+const showVerificationDialog = ref(false)
+const submittingVerification = ref(false)
+const codeSending = ref(false)
+const codeCountdown = ref(0)
+let codeTimer: any = null
+const sentCode = ref('')
+
 const loginRules = reactive<FormRules>({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
@@ -453,7 +424,7 @@ const registerRules = reactive<FormRules>({
     {
 
       validator: (_rule: any, value: string, callback: Function) => {
-        if (value !== registerForm.value.password) {
+        if (value !== registerForm.password) {
           callback(new Error('两次输入的密码不一致'))
         } else {
           callback()
@@ -492,8 +463,8 @@ const handleLogin = async () => {
 
   loginLoading.value = true
   try {
-    console.log('准备发送登录请求，用户名:', loginForm.value.username)
-    const result = await authStore.login(loginForm.value.username, loginForm.value.password)
+    console.log('准备发送登录请求，用户名:', loginForm.username)
+    const result = await authStore.login(loginForm.username, loginForm.password)
     console.log('登录结果:', result)
     if (result.success) {
       ElMessage.success('登录成功')
@@ -516,10 +487,10 @@ const handleRegister = async () => {
   registerLoading.value = true
   try {
     const result = await authStore.register(
-      registerForm.value.name,
-      registerForm.value.email,
-      registerForm.value.password,
-      registerForm.value.role
+      registerForm.name,
+      registerForm.email,
+      registerForm.password,
+      registerForm.role
     )
     if (result.success) {
       ElMessage.success('注册成功，请登录')
@@ -571,6 +542,7 @@ const handleSendCode = async () => {
 const handleSubmitVerification = async () => {
   submittingVerification.value = true
   const formRef = verificationFormRef.value
+  if (!formRef) return
   formRef.validate(async (valid: boolean) => {
     if (!valid) {
       submittingVerification.value = false
@@ -596,8 +568,11 @@ const handleSubmitVerification = async () => {
     }
   })
 }
-</script>
 
+const saveProfile = async () => {
+  console.log('saveProfile called', editForm)
+  showEditDialog.value = false
+}
 
 const loadCertificationStatus = async () => {
   if (!authStore.isLoggedIn) return
@@ -625,24 +600,6 @@ const resetVerificationForm = () => {
   codeCountdown.value = 0
   codeTimer && clearInterval(codeTimer)
 }
-
-.page-content {
-  padding: 40px 0;
-  min-height: calc(100vh - 60px);
-  display: flex;
-  align-items: center; // Center vertically for auth
-}
-
-.container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 20px;
-  width: 100%;
-}
-
-
-// 新增：声明 managedPapers，模拟数据或空数组
-const managedPapers = ref<any[]>([])
 
 // 轮播方法
 const startAutoPlay = () => {
@@ -1248,7 +1205,7 @@ onUnmounted(() => {
         }
       }
     }
-  }
+  
 
   .content-card {
     background-image: url('@/assets/accept.jpg');
@@ -1527,8 +1484,7 @@ onUnmounted(() => {
         }
       }
     }
-  }
-}
+
 
 .content-card {
   padding: 20px;

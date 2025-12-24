@@ -133,12 +133,12 @@ const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726
 
 // Configure marked with highlight.js
 marked.setOptions({
-  highlight: function(code, lang) {
+  highlight: function(code: string, lang: string) {
     const language = hljs.getLanguage(lang) ? lang : 'plaintext';
     return hljs.highlight(code, { language }).value;
   },
   langPrefix: 'hljs language-'
-})
+} as any)
 
 const renderedContent = computed(() => {
   if (!post.value?.content) return ''

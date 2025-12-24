@@ -47,7 +47,7 @@
             <el-input
               v-model="searchQuery"
               placeholder="搜索感兴趣的话题..."
-              prefix-icon="Search"
+              :prefix-icon="Search"
               class="search-input"
               clearable
             />
@@ -155,9 +155,9 @@ import { useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import { 
   Menu, Edit, Search, ChatDotRound, View, Star, 
-  Compass, DataAnalysis, Monitor, Share, EditPen 
+  Compass, EditPen
 } from '@element-plus/icons-vue'
-import { getBoards, getPosts, createPost } from '../api/social'
+import { getPosts, createPost } from '../api/social'
 import { ElMessage } from 'element-plus'
 import EmojiPicker from 'vue3-emoji-picker'
 import 'vue3-emoji-picker/css'

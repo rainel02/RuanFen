@@ -338,9 +338,7 @@ import type { UserSettings } from '../types/chat'
 
 declare global {
   interface Window {
-    VANTA: {
-      BIRDS: (options: any) => any
-    }
+    VANTA: any
   }
 }
 
