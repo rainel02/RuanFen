@@ -1,230 +1,147 @@
 <template>
   <div class="forum-page">
     <AppHeader />
+    <div class="forum-layout">
+      <!-- Sidebar -->
+      <div class="sidebar glass-panel">
+        <div class="sidebar-header">
+          <h3><el-icon><Compass /></el-icon> 探索板块</h3>
+        </div>
+        <div class="board-list">
+          <div 
+            class="board-item" 
+            :class="{ active: activeBoard === '' }"
+            @click="handleBoardSelect('')"
+          >
+            <el-icon><Menu /></el-icon>
+            <span>全部动态</span>
+          </div>
+          <div 
+            v-for="board in boards" 
+            :key="board.id" 
+            class="board-item"
+            :class="{ active: activeBoard === board.id }"
+            @click="handleBoardSelect(board.id)"
+          >
+            <el-icon><component :is="board.icon" /></el-icon>
+            <span>{{ board.name }}</span>
+            <span class="badge" v-if="board.count">{{ board.count }}</span>
+          </div>
+        </div>
+        
+        <div class="create-btn-wrapper">
+          <el-button type="primary" class="create-btn" round @click="showCreateDialog = true">
+            <el-icon><Edit /></el-icon> 发起讨论
+          </el-button>
+        </div>
+      </div>
 
-    <div class="page-content">
-      <div class="container">
-        <div class="forum-header">
-          <el-breadcrumb separator="/">
-            <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-            <el-breadcrumb-item>学术论坛</el-breadcrumb-item>
-          </el-breadcrumb>
-          
-          <div class="header-actions">
-            <el-button type="primary" @click="showNewTopicDialog = true">
-              <el-icon><EditPen /></el-icon>
-              发表新话题
-            </el-button>
+      <!-- Main Content -->
+      <div class="main-content">
+        <div class="content-header glass-panel">
+          <div class="header-left">
+            <h2>{{ currentBoardName }}</h2>
+            <span class="subtitle">共找到 {{ posts.length }} 篇相关帖子</span>
+          </div>
+          <div class="header-right">
+            <el-input
+              v-model="searchQuery"
+              placeholder="搜索感兴趣的话题..."
+              prefix-icon="Search"
+              class="search-input"
+              clearable
+            />
           </div>
         </div>
 
-        <el-row :gutter="24">
-          <!-- 论坛分类 -->
-          <el-col :lg="6" :md="8" :sm="24" :xs="24">
-            <el-card class="forum-categories">
-              <template #header>
-                <h4>论坛分类</h4>
-              </template>
-              
-              <div class="category-list">
-                <div
-                  v-for="category in categories"
-                  :key="category.id"
-                  class="category-item"
-                  :class="{ active: selectedCategory === category.id }"
-                  @click="selectCategory(category.id)"
-                >
-                  <div class="category-info">
-                    <span class="category-name">{{ category.name }}</span>
-                    <span class="category-desc">{{ category.description }}</span>
+        <div v-loading="loading" class="post-list">
+          <el-empty v-if="posts.length === 0 && !loading" description="这里静悄悄的，来发第一篇帖子吧~" />
+          
+          <transition-group name="list">
+            <div
+              v-for="post in posts"
+              :key="post.id"
+              class="post-card glass-panel"
+              @click="goToPost(post.id)"
+            >
+              <div class="card-body">
+                <div class="post-main">
+                  <div class="post-header">
+                    <el-tag size="small" effect="light" class="board-tag">{{ post.boardName }}</el-tag>
+                    <h3 class="post-title">{{ post.title }}</h3>
                   </div>
-                  <div class="category-stats">
-                    <span class="topic-count">{{ category.topicCount }}</span>
-                    <span class="label">话题</span>
+                  <p class="post-summary">{{ getSummary(post.content) }}</p>
+                </div>
+                <div class="post-meta">
+                  <div class="author">
+                    <el-avatar :size="24" :src="post.authorAvatar || defaultAvatar" />
+                    <span class="name">{{ post.authorName }}</span>
+                    <span class="dot">·</span>
+                    <span class="time">{{ formatDate(post.createdAt) }}</span>
+                  </div>
+                  <div class="stats">
+                    <span class="stat-item"><el-icon><View /></el-icon> {{ post.viewCount || 0 }}</span>
+                    <span class="stat-item"><el-icon><ChatDotRound /></el-icon> {{ post.replyCount || 0 }}</span>
+                    <span class="stat-item"><el-icon><Star /></el-icon> {{ post.likeCount || 0 }}</span>
                   </div>
                 </div>
               </div>
-            </el-card>
-
-            <!-- 热门标签 -->
-            <el-card class="hot-tags">
-              <template #header>
-                <h4>热门标签</h4>
-              </template>
-              
-              <div class="tags-list">
-                <el-tag
-                  v-for="tag in hotTags"
-                  :key="tag.name"
-                  :type="getTagType(tag.heat)"
-                  class="hot-tag"
-                  @click="filterByTag(tag.name)"
-                >
-                  {{ tag.name }}
-                  <span class="tag-count">({{ tag.count }})</span>
-                </el-tag>
-              </div>
-            </el-card>
-          </el-col>
-
-          <!-- 话题列表 -->
-          <el-col :lg="18" :md="16" :sm="24" :xs="24">
-            <el-card class="topics-container">
-              <template #header>
-                <div class="topics-header">
-                  <h4>{{ currentCategoryName }}话题</h4>
-                  <div class="sort-options">
-                    <el-select v-model="sortBy" size="small" style="width: 120px;">
-                      <el-option label="最新回复" value="latest" />
-                      <el-option label="最新发布" value="newest" />
-                      <el-option label="最多回复" value="replies" />
-                      <el-option label="最多点赞" value="likes" />
-                    </el-select>
-                  </div>
-                </div>
-              </template>
-
-              <div class="topics-list">
-                <div
-                  v-for="topic in filteredTopics"
-                  :key="topic.id"
-                  class="topic-item"
-                  @click="viewTopic(topic)"
-                >
-                  <div class="topic-avatar">
-                    <el-avatar :src="topic.author.avatar" :size="40">
-                      {{ topic.author.name.charAt(0) }}
-                    </el-avatar>
-                  </div>
-
-                  <div class="topic-content">
-                    <div class="topic-header">
-                      <h5 class="topic-title">{{ topic.title }}</h5>
-                      <div class="topic-tags">
-                        <el-tag
-                          v-for="tag in topic.tags"
-                          :key="tag"
-                          size="small"
-                          effect="plain"
-                        >
-                          {{ tag }}
-                        </el-tag>
-                      </div>
-                    </div>
-
-                    <p class="topic-preview">{{ topic.content.substring(0, 150) }}...</p>
-
-                    <div class="topic-meta">
-                      <span class="author">{{ topic.author.name }}</span>
-                      <span class="time">{{ formatTime(topic.createTime) }}</span>
-                      <span class="category">{{ getCategoryName(topic.categoryId) }}</span>
-                    </div>
-                  </div>
-
-                  <div class="topic-stats">
-                    <div class="stat-item">
-                      <el-icon><ChatLineSquare /></el-icon>
-                      <span>{{ topic.replyCount }}</span>
-                    </div>
-                    <div class="stat-item">
-                      <el-icon><View /></el-icon>
-                      <span>{{ topic.viewCount }}</span>
-                    </div>
-                    <div class="stat-item">
-                      <el-icon><Star /></el-icon>
-                      <span>{{ topic.likeCount }}</span>
-                    </div>
-                  </div>
-
-                  <div class="topic-status">
-                    <el-tag v-if="topic.isPinned" type="danger" size="small">置顶</el-tag>
-                    <el-tag v-if="topic.isClosed" type="info" size="small">已关闭</el-tag>
-                    <el-tag v-if="topic.isHot" type="warning" size="small">热门</el-tag>
-                  </div>
-                </div>
-
-                <!-- 分页 -->
-                <div class="pagination-wrapper">
-                  <el-pagination
-                    v-model:current-page="currentPage"
-                    v-model:page-size="pageSize"
-                    :total="totalTopics"
-                    layout="prev, pager, next, sizes, total"
-                    :page-sizes="[10, 20, 50]"
-                    @current-change="handlePageChange"
-                    @size-change="handleSizeChange"
-                  />
-                </div>
-              </div>
-            </el-card>
-          </el-col>
-        </el-row>
+            </div>
+          </transition-group>
+        </div>
       </div>
     </div>
 
-    <!-- 发表新话题对话框 -->
+    <!-- Create Post Dialog -->
     <el-dialog
-      v-model="showNewTopicDialog"
-      title="发表新话题"
-      width="800px"
-      @close="resetTopicForm"
+      v-model="showCreateDialog"
+      title="发起新讨论"
+      width="600px"
+      destroy-on-close
+      class="create-dialog"
     >
-      <el-form :model="newTopicForm" :rules="topicRules" ref="topicFormRef" label-width="80px">
-        <el-form-item label="话题标题" prop="title">
-          <el-input
-            v-model="newTopicForm.title"
-            placeholder="请输入话题标题"
-            maxlength="100"
-            show-word-limit
-          />
+      <el-form :model="newPost" label-position="top">
+        <el-form-item label="标题">
+          <el-input v-model="newPost.title" placeholder="请输入引人注目的标题" size="large" />
         </el-form-item>
-        
-        <el-form-item label="分类" prop="categoryId">
-          <el-select v-model="newTopicForm.categoryId" placeholder="请选择分类">
+        <el-form-item label="选择板块">
+          <el-select v-model="newPost.boardId" placeholder="选择合适的板块" style="width: 100%">
             <el-option
-              v-for="category in categories"
-              :key="category.id"
-              :label="category.name"
-              :value="category.id"
+              v-for="board in boards"
+              :key="board.id"
+              :label="board.name"
+              :value="board.id"
             />
           </el-select>
         </el-form-item>
-
-        <el-form-item label="标签" prop="tags">
-          <el-select
-            v-model="newTopicForm.tags"
-            multiple
-            filterable
-            allow-create
-            placeholder="请选择或输入标签"
-            style="width: 100%"
-          >
-            <el-option
-              v-for="tag in availableTags"
-              :key="tag"
-              :label="tag"
-              :value="tag"
-            />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="内容" prop="content">
+        <el-form-item label="内容">
+          <div class="editor-toolbar">
+             <el-button-group size="small">
+                <el-button :icon="EditPen" title="Bold" @click="insertMarkdown('**')">B</el-button>
+                <el-button title="Italic" @click="insertMarkdown('*')">I</el-button>
+                <el-button title="Code" @click="insertMarkdown('`')">&lt;/&gt;</el-button>
+             </el-button-group>
+             <el-popover placement="bottom-start" :width="300" trigger="click">
+                <template #reference>
+                  <el-button size="small" circle>😀</el-button>
+                </template>
+                <EmojiPicker @select="onSelectEmoji" />
+              </el-popover>
+          </div>
           <el-input
-            v-model="newTopicForm.content"
+            v-model="newPost.content"
             type="textarea"
             :rows="8"
-            placeholder="请输入话题内容..."
-            maxlength="5000"
-            show-word-limit
+            placeholder="支持 Markdown 格式，分享你的观点..."
+            resize="none"
           />
         </el-form-item>
       </el-form>
-      
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showNewTopicDialog = false">取消</el-button>
-          <el-button type="primary" @click="handleSubmitTopic" :loading="submitting">
-            发布话题
+          <el-button @click="showCreateDialog = false">取消</el-button>
+          <el-button type="primary" @click="handleCreatePost" :loading="submitting">
+            发布
           </el-button>
         </span>
       </template>
@@ -233,507 +150,334 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import {
-  EditPen,
-  ChatLineSquare,
-  View,
-  Star
+import AppHeader from '../components/AppHeader.vue'
+import { 
+  Menu, Edit, Search, ChatDotRound, View, Star, 
+  Compass, DataAnalysis, Monitor, Share, EditPen 
 } from '@element-plus/icons-vue'
-import AppHeader from '@/components/AppHeader.vue'
+import { getBoards, getPosts, createPost } from '../api/social'
+import { ElMessage } from 'element-plus'
+import EmojiPicker from 'vue3-emoji-picker'
+import 'vue3-emoji-picker/css'
 
 const router = useRouter()
-const showNewTopicDialog = ref(false)
+const loading = ref(false)
 const submitting = ref(false)
-const selectedCategory = ref('')
-const sortBy = ref('latest')
-const currentPage = ref(1)
-const pageSize = ref(20)
+const showCreateDialog = ref(false)
+const activeBoard = ref('')
+const searchQuery = ref('')
+const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-// 论坛分类
-const categories = ref([
-  {
-    id: '',
-    name: '全部话题',
-    description: '查看所有讨论话题',
-    topicCount: 1250
-  },
-  {
-    id: 'ai',
-    name: '人工智能',
-    description: 'AI技术讨论与交流',
-    topicCount: 340
-  },
-  {
-    id: 'ml',
-    name: '机器学习',
-    description: '机器学习算法与应用',
-    topicCount: 285
-  },
-  {
-    id: 'cv',
-    name: '计算机视觉',
-    description: '图像处理与视觉算法',
-    topicCount: 192
-  },
-  {
-    id: 'nlp',
-    name: '自然语言处理',
-    description: 'NLP技术与应用',
-    topicCount: 156
-  },
-  {
-    id: 'research',
-    name: '学术研究',
-    description: '研究方法与经验分享',
-    topicCount: 178
-  },
-  {
-    id: 'career',
-    name: '职业发展',
-    description: '学术职业规划讨论',
-    topicCount: 99
+const boards = ref([
+  { id: 'academic', name: '学术交流', icon: 'DataAnalysis', count: 12 },
+  { id: 'tech', name: '技术分享', icon: 'Monitor', count: 8 },
+  { id: 'life', name: '校园生活', icon: 'Compass', count: 5 },
+  { id: 'career', name: '求职招聘', icon: 'Share', count: 3 },
+])
+
+const allPosts = ref<any[]>([])
+
+const posts = computed(() => {
+  let result = allPosts.value
+  if (activeBoard.value) {
+    result = result.filter(p => p.boardId === activeBoard.value)
   }
-])
-
-// 热门标签
-const hotTags = ref([
-  { name: 'ChatGPT', count: 45, heat: 'high' },
-  { name: '深度学习', count: 38, heat: 'high' },
-  { name: '论文写作', count: 32, heat: 'medium' },
-  { name: '数据集', count: 28, heat: 'medium' },
-  { name: '实验设计', count: 25, heat: 'medium' },
-  { name: '代码实现', count: 22, heat: 'low' },
-  { name: '学术会议', count: 18, heat: 'low' },
-  { name: '开源项目', count: 15, heat: 'low' }
-])
-
-// 话题列表
-const topics = ref([
-  {
-    id: 'topic-1',
-    title: '如何选择合适的深度学习框架进行研究？',
-    content: '最近在准备开始一个新的研究项目，需要选择一个深度学习框架。目前主要考虑PyTorch和TensorFlow，想听听大家的建议和经验分享。项目主要涉及计算机视觉和自然语言处理...',
-    author: {
-      id: 'user1',
-      name: '张同学',
-      avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150'
-    },
-    categoryId: 'ai',
-    tags: ['深度学习', 'PyTorch', 'TensorFlow'],
-    createTime: new Date(Date.now() - 3600000).toISOString(),
-    replyCount: 23,
-    viewCount: 156,
-    likeCount: 12,
-    isPinned: false,
-    isClosed: false,
-    isHot: true
-  },
-  {
-    id: 'topic-2',
-    title: '学术论文写作技巧分享',
-    content: '作为一个博士生，想和大家分享一些学术论文写作的心得。包括如何构思文章结构、如何进行文献综述、如何撰写方法论部分等...',
-    author: {
-      id: 'user2',
-      name: '李博士',
-      avatar: 'https://images.pexels.com/photos/2381069/pexels-photo-2381069.jpeg?auto=compress&cs=tinysrgb&w=150'
-    },
-    categoryId: 'research',
-    tags: ['论文写作', '学术研究', '博士'],
-    createTime: new Date(Date.now() - 7200000).toISOString(),
-    replyCount: 45,
-    viewCount: 289,
-    likeCount: 34,
-    isPinned: true,
-    isClosed: false,
-    isHot: true
-  },
-  {
-    id: 'topic-3',
-    title: 'CVPR 2024 论文解读与讨论',
-    content: 'CVPR 2024 已经公布了接收论文列表，让我们一起来讨论一些有趣的工作。我先分享几篇我比较关注的论文...',
-    author: {
-      id: 'user3',
-      name: '王教授',
-      avatar: 'https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=150'
-    },
-    categoryId: 'cv',
-    tags: ['CVPR', '会议论文', '计算机视觉'],
-    createTime: new Date(Date.now() - 14400000).toISOString(),
-    replyCount: 18,
-    viewCount: 98,
-    likeCount: 8,
-    isPinned: false,
-    isClosed: false,
-    isHot: false
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase()
+    result = result.filter(p => p.title.toLowerCase().includes(q) || p.content.toLowerCase().includes(q))
   }
-])
+  return result
+})
 
-// 新话题表单
-const newTopicForm = ref({
+const currentBoardName = computed(() => {
+  const board = boards.value.find(b => b.id === activeBoard.value)
+  return board ? board.name : '全部动态'
+})
+
+const newPost = ref({
   title: '',
-  categoryId: '',
-  tags: [],
-  content: ''
+  content: '',
+  boardId: ''
 })
 
-const topicRules = {
-  title: [
-    { required: true, message: '请输入话题标题', trigger: 'blur' },
-    { min: 5, max: 100, message: '标题长度在 5 到 100 个字符', trigger: 'blur' }
-  ],
-  categoryId: [
-    { required: true, message: '请选择分类', trigger: 'change' }
-  ],
-  content: [
-    { required: true, message: '请输入话题内容', trigger: 'blur' },
-    { min: 20, max: 5000, message: '内容长度在 20 到 5000 个字符', trigger: 'blur' }
-  ]
+const fetchPosts = async () => {
+  loading.value = true
+  try {
+    const res = await getPosts()
+    // API returns { posts: [...] }
+    allPosts.value = (res as any).posts || (res as any).data || res
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('获取帖子列表失败')
+  } finally {
+    loading.value = false
+  }
 }
 
-const availableTags = ref([
-  '深度学习', '机器学习', '计算机视觉', '自然语言处理',
-  '论文写作', '实验设计', '数据集', '开源项目',
-  'PyTorch', 'TensorFlow', 'Python', 'CUDA'
-])
+const handleBoardSelect = (id: string) => {
+  activeBoard.value = id
+}
 
-const totalTopics = computed(() => topics.value.length)
-
-const currentCategoryName = computed(() => {
-  const category = categories.value.find(c => c.id === selectedCategory.value)
-  return category ? category.name : '全部'
-})
-
-const filteredTopics = computed(() => {
-  let filtered = topics.value
-
-  if (selectedCategory.value) {
-    filtered = filtered.filter(topic => topic.categoryId === selectedCategory.value)
+const handleCreatePost = async () => {
+  if (!newPost.value.title || !newPost.value.content || !newPost.value.boardId) {
+    ElMessage.warning('请填写完整信息')
+    return
   }
-
-  // 排序
-  filtered = [...filtered].sort((a, b) => {
-    switch (sortBy.value) {
-      case 'newest':
-        return new Date(b.createTime).getTime() - new Date(a.createTime).getTime()
-      case 'replies':
-        return b.replyCount - a.replyCount
-      case 'likes':
-        return b.likeCount - a.likeCount
-      case 'latest':
-      default:
-        return new Date(b.createTime).getTime() - new Date(a.createTime).getTime()
-    }
-  })
-
-  return filtered.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value)
-})
-
-const formatTime = (timestamp: string) => {
-  const date = new Date(timestamp)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
   
-  if (diff < 60000) return '刚刚'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
-  return date.toLocaleDateString('zh-CN')
-}
-
-const getTagType = (heat: string) => {
-  switch (heat) {
-    case 'high': return 'danger'
-    case 'medium': return 'warning'
-    case 'low': return 'info'
-    default: return ''
-  }
-}
-
-const getCategoryName = (categoryId: string) => {
-  const category = categories.value.find(c => c.id === categoryId)
-  return category ? category.name : '未分类'
-}
-
-const selectCategory = (categoryId: string) => {
-  selectedCategory.value = categoryId
-  currentPage.value = 1
-}
-
-const filterByTag = (tagName: string) => {
-  ElMessage.info(`正在筛选标签: ${tagName}`)
-}
-
-const viewTopic = (topic: any) => {
-  router.push(`/forum/topic/${topic.id}`)
-}
-
-const handlePageChange = (page: number) => {
-  currentPage.value = page
-}
-
-const handleSizeChange = (size: number) => {
-  pageSize.value = size
-  currentPage.value = 1
-}
-
-const resetTopicForm = () => {
-  newTopicForm.value = {
-    title: '',
-    categoryId: '',
-    tags: [],
-    content: ''
-  }
-}
-
-const handleSubmitTopic = () => {
   submitting.value = true
-  
-  setTimeout(() => {
-    ElMessage.success('话题发布成功！')
-    showNewTopicDialog.value = false
-    resetTopicForm()
+  try {
+    await createPost(newPost.value)
+    ElMessage.success('发布成功')
+    showCreateDialog.value = false
+    newPost.value = { title: '', content: '', boardId: '' }
+    fetchPosts()
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('发布失败')
+  } finally {
     submitting.value = false
-  }, 1500)
+  }
+}
+
+const goToPost = (id: string) => {
+  router.push(`/forum/${id}`)
+}
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return `${date.getMonth() + 1}月${date.getDate()}日`
+}
+
+const getSummary = (content: string) => {
+  if (!content) return ''
+  return content.replace(/[#*`]/g, '').substring(0, 120) + (content.length > 120 ? '...' : '')
+}
+
+const insertMarkdown = (syntax: string) => {
+  newPost.value.content += syntax
+}
+
+const onSelectEmoji = (emoji: any) => {
+  newPost.value.content += emoji.i
 }
 
 onMounted(() => {
-  // 初始化
+  fetchPosts()
 })
 </script>
 
 <style scoped lang="scss">
 .forum-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #f0f2f5;
+  background-image: radial-gradient(#e0e4e8 1px, transparent 1px);
+  background-size: 20px 20px;
+}
 
-  .forum-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
+.forum-layout {
+  max-width: 1200px;
+  margin: 20px auto;
+  display: flex;
+  gap: 20px;
+  padding: 0 20px;
+}
 
-    @media (max-width: 768px) {
-      flex-direction: column;
-      gap: 16px;
-      align-items: stretch;
-    }
-  }
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+}
 
-  .forum-categories {
+.sidebar {
+  width: 260px;
+  height: fit-content;
+  padding: 20px;
+  position: sticky;
+  top: 20px;
+
+  .sidebar-header {
     margin-bottom: 20px;
-
-    .category-list {
-      .category-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-        margin-bottom: 8px;
-
-        &:hover {
-          background-color: #f8f9fa;
-        }
-
-        &.active {
-          background-color: var(--el-color-primary);
-          color: white;
-
-          .category-info .category-desc,
-          .category-stats .label {
-            color: rgba(255, 255, 255, 0.8);
-          }
-        }
-
-        .category-info {
-          flex: 1;
-
-          .category-name {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 4px;
-          }
-
-          .category-desc {
-            display: block;
-            font-size: 12px;
-            color: #666;
-          }
-        }
-
-        .category-stats {
-          text-align: center;
-
-          .topic-count {
-            display: block;
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--el-color-primary);
-          }
-
-          .label {
-            font-size: 11px;
-            color: #999;
-          }
-        }
-
-        &.active .category-stats .topic-count {
-          color: white;
-        }
-      }
-    }
-  }
-
-  .hot-tags {
-    .tags-list {
+    h3 {
+      margin: 0;
       display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-
-      .hot-tag {
-        cursor: pointer;
-        transition: transform 0.2s;
-
-        &:hover {
-          transform: scale(1.05);
-        }
-
-        .tag-count {
-          font-size: 11px;
-          opacity: 0.8;
-        }
-      }
-    }
-  }
-
-  .topics-container {
-    .topics-header {
-      display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      color: #303133;
+    }
+  }
 
-      h4 {
-        margin: 0;
+  .board-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    .board-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #606266;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background-color: rgba(64, 158, 255, 0.1);
+        color: #409eff;
+      }
+
+      &.active {
+        background-color: #409eff;
+        color: white;
+        box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+      }
+
+      .badge {
+        margin-left: auto;
+        background: rgba(0,0,0,0.1);
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-size: 12px;
       }
     }
+  }
 
-    .topics-list {
-      .topic-item {
-        display: flex;
-        padding: 16px;
-        border-bottom: 1px solid #f0f0f0;
-        cursor: pointer;
-        transition: background-color 0.2s;
-
-        &:hover {
-          background-color: #f8f9fa;
-        }
-
-        &:last-child {
-          border-bottom: none;
-        }
-
-        .topic-avatar {
-          margin-right: 12px;
-        }
-
-        .topic-content {
-          flex: 1;
-          min-width: 0;
-
-          .topic-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-
-            .topic-title {
-              margin: 0;
-              font-size: 16px;
-              font-weight: 500;
-              color: #333;
-              flex: 1;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              white-space: nowrap;
-            }
-
-            .topic-tags {
-              display: flex;
-              gap: 4px;
-            }
-          }
-
-          .topic-preview {
-            margin: 8px 0;
-            color: #666;
-            line-height: 1.5;
-            font-size: 14px;
-          }
-
-          .topic-meta {
-            display: flex;
-            gap: 16px;
-            font-size: 12px;
-            color: #999;
-
-            .author {
-              font-weight: 500;
-              color: var(--el-color-primary);
-            }
-          }
-        }
-
-        .topic-stats {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          margin: 0 16px;
-          min-width: 60px;
-
-          .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 12px;
-            color: #666;
-
-            .el-icon {
-              font-size: 14px;
-            }
-          }
-        }
-
-        .topic-status {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-      }
-
-      .pagination-wrapper {
-        margin-top: 24px;
-        text-align: center;
+  .create-btn-wrapper {
+    margin-top: 30px;
+    .create-btn {
+      width: 100%;
+      height: 40px;
+      font-size: 16px;
+      background: linear-gradient(45deg, #409eff, #36d1dc);
+      border: none;
+      
+      &:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
       }
     }
   }
 }
 
-@media (max-width: 768px) {
-  .forum-page {
-    .topics-list .topic-item {
-      flex-direction: column;
-      gap: 12px;
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 
-      .topic-stats {
-        flex-direction: row;
-        margin: 0;
+  .content-header {
+    padding: 20px 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .header-left {
+      h2 { margin: 0 0 5px 0; font-size: 22px; color: #303133; }
+      .subtitle { font-size: 13px; color: #909399; }
+    }
+
+    .search-input {
+      width: 250px;
+      :deep(.el-input__wrapper) {
+        border-radius: 20px;
+        box-shadow: 0 0 0 1px #dcdfe6 inset;
       }
     }
   }
+
+  .post-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    .post-card {
+      padding: 20px 25px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border-left: 4px solid transparent;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        border-left-color: #409eff;
+      }
+
+      .post-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+
+        .post-title {
+          margin: 0;
+          font-size: 18px;
+          color: #303133;
+          font-weight: 600;
+        }
+      }
+
+      .post-summary {
+        color: #606266;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 15px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .post-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 13px;
+        color: #909399;
+
+        .author {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          
+          .name { color: #606266; font-weight: 500; }
+          .dot { margin: 0 2px; }
+        }
+
+        .stats {
+          display: flex;
+          gap: 15px;
+          
+          .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          }
+        }
+      }
+    }
+  }
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* List Transitions */
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.5s ease;
+}
+.list-enter-from,
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
 }
 </style>

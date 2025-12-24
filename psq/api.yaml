@@ -1,0 +1,1214 @@
+openapi: 3.0.0
+info:
+  title: 学术成果管理平台 API
+  description: 基于资源倒推团队分工的详细 RESTful API 接口文档 (v1)
+  version: 1.0.0
+servers:
+  - url: /api
+    description:  版本接口
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 错误信息
+    
+    SuccessMessage:
+      type: object
+      properties:
+        message:
+          type: string
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+    description: 认证 (Public)
+  - name: Users
+    description: 用户个人中心与认证
+  - name: Scholars
+    description: 学者门户与检索
+  - name: Achievements
+    description: 学术成果检索与管理
+  - name: Social
+    description: 社交互动
+  - name: Analysis
+    description: 数据分析
+  - name: Admin
+    description: 管理员后台
+
+paths:
+  # -------------------- 1. 认证 (Auth) --------------------
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: 新用户注册
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                email: { type: string }
+                password: { type: string }
+      responses:
+        201:
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId: { type: string, format: uuid }
+                  username: { type: string }
+                  email: { type: string }
+        400:
+          description: 邮箱已被注册或密码不符合要求
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 用户登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account: 
+                  type: string
+                  description: 用户名/邮箱
+                password: 
+                  type: string
+      responses:
+        200:
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string, description: JWT }
+                  user:
+                    type: object
+                    properties:
+                      userId: { type: string, format: uuid }
+                      username: { type: string }
+                      role: { type: string, example: user }
+        401:
+          description: 账户或密码错误
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: 忘记密码，请求发送验证码
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+      responses:
+        200:
+          description: 验证码已发送
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: 重置密码
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+                verificationCode: { type: string }
+                newPassword: { type: string }
+      responses:
+        200:
+          description: 密码重置成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  # -------------------- 2. 用户 (Users) --------------------
+  /users/me:
+    get:
+      tags: [Users]
+      summary: 获取当前登录用户的详细信息
+      responses:
+        200:
+          description: 用户信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId: { type: string, format: uuid }
+                  username: { type: string }
+                  email: { type: string }
+                  certificationStatus: 
+                    type: string
+                    enum: [not_certified, pending, certified]
+                  preferences: { type: object }
+    put:
+      tags: [Users]
+      summary: 更新当前登录用户的个人信息
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+                email: { type: string }
+                preferences: { type: object }
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object # 简化表示
+                description: 更新后的用户信息
+
+  /users/me/certification:
+    post:
+      tags: [Users]
+      summary: 提交学者认证申请
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                realName: { type: string }
+                organization: { type: string }
+                orgEmail: { type: string }
+                title: { type: string }
+                proofMaterials: 
+                  type: array
+                  items: { type: string, format: uri }
+      responses:
+        202:
+          description: 认证已提交
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  status: { type: string, example: pending }
+        400:
+          description: 材料不符合要求
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags: [Users]
+      summary: 查看自己的认证申请状态
+      responses:
+        200:
+          description: 申请状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [pending, certified, rejected] }
+                  reason: { type: string, description: 如果被驳回的原因 }
+
+  /users/me/appeal:
+    post:
+      tags: [Users]
+      summary: 针对身份冒用或成果冒领发起申诉
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                appealType: { type: string, enum: [identity_stolen, achievement_stolen] }
+                targetId: { type: string, description: 被申诉的学者或成果ID }
+                reason: { type: string }
+                evidenceMaterials:
+                  type: array
+                  items: { type: string }
+      responses:
+        202:
+          description: 申诉已提交
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  caseId: { type: string, format: uuid }
+        400:
+          description: 必填信息缺失
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------- 3. 学者门户 (Scholars) --------------------
+  /scholars:
+    get:
+      tags: [Scholars]
+      summary: 检索学者门户
+      security: []
+      parameters:
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: organization
+          in: query
+          schema: { type: string }
+        - name: field
+          in: query
+          schema: { type: string }
+      responses:
+        200:
+          description: 检索结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        scholarId: { type: string, format: uuid }
+                        name: { type: string }
+                        organization: { type: string }
+                        title: { type: string }
+                        avatarUrl: { type: string }
+                  total: { type: integer }
+        404:
+          description: 未找到相关学者
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /scholars/{id}:
+    get:
+      tags: [Scholars]
+      summary: 浏览特定学者的公开门户主页
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 学者详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scholarId: { type: string, format: uuid }
+                  name: { type: string }
+                  organization: { type: string }
+                  bio: { type: string }
+                  researchFields: { type: array, items: { type: string } }
+                  achievements: { type: array, items: { type: object } }
+        404:
+          description: 该学者暂未开通门户
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /scholars/{id}/collaboration-network:
+    get:
+      tags: [Scholars]
+      summary: 查看学者合作关系网络
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 图表数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes: { type: array, items: { type: object } }
+                  links: { type: array, items: { type: object } }
+        403:
+          description: 该学者合作网络不可见
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------- 4. 学术成果 (Achievements) --------------------
+  /achievements:
+    get:
+      tags: [Achievements]
+      summary: 检索学术成果（普通/高级检索）
+      security: []
+      parameters:
+        - name: q
+          in: query
+          description: 关键词 - 普通检索
+          schema: { type: string }
+        - name: author
+          in: query
+          description: 高级检索
+          schema: { type: string }
+        - name: organization
+          in: query
+          description: 高级检索
+          schema: { type: string }
+        - name: time_start
+          in: query
+          schema: { type: string }
+        - name: time_end
+          in: query
+          schema: { type: string }
+        - name: field
+          in: query
+          schema: { type: string }
+        - name: sort_by
+          in: query
+          schema: { type: string, enum: [citations, time] }
+      responses:
+        200:
+          description: 检索结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        title: { type: string }
+                        authors: { type: array, items: { type: string } }
+                        year: { type: integer }
+                        abstract: { type: string }
+                        citationCount: { type: integer }
+                  total: { type: integer }
+        400:
+          description: 请输入检索内容
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /achievements/{id}:
+    get:
+      tags: [Achievements]
+      summary: 浏览学术成果详情
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 成果详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  title: { type: string }
+                  authors: { type: array, items: { type: string } }
+                  abstract: { type: string }
+                  doi: { type: string }
+                  publication: { type: string }
+                  year: { type: integer }
+        404:
+          description: 内容暂不可用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/me/achievements:
+    get:
+      tags: [Achievements]
+      summary: 查看“我”的个人成果列表（门户管理）
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, rejected] }
+      responses:
+        200:
+          description: 列表数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  achievements:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        title: { type: string }
+                        year: { type: integer }
+                        status: { type: string }
+                  total: { type: integer }
+    post:
+      tags: [Achievements]
+      summary: 添加一项新的个人成果（需审核）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type: { type: string, enum: [paper, patent, project] }
+                title: { type: string }
+                authors: { type: array, items: { type: string } }
+                year: { type: integer }
+                journal: { type: string }
+                doi: { type: string }
+      responses:
+        202:
+          description: 待审核
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  title: { type: string }
+                  status: { type: string, example: pending }
+
+  /users/me/achievements/{id}:
+    put:
+      tags: [Achievements]
+      summary: 更新“我”的某项个人成果（更新后需重新审核）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              description: 结构同POST
+      responses:
+        202:
+          description: 待审核
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  title: { type: string }
+                  status: { type: string, example: pending }
+    delete:
+      tags: [Achievements]
+      summary: 删除“我”的某项个人成果
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        204:
+          description: No Content
+
+  /users/me/collections:
+    get:
+      tags: [Achievements]
+      summary: 查看“我”的收藏夹
+      responses:
+        200:
+          description: 收藏列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collections:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        title: { type: string }
+                        authors: { type: array, items: { type: string } }
+                        year: { type: integer }
+    post:
+      tags: [Achievements]
+      summary: 收藏一项学术成果
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                achievementId: { type: string, format: uuid }
+      responses:
+        201:
+          description: 收藏成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        400:
+          description: 已在收藏夹中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/me/collections/{achievementId}:
+    delete:
+      tags: [Achievements]
+      summary: 取消收藏一项学术成果
+      parameters:
+        - name: achievementId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        204:
+          description: No Content
+
+  # -------------------- 5. 社交互动 (Social) --------------------
+  /social/follow/{userId}:
+    post:
+      tags: [Social]
+      summary: 关注一个学者
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 关注成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+    delete:
+      tags: [Social]
+      summary: 取消关注一个学者
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 取消关注成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /social/followers/{userId}:
+    get:
+      tags: [Social]
+      summary: 查看某个学者的粉丝列表
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 粉丝列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  followers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId: { type: string, format: uuid }
+                        name: { type: string }
+                  total: { type: integer }
+
+  /social/following/{userId}:
+    get:
+      tags: [Social]
+      summary: 查看某个学者关注的人列表
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 关注列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  following:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        userId: { type: string, format: uuid }
+                        name: { type: string }
+                  total: { type: integer }
+
+  /social/dms:
+    get:
+      tags: [Social]
+      summary: 获取私信会话列表
+      responses:
+        200:
+          description: 会话列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        withUser: { type: object }
+                        latestMessage: { type: string }
+                        unreadCount: { type: integer }
+    post:
+      tags: [Social]
+      summary: 发送私信
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                recipientId: { type: string, format: uuid }
+                content: { type: string }
+                attachmentUrl: { type: string }
+      responses:
+        201:
+          description: 发送成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        400:
+          description: 消息格式不符合要求
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /social/dms/{userId}:
+    get:
+      tags: [Social]
+      summary: 获取与特定用户的私信历史
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 消息记录
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        senderId: { type: string, format: uuid }
+                        content: { type: string }
+                        timestamp: { type: string }
+
+  /social/forum/posts:
+    get:
+      tags: [Social]
+      summary: 获取论坛帖子列表
+      parameters:
+        - name: boardId
+          in: query
+          description: 板块ID
+          schema: { type: string }
+      responses:
+        200:
+          description: 帖子列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  posts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        postId: { type: string, format: uuid }
+                        title: { type: string }
+                        author: { type: object }
+                        replyCount: { type: integer }
+                        lastReplyTime: { type: string }
+    post:
+      tags: [Social]
+      summary: 发布新帖子
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                content: { type: string }
+                boardId: { type: string }
+                attachments: { type: array, items: { type: string } }
+      responses:
+        201:
+          description: 发布成功
+          content:
+            application/json:
+              schema:
+                type: object
+                description: 新帖子的内容
+        400:
+          description: 标题/正文不能为空
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /social/forum/posts/{id}:
+    get:
+      tags: [Social]
+      summary: 查看帖子详情及回复
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 详情
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post: { type: object }
+                  replies: { type: array, items: { type: object } }
+
+  /social/forum/posts/{id}/reply:
+    post:
+      tags: [Social]
+      summary: 回复帖子
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string }
+                attachments: { type: array, items: { type: string } }
+      responses:
+        201:
+          description: 回复成功
+          content:
+            application/json:
+              schema:
+                type: object
+                description: 新回复的内容
+        400:
+          description: 回复内容格式不符合要求
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------- 6. 分析 (Analysis) --------------------
+  /analysis/hot-topics:
+    get:
+      tags: [Analysis]
+      summary: 查看学科热门（关键词云图数据）
+      parameters:
+        - name: time_range
+          in: query
+          schema: { type: string, enum: [1y, 3m, all] }
+      responses:
+        200:
+          description: 云图数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  topics:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        topic: { type: string }
+                        weight: { type: integer }
+        404:
+          description: 学科热点数据获取失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analysis/influence/ranking:
+    get:
+      tags: [Analysis]
+      summary: 查看学者影响力排行榜
+      parameters:
+        - name: domain
+          in: query
+          schema: { type: string, enum: [cs, physics, all] }
+      responses:
+        200:
+          description: 排行榜
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ranking:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rank: { type: integer }
+                        scholar: { type: object }
+                        influenceScore: { type: integer }
+        404:
+          description: 选定领域数据不足
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /analysis/influence/trend/{userId}:
+    get:
+      tags: [Analysis]
+      summary: 查看学者影响力趋势
+      description: userId 可以是 'me'
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: time_range
+          in: query
+          schema: { type: string, example: 5y }
+        - name: metric
+          in: query
+          schema: { type: string, enum: [citations, h-index] }
+      responses:
+        200:
+          description: 趋势数据
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trend:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        year: { type: integer }
+                        value: { type: integer }
+        404:
+          description: 暂无相关数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # -------------------- 7. 管理员 (Admin) --------------------
+  /admin/certifications:
+    get:
+      tags: [Admin]
+      summary: 获取待审核的学者认证列表
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, example: pending }
+      responses:
+        200:
+          description: 列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications: { type: array, items: { type: object } }
+
+  /admin/certifications/{appId}/approve:
+    post:
+      tags: [Admin]
+      summary: 批准学者认证
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 认证已批准
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /admin/certifications/{appId}/reject:
+    post:
+      tags: [Admin]
+      summary: 驳回学者认证
+      parameters:
+        - name: appId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        200:
+          description: 认证已驳回
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /admin/appeals:
+    get:
+      tags: [Admin]
+      summary: 获取待处理的申诉列表
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, example: pending }
+      responses:
+        200:
+          description: 列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  appeals: { type: array, items: { type: object } }
+
+  /admin/appeals/{caseId}/process:
+    post:
+      tags: [Admin]
+      summary: 处理申诉（批准或驳回）
+      parameters:
+        - name: caseId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action: { type: string, enum: [approve, reject] }
+                reason: { type: string }
+      responses:
+        200:
+          description: 申诉已处理
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /admin/achievements/pending:
+    get:
+      tags: [Admin]
+      summary: 获取待审核的学者提交成果
+      responses:
+        200:
+          description: 列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pendingAchievements: { type: array, items: { type: object } }
+
+  /admin/achievements/{achId}/approve:
+    post:
+      tags: [Admin]
+      summary: 批准学者提交的成果
+      parameters:
+        - name: achId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: 成果已批准
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /admin/achievements/{achId}/reject:
+    post:
+      tags: [Admin]
+      summary: 驳回学者提交的成果
+      parameters:
+        - name: achId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        200:
+          description: 成果已驳回
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+
+  /admin/tasks:
+    get:
+      tags: [Admin]
+      summary: 查看所有定时任务
+      responses:
+        200:
+          description: 任务列表
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        taskId: { type: string }
+                        name: { type: string }
+                        cron: { type: string }
+                        status: { type: string }
+                        lastRun: { type: string }
+
+  /admin/tasks/{taskId}:
+    put:
+      tags: [Admin]
+      summary: 配置定时任务
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cron: { type: string }
+                status: { type: string, enum: [enabled, disabled] }
+                params: { type: object }
+      responses:
+        200:
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                type: object
+                description: 更新后的任务
+
+  /admin/tasks/{taskId}/run:
+    post:
+      tags: [Admin]
+      summary: 手动触发一次任务
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        202:
+          description: 任务已加入执行队列
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'

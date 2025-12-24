@@ -1,59 +1,57 @@
 <template>
   <div class="filter-sidebar">
-    <div class="filter-section">
-      <h4 class="filter-title">学科分类</h4>
-      <el-checkbox-group
-        v-model="selectedFields"
-        @change="handleFieldChange"
-      >
-        <el-checkbox
-          v-for="field in fields"
-          :key="field"
-          :value="field"
-          class="field-checkbox"
-        >
-          {{ field }}
-        </el-checkbox>
-      </el-checkbox-group>
+    <div class="sidebar-header">
+      <h3><el-icon><Filter /></el-icon> 筛选条件</h3>
+      <el-button link type="primary" size="small" @click="clearFilters">清空</el-button>
     </div>
 
-    <div class="filter-section">
-      <h4 class="filter-title">时间范围</h4>
-      <el-radio-group
-        v-model="timeRange"
-        @change="handleTimeChange"
-      >
-        <el-radio value="all">全部时间</el-radio>
-        <el-radio value="year">最近一年</el-radio>
-        <el-radio value="month">最近一月</el-radio>
-        <el-radio value="week">最近一周</el-radio>
-      </el-radio-group>
+    <div class="filter-group">
+      <h4 class="group-title">学科分类</h4>
+      <div class="filter-content scrollable">
+        <el-checkbox-group v-model="selectedFields" @change="handleFieldChange">
+          <div v-for="field in fields" :key="field" class="checkbox-item">
+            <el-checkbox :label="field" :value="field" />
+          </div>
+        </el-checkbox-group>
+      </div>
     </div>
 
-    <div class="filter-section">
-      <h4 class="filter-title">排序方式</h4>
+    <div class="filter-divider"></div>
+
+    <div class="filter-group">
+      <h4 class="group-title">时间范围</h4>
+      <div class="filter-content">
+        <el-radio-group v-model="timeRange" @change="handleTimeChange" class="vertical-radio">
+          <el-radio label="all" value="all">全部时间</el-radio>
+          <el-radio label="year" value="year">最近一年</el-radio>
+          <el-radio label="month" value="month">最近一月</el-radio>
+          <el-radio label="week" value="week">最近一周</el-radio>
+        </el-radio-group>
+      </div>
+    </div>
+
+    <div class="filter-divider"></div>
+
+    <div class="filter-group">
+      <h4 class="group-title">排序方式</h4>
       <el-select
         v-model="sortBy"
         @change="handleSortChange"
         style="width: 100%"
+        class="custom-select"
       >
         <el-option label="最新发表" value="latest" />
         <el-option label="引用数量" value="citations" />
         <el-option label="收藏数量" value="favorites" />
       </el-select>
     </div>
-
-    <div class="filter-actions">
-      <el-button @click="clearFilters" size="small">
-        清空筛选
-      </el-button>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { usePapersStore } from '../stores/papers'
+import { Filter } from '@element-plus/icons-vue'
 
 const papersStore = usePapersStore()
 
@@ -102,54 +100,73 @@ const clearFilters = () => {
 
 <style scoped lang="scss">
 .filter-sidebar {
-  background: white;
-  border-radius: var(--border-radius);
   padding: 20px;
-  box-shadow: var(--shadow-light);
-  height: fit-content;
+  color: #303133;
+}
 
-  .filter-section {
-    margin-bottom: 24px;
-
-    &:last-of-type {
-      margin-bottom: 16px;
-    }
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
+}
 
-  .filter-title {
-    margin: 0 0 12px 0;
+.filter-group {
+  margin-bottom: 15px;
+
+  .group-title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--text-color);
+    margin-bottom: 12px;
+    color: #606266;
   }
 
-  .field-checkbox {
-    display: block;
-    margin-bottom: 8px;
-
-    :deep(.el-checkbox__label) {
-      font-size: 13px;
-      color: var(--text-color);
-    }
-  }
-
-  :deep(.el-radio-group) {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
-    .el-radio {
-      margin: 0;
-
-      .el-radio__label {
-        font-size: 13px;
+  .filter-content {
+    &.scrollable {
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 5px;
+      
+      &::-webkit-scrollbar {
+        width: 4px;
+      }
+      &::-webkit-scrollbar-thumb {
+        background: #dcdfe6;
+        border-radius: 2px;
       }
     }
   }
+}
 
-  .filter-actions {
-    padding-top: 16px;
-    border-top: 1px solid var(--border-color);
+.checkbox-item {
+  margin-bottom: 8px;
+  &:last-child { margin-bottom: 0; }
+}
+
+.vertical-radio {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.filter-divider {
+  height: 1px;
+  background-color: #ebeef5;
+  margin: 20px 0;
+}
+
+.custom-select {
+  :deep(.el-input__wrapper) {
+    border-radius: 8px;
   }
 }
 </style>

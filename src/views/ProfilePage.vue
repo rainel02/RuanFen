@@ -43,6 +43,7 @@
 
     <div class="page-content" :class="{ 'with-carousel': !isLoggedIn }">
       <div class="container">
+
         <div v-if="!isLoggedIn" class="auth-section">
           <el-card class="auth-card">
             <div class="auth-tabs">
@@ -137,8 +138,101 @@
                 </el-tab-pane>
               </el-tabs>
             </div>
-          </el-card>
+            
+            <el-tabs v-model="authTab" class="auth-tabs" stretch>
+              <el-tab-pane label="登录" name="login">
+                <el-form
+                  ref="loginFormRef"
+                  :model="loginForm"
+                  :rules="loginRules"
+                  label-position="top"
+                  size="large"
+                >
+                  <el-form-item label="用户名" prop="username">
+                    <el-input
+                      v-model="loginForm.username"
+                      placeholder="请输入用户名"
+                      :prefix-icon="User"
+                    />
+                  </el-form-item>
+
+                  <el-form-item label="密码" prop="password">
+                    <el-input
+                      v-model="loginForm.password"
+                      type="password"
+                      placeholder="请输入密码"
+                      show-password
+                      :prefix-icon="Lock"
+                    />
+                  </el-form-item>
+
+                  <el-form-item>
+                    <el-button
+                      type="primary"
+                      @click="handleLogin"
+                      :loading="loginLoading"
+                      class="submit-btn"
+                      round
+                    >
+                      立即登录
+                    </el-button>
+                  </el-form-item>
+                </el-form>
+
+                <div class="demo-info">
+                  <el-alert
+                    title="演示账号: admin / 123456"
+                    type="info"
+                    :closable="false"
+                    show-icon
+                    center
+                  />
+                </div>
+              </el-tab-pane>
+
+              <el-tab-pane label="注册" name="register">
+                <el-form
+                  ref="registerFormRef"
+                  :model="registerForm"
+                  :rules="registerRules"
+                  label-position="top"
+                  size="large"
+                >
+                  <el-form-item label="姓名" prop="name">
+                    <el-input v-model="registerForm.name" placeholder="真实姓名" :prefix-icon="User" />
+                  </el-form-item>
+
+                  <el-form-item label="邮箱" prop="email">
+                    <el-input v-model="registerForm.email" placeholder="邮箱地址" :prefix-icon="Message" />
+                  </el-form-item>
+
+                  <el-form-item label="密码" prop="password">
+                    <el-input
+                      v-model="registerForm.password"
+                      type="password"
+                      placeholder="设置密码"
+                      show-password
+                      :prefix-icon="Lock"
+                    />
+                  </el-form-item>
+
+                  <el-form-item>
+                    <el-button
+                      type="primary"
+                      @click="handleRegister"
+                      :loading="registerLoading"
+                      class="submit-btn"
+                      round
+                    >
+                      注册账号
+                    </el-button>
+                  </el-form-item>
+                </el-form>
+              </el-tab-pane>
+            </el-tabs>
+          </div>
         </div>
+
 
         <div v-else class="profile-content">
           <el-row :gutter="24">
@@ -152,265 +246,86 @@
                   <p class="user-title">{{ user?.title }}</p>
                   <p class="user-institution">{{ user?.institution }}</p>
                 </div>
+                <p class="email"><el-icon><Message /></el-icon> {{ user.email }}</p>
+                <p class="bio">{{ user.bio || '这个人很懒，什么都没有写...' }}</p>
+              </div>
 
-                <div class="profile-stats">
-                  <div class="stat-item">
-                    <span class="stat-value">{{ user?.hIndex }}</span>
-                    <span class="stat-label">H指数</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-value">{{ user?.citations }}</span>
-                    <span class="stat-label">引用数</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-value">{{ user?.papers }}</span>
-                    <span class="stat-label">论文数</span>
-                  </div>
-                </div>
+              <div class="actions-section">
+                <el-button type="primary" plain round @click="showEditDialog = true">编辑资料</el-button>
+                <el-button type="danger" plain round @click="handleLogout">退出登录</el-button>
+              </div>
+            </div>
+          </div>
 
-                <div class="profile-actions">
-                  <el-button @click="handleLogout">退出登录</el-button>
-                  <el-button @click="$router.push('/settings')">个人设置</el-button>
-                </div>
-              </el-card>
-            </el-col>
-
-            <el-col :md="16" :sm="24" :xs="24">
-              <el-card class="content-card">
-                <el-tabs v-model="activeTab" class="profile-tabs">
-                  <el-tab-pane label="个人信息" name="info">
-                    <div class="info-content">
-                      <h4>研究领域</h4>
-                      <div class="research-fields">
-                        <el-tag
-                          v-for="field in user?.researchFields"
-                          :key="field"
-                          type="info"
-                          effect="plain"
-                        >
-                          {{ field }}
-                        </el-tag>
-                      </div>
-
-                      <h4>联系信息</h4>
-                      <p><strong>邮箱：</strong>{{ user?.email }}</p>
-                      <p><strong>机构：</strong>{{ user?.institution }}</p>
-
-                      <div class="verification-section">
-                        <h4>学术认证</h4>
-                        <div class="verification-status">
-                          <div v-if="verificationStatus === 'verified'" class="status-verified">
-                            <el-icon class="status-icon"><CircleCheckFilled /></el-icon>
-                            <span class="status-text">已认证学术专家</span>
-                            <el-tag type="success" size="small">认证通过</el-tag>
-                          </div>
-                          <div v-else-if="verificationStatus === 'pending'" class="status-pending">
-                            <el-icon class="status-icon"><Clock /></el-icon>
-                            <span class="status-text">认证审核中</span>
-                            <el-tag type="warning" size="small">审核中</el-tag>
-                          </div>
-                          <div v-else-if="verificationStatus === 'rejected'" class="status-rejected">
-                            <el-icon class="status-icon"><CircleCloseFilled /></el-icon>
-                            <span class="status-text">认证未通过</span>
-                            <el-tag type="danger" size="small">未通过</el-tag>
-                            <el-button size="small" type="primary" @click="showVerificationDialog = true">
-                              重新申请
-                            </el-button>
-                          </div>
-                          <div v-else class="status-unverified">
-                            <el-icon class="status-icon"><QuestionFilled /></el-icon>
-                            <span class="status-text">未认证</span>
-                            <el-button size="small" type="primary" @click="showVerificationDialog = true">
-                              申请认证
-                            </el-button>
-                          </div>
-                        </div>
-                        <p class="verification-desc">
-                          认证后可以管理您名下的所有论文，包括编辑论文信息、回复评论等
-                        </p>
-                      </div>
-                    </div>
+          <el-row :gutter="24">
+            <el-col :span="16">
+              <div class="glass-panel content-card">
+                <el-tabs v-model="activeTab">
+                  <el-tab-pane label="我的收藏" name="favorites">
+                    <el-empty description="暂无收藏内容" />
                   </el-tab-pane>
-
-                  <el-tab-pane label="我的论文" name="papers">
-                    <div class="papers-content">
-                      <el-empty v-if="settings.showFavorites" description="暂无上传的论文" />
-                      <div v-else class="privacy-notice">
-                        <el-alert
-                          title="内容已隐藏"
-                          description="您已在隐私设置中关闭了此内容的展示"
-                          type="info"
-                          :closable="false"
-                        />
-                      </div>
-                    </div>
+                  <el-tab-pane label="浏览历史" name="history">
+                    <el-empty description="暂无浏览记录" />
                   </el-tab-pane>
-
-                  <el-tab-pane label="收藏夹" name="favorites">
-                    <div class="favorites-content">
-                      <el-empty v-if="settings.showFavorites" description="暂无收藏的论文" />
-                      <div v-else class="privacy-notice">
-                        <el-alert
-                          title="内容已隐藏"
-                          description="您已在隐私设置中关闭了收藏夹的展示"
-                          type="info"
-                          :closable="false"
-                        />
-                      </div>
-                    </div>
-                  </el-tab-pane>
-
-                  <el-tab-pane label="关注列表" name="following">
-                    <div class="following-content">
-                      <el-empty v-if="settings.showFollowing" description="暂无关注的学者" />
-                      <div v-else class="privacy-notice">
-                        <el-alert
-                          title="内容已隐藏"
-                          description="您已在隐私设置中关闭了关注列表的展示"
-                          type="info"
-                          :closable="false"
-                        />
-                      </div>
-                    </div>
-                  </el-tab-pane>
-
-                  <el-tab-pane label="粉丝列表" name="followers">
-                    <div class="followers-content">
-                      <el-empty v-if="settings.showFollowers" description="暂无粉丝" />
-                      <div v-else class="privacy-notice">
-                        <el-alert
-                          title="内容已隐藏"
-                          description="您已在隐私设置中关闭了粉丝列表的展示"
-                          type="info"
-                          :closable="false"
-                        />
-                      </div>
-                    </div>
-                  </el-tab-pane>
-
-                  <el-tab-pane label="认证管理" name="verification" v-if="verificationStatus === 'verified'">
-                    <div class="verification-management">
-                      <div class="verification-header">
-                        <h4>学术专家认证管理</h4>
-                        <el-tag type="success">已认证</el-tag>
-                      </div>
-
-                      <el-alert
-                        title="认证权限"
-                        description="您已通过学术专家认证，可以管理名下的所有论文"
-                        type="success"
-                        :closable="false"
-                        show-icon
-                        style="margin-bottom: 20px;"
-                      />
-
-                      <div class="managed-papers">
-                        <h5>可管理的论文</h5>
-                        <div class="papers-list">
-                          <div
-                            v-for="paper in managedPapers"
-                            :key="paper.id"
-                            class="managed-paper-item"
-                          >
-                            <div class="paper-info">
-                              <h6 class="paper-title">{{ paper.title }}</h6>
-                              <p class="paper-meta">
-                                {{ paper.journal }} - {{ new Date(paper.publishDate).getFullYear() }}
-                              </p>
-                              <div class="paper-stats">
-                                <span>引用: {{ paper.citations }}</span>
-                                <span>收藏: {{ paper.favorites }}</span>
-                              </div>
-                            </div>
-                            <div class="paper-actions">
-                              <el-button size="small" @click="editPaper(paper)">
-                                <el-icon><Edit /></el-icon>
-                                编辑
-                              </el-button>
-                              <el-button size="small" @click="viewPaperComments(paper)">
-                                <el-icon><ChatDotSquare /></el-icon>
-                                评论管理
-                              </el-button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div v-if="managedPapers.length === 0" class="empty-papers">
-                          <el-empty description="暂无可管理的论文" />
-                        </div>
-                      </div>
-                    </div>
+                  <el-tab-pane label="我的帖子" name="posts">
+                    <el-empty description="暂无发帖记录" />
                   </el-tab-pane>
                 </el-tabs>
-              </el-card>
+              </div>
+            </el-col>
+            
+            <el-col :span="8">
+              <div class="glass-panel sidebar-card">
+                <h3>账户统计</h3>
+                <div class="stats-grid">
+                  <div class="stat-item">
+                    <div class="value">0</div>
+                    <div class="label">关注</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="value">0</div>
+                    <div class="label">粉丝</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="value">0</div>
+                    <div class="label">获赞</div>
+                  </div>
+                </div>
+              </div>
             </el-col>
           </el-row>
         </div>
       </div>
     </div>
 
-    <!-- 学术专家认证对话框 -->
-    <el-dialog
-      v-model="showVerificationDialog"
-      title="学术专家认证申请"
-      width="800px"
-      @close="resetVerificationForm"
-    >
-      <div class="verification-form">
-        <el-alert
-          title="认证说明"
-          description="请输入真实姓名和edu邮箱，获取验证码并完成邮箱验证。"
-          type="info"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 20px;"
-        />
-
-        <el-form :model="verificationForm" :rules="verificationRules" ref="verificationFormRef" label-width="120px">
-          <el-form-item label="真实姓名" prop="realName">
-            <el-input
-              v-model="verificationForm.realName"
-              placeholder="请输入您的真实姓名"
-            />
-          </el-form-item>
-
-          <el-form-item label="edu邮箱" prop="email">
-            <el-input
-              v-model="verificationForm.email"
-              placeholder="请输入您的edu邮箱"
-            />
-          </el-form-item>
-
-          <el-form-item label="验证码" prop="code">
-            <el-row :gutter="8">
-              <el-col :span="16">
-                <el-input v-model="verificationForm.code" placeholder="请输入验证码" />
-              </el-col>
-              <el-col :span="8">
-                <el-button
-                  :disabled="codeSending || codeCountdown > 0 || !verificationForm.email"
-                  @click="handleSendCode"
-                  style="width: 100%;"
-                >
-                  <span v-if="codeCountdown === 0">获取验证码</span>
-                  <span v-else>{{ codeCountdown }}秒后重试</span>
-                </el-button>
-              </el-col>
-            </el-row>
-          </el-form-item>
-        </el-form>
-      </div>
-
+    <!-- Edit Profile Dialog -->
+    <el-dialog v-model="showEditDialog" title="编辑个人资料" width="500px">
+      <el-form :model="editForm" label-position="top">
+        <el-form-item label="姓名">
+          <el-input v-model="editForm.name" />
+        </el-form-item>
+        <el-form-item label="个人简介">
+          <el-input v-model="editForm.bio" type="textarea" :rows="3" />
+        </el-form-item>
+        <el-form-item label="研究兴趣">
+          <el-select
+            v-model="editForm.interests"
+            multiple
+            filterable
+            allow-create
+            default-first-option
+            placeholder="添加标签"
+            style="width: 100%"
+          >
+            <el-option label="人工智能" value="AI" />
+            <el-option label="大数据" value="BigData" />
+          </el-select>
+        </el-form-item>
+      </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="showVerificationDialog = false">取消</el-button>
-          <el-button
-            type="primary"
-            @click="handleSubmitVerification"
-            :loading="submittingVerification"
-          >
-            提交申请
-          </el-button>
+          <el-button @click="showEditDialog = false">取消</el-button>
+          <el-button type="primary" @click="saveProfile">保存</el-button>
         </span>
       </template>
     </el-dialog>
@@ -418,6 +333,7 @@
 </template>
 
 <script setup lang="ts">
+
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -487,37 +403,27 @@ const getCarouselStyle = () => {
 
 const router = useRouter()
 
+const router = useRouter()
 const authStore = useAuthStore()
-const settingsStore = useSettingsStore()
+
+const isLoggedIn = computed(() => authStore.isAuthenticated)
+const user = computed(() => authStore.user || {})
 
 const authTab = ref('login')
-const activeTab = ref('info')
+const activeTab = ref('favorites')
+const showEditDialog = ref(false)
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 
-// 认证相关变量
-const verificationStatus = ref('unverified') // 'unverified' | 'pending' | 'verified' | 'rejected'
-const showVerificationDialog = ref(false)
-const submittingVerification = ref(false)
-const verificationFormRef = ref()
+const loginFormRef = ref<FormInstance>()
+const registerFormRef = ref<FormInstance>()
 
-const verificationForm = ref({
-  realName: '',
-  email: '',
-  code: ''
-})
-
-const codeSending = ref(false)
-const codeCountdown = ref(0)
-let codeTimer: any = null
-const sentCode = ref('')
-
-const loginForm = ref({
+const loginForm = reactive({
   username: '',
   password: ''
 })
 
-const registerForm = ref({
+const registerForm = reactive({
   name: '',
   email: '',
   password: '',
@@ -525,34 +431,28 @@ const registerForm = ref({
   role: 'user' as 'user' | 'admin' | 'administrator'
 })
 
-const isLoggedIn = computed(() => authStore.isLoggedIn)
-const user = computed(() => authStore.user)
-const settings = computed(() => settingsStore.settings)
+const editForm = reactive({
+  name: '',
+  bio: '',
+  interests: []
+})
 
-const loginRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' }
-  ]
-}
+const loginRules = reactive<FormRules>({
+  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+})
 
-const registerRules = {
-  name: [
-    { required: true, message: '请输入姓名', trigger: 'blur' }
-  ],
+const registerRules = reactive<FormRules>({
+  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
+    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
-  ],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
   confirmPassword: [
     { required: true, message: '请确认密码', trigger: 'blur' },
     {
+
       validator: (_rule: any, value: string, callback: Function) => {
         if (value !== registerForm.value.password) {
           callback(new Error('两次输入的密码不一致'))
@@ -586,13 +486,11 @@ const verificationRules = {
       },
       trigger: 'blur'
     }
-  ],
-  code: [
-    { required: true, message: '请输入验证码', trigger: 'blur' }
   ]
-}
+})
 
 const handleLogin = async () => {
+
   loginLoading.value = true
   try {
     console.log('准备发送登录请求，用户名:', loginForm.value.username)
@@ -640,7 +538,9 @@ const handleRegister = async () => {
 const handleLogout = () => {
   authStore.logout()
   ElMessage.success('已退出登录')
+  router.push('/')
 }
+
 
 // 认证相关方法
 const handleSendCode = async () => {
@@ -697,6 +597,8 @@ const handleSubmitVerification = async () => {
     }
   })
 }
+</script>
+
 
 const loadCertificationStatus = async () => {
   if (!authStore.isLoggedIn) return
@@ -725,16 +627,20 @@ const resetVerificationForm = () => {
   codeTimer && clearInterval(codeTimer)
 }
 
-// 论文管理方法
-const editPaper = (paper: any) => {
-  ElMessage.info(`编辑论文: ${paper.title}`)
-  // 这里可以跳转到论文编辑页面
+.page-content {
+  padding: 40px 0;
+  min-height: calc(100vh - 60px);
+  display: flex;
+  align-items: center; // Center vertically for auth
 }
 
-const viewPaperComments = (paper: any) => {
-  ElMessage.info(`查看论文评论: ${paper.title}`)
-  // 这里可以跳转到评论管理页面
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+  width: 100%;
 }
+
 
 // 新增：声明 managedPapers，模拟数据或空数组
 const managedPapers = ref<any[]>([])
@@ -1156,12 +1062,15 @@ onUnmounted(() => {
       }
     }
   }
+
 }
 
-.auth-section {
+/* Auth Styles */
+.auth-container {
   display: flex;
   justify-content: center;
   align-items: center;
+
   min-height: 60vh;
   position: relative;
   z-index: 2;
@@ -1286,6 +1195,9 @@ onUnmounted(() => {
         font-weight: 500;
       }
     }
+  }
+}
+
 
     .profile-stats {
       display: grid;
@@ -1450,21 +1362,14 @@ onUnmounted(() => {
           font-weight: 700;
         }
       }
-    }
-
-    .papers-content,
-    .favorites-content,
-    .following-content,
-    .followers-content {
-      min-height: 300px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      .privacy-notice {
-        width: 100%;
+      .edit-avatar-btn {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       }
     }
+
 
     // 认证相关样式
     .verification-section {
@@ -1527,18 +1432,13 @@ onUnmounted(() => {
       }
     }
 
-    // 认证管理样式
-    .verification-management {
-      .verification-header {
+      .name-row {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
-
-        h4 {
-          margin: 0;
-        }
+        gap: 10px;
+        h1 { margin: 0; font-size: 28px; color: #303133; }
       }
+
 
       .managed-papers {
         h5 {
@@ -1629,33 +1529,40 @@ onUnmounted(() => {
       }
     }
   }
+}
 
-  // 认证对话框样式
-  .verification-form {
-    .upload-section {
-      .el-upload__tip {
-        color: #666;
-        font-size: 12px;
-        line-height: 1.4;
-        margin-top: 8px;
-      }
+.content-card {
+  padding: 20px;
+  min-height: 400px;
+}
+
+.sidebar-card {
+  padding: 20px;
+  h3 { margin: 0 0 20px 0; font-size: 16px; color: #303133; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    text-align: center;
+
+    .stat-item {
+      .value { font-size: 20px; font-weight: 700; color: #303133; }
+      .label { font-size: 12px; color: #909399; margin-top: 5px; }
     }
   }
 }
 
 @media (max-width: 768px) {
-  .profile-page {
-    .profile-content {
-      .managed-papers .papers-list .managed-paper-item {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+  .profile-header-card .header-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-top: -40px;
 
-        .paper-actions {
-          width: 100%;
-          justify-content: flex-end;
-        }
-      }
+    .info-section {
+      .name-row { justify-content: center; }
+      .email { justify-content: center; }
     }
   }
 }

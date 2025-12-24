@@ -63,6 +63,17 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '学术论坛' }
   },
   {
+
+    path: '/forum/post/:id',
+    name: 'ForumPostDetail',
+    component: () => import('../views/ForumPostDetailPage.vue'),
+    meta: { title: '帖子详情' }
+  },
+  {
+    path: '/social',
+    name: 'Social',
+    component: () => import('../views/SocialPage.vue'),
+    meta: { title: '我的社交' }
     path: '/admin',
     name: 'AdminDashboard',
     component: () => import('../views/admin/AdminDashboard.vue'),
