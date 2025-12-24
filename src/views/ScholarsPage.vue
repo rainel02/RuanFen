@@ -160,12 +160,6 @@ const handleStartChat = (participantId: string, participantName: string, partici
   showChatWindow.value = true
 }
 
-const handleStartChat = (scholarId: string) => {
-  // In a real app, we would create a conversation or get existing one
-  // For now, just navigate to chat page
-  router.push('/chat')
-}
-
 
 onMounted(() => {
   loadScholars()

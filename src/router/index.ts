@@ -74,6 +74,8 @@ const routes: RouteRecordRaw[] = [
     name: 'Social',
     component: () => import('../views/SocialPage.vue'),
     meta: { title: '我的社交' }
+  },
+  {
     path: '/admin',
     name: 'AdminDashboard',
     component: () => import('../views/admin/AdminDashboard.vue'),

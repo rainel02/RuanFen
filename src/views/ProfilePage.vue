@@ -334,7 +334,8 @@
 
 <script setup lang="ts">
 
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
+import type { FormRules, FormInstance } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -402,11 +403,9 @@ const getCarouselStyle = () => {
 }
 
 const router = useRouter()
-
-const router = useRouter()
 const authStore = useAuthStore()
 
-const isLoggedIn = computed(() => authStore.isAuthenticated)
+const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user || {})
 
 const authTab = ref('login')
@@ -466,7 +465,7 @@ const registerRules = reactive<FormRules>({
   role: [
     { required: true, message: '请选择用户角色', trigger: 'change' }
   ]
-}
+})
 
 // 认证表单验证规则
 const verificationRules = {
@@ -487,7 +486,7 @@ const verificationRules = {
       trigger: 'blur'
     }
   ]
-})
+}
 
 const handleLogin = async () => {
 
