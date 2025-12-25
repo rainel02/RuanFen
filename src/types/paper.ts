@@ -28,6 +28,10 @@ export interface SearchFilters {
   sortBy: string
   author?: string
   organization?: string
+  institution?: string
+  q?: string
+  startDate?: string
+  endDate?: string
   time_start?: string
   time_end?: string
 }
