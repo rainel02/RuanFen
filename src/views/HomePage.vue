@@ -6,82 +6,82 @@
       <div class="container">
         <div class="main-content">
           <div class="swiss-search-section">
-            <div class="search-wrapper">
-              <el-input
-                v-model="searchQueryLocal"
-                placeholder="Search for papers..."
-                class="swiss-input-lg"
-                clearable
-                @keyup.enter="onSearch"
-              >
-                <template #prefix>
-                  <el-icon class="search-icon"><Search /></el-icon>
-                </template>
-                <template #append>
-                  <el-button class="swiss-search-btn" @click="onSearch">
-                    Search
-                  </el-button>
-                </template>
-              </el-input>
-            </div>
+            <div class="search-controls">
+                <div class="segmented" role="tablist" aria-label="搜索模式">
+                <el-button :class="{ active: !isAdvanced }" @click="isAdvanced = false">普通搜索</el-button>
+                <el-button :class="{ active: isAdvanced }" @click="isAdvanced = true">高级搜索</el-button>
+              </div>
 
-            <div class="advanced-toggle-wrapper">
-              <el-collapse v-model="advancedActive" class="swiss-collapse">
-                <el-collapse-item name="1">
-                  <template #title>
-                    <div class="toggle-label">
-                      <el-icon><Operation /></el-icon>
-                      <span>高级搜索</span>
-                      <el-icon class="arrow-icon" :class="{ 'is-active': advancedActive.includes('1') }"><ArrowDown /></el-icon>
-                    </div>
-                  </template>
-                  
+              <div class="search-wrapper">
+                <template v-if="!isAdvanced">
+                  <el-input
+                    v-model="searchQueryLocal"
+                    placeholder="搜索论文关键词..."
+                    class="swiss-input-lg"
+                    clearable
+                    @keyup.enter="onSearch"
+                  >
+                    <template #prefix>
+                      <el-icon class="search-icon"><Search /></el-icon>
+                    </template>
+                    <template #append>
+                      <el-button class="swiss-search-btn" @click="onSearch" aria-label="搜索">
+                        <el-icon class="search-btn-icon"><Search /></el-icon>
+                      </el-button>
+                    </template>
+                  </el-input>
+                </template>
+
+                <template v-else>
                   <div class="swiss-advanced-panel">
                     <div class="filter-grid">
                       <div class="filter-item">
-                        <label>Author</label>
-                        <el-input v-model="author" placeholder="e.g. Hinton" />
+                        <label>关键词</label>
+                        <el-input v-model="searchQueryLocal" placeholder="任意关键词" clearable />
                       </div>
                       <div class="filter-item">
-                        <label>Organization</label>
-                        <el-input v-model="organization" placeholder="e.g. Google" />
+                        <label>作者</label>
+                        <el-input v-model="author" placeholder="作者名" clearable />
                       </div>
                       <div class="filter-item">
-                        <label>Date Range</label>
-                        <el-date-picker 
-                          v-model="timeRangeLocal" 
-                          type="daterange" 
-                          range-separator="-"
-                          start-placeholder="Start" 
-                          end-placeholder="End"
-                          style="width: 100%"
+                        <label>机构</label>
+                        <el-input v-model="organization" placeholder="机构名称" clearable />
+                      </div>
+
+                      <div class="filter-item">
+                        <label>领域</label>
+                        <el-cascader
+                          v-model="fieldLocal"
+                          :options="fieldOptions"
+                          :props="{ checkStrictly: true, emitPath: false }"
+                          placeholder="选择领域"
+                          clearable
+                          popper-class="swiss-cascader-popper"
                         />
                       </div>
+
                       <div class="filter-item">
-                        <label>Field</label>
-                        <el-select v-model="fieldLocal" placeholder="Select Field" clearable>
-                          <el-option v-for="f in fields" :key="f" :label="f" :value="f" />
-                        </el-select>
+                        <label>开始时间</label>
+                        <el-date-picker v-model="startDateLocal" type="date" placeholder="开始日期" clearable />
                       </div>
+
                       <div class="filter-item">
-                        <label>Sort By</label>
-                        <el-select v-model="sortLocal" placeholder="Relevance" clearable>
-                          <el-option label="Citations" value="citations" />
-                          <el-option label="Date" value="time" />
-                        </el-select>
+                        <label>截止时间</label>
+                        <el-date-picker v-model="endDateLocal" type="date" placeholder="截止日期" clearable />
                       </div>
+
                       <div class="filter-actions">
-                        <el-button class="btn-reset" @click="onClearAdvanced">Reset</el-button>
-                        <el-button type="primary" class="btn-apply" @click="applyAdvanced">Apply Filters</el-button>
+                        <el-button class="btn-reset" @click="onClearAdvanced">重置</el-button>
+                        <el-button type="primary" class="btn-apply" @click="onSearch">搜索</el-button>
                       </div>
                     </div>
                   </div>
-                </el-collapse-item>
-              </el-collapse>
+                </template>
+              </div>
             </div>
           </div>
           <!-- 论文收藏区域 -->
-          <div v-if="showPaperGuide && !searchQuery" class="paper-guide-section">
+          <!-- <div v-if="showPaperGuide && !searchQuery" class="paper-guide-section">
             <router-link to="/collections" class="guide-link-wrapper">
               <VantaBanner>
                 <div class="guide-banner-content">
@@ -94,7 +94,7 @@
                 </div>
               </VantaBanner>
             </router-link>
-            <!-- <el-card class="guide-card">
+            <el-card class="guide-card">
               <template #header>
                 <div class="guide-header">
                   <h4>
@@ -123,8 +123,8 @@
                   </el-carousel-item>
                 </el-carousel>
               </div>
-            </el-card> -->
-          </div>
+            </el-card>
+          </div> -->
 
           <div class="content-header">
             <div class="results-info">
@@ -189,6 +189,7 @@ import PaperCard from '../components/PaperCard.vue'
 import VantaBanner from '../components/VantaBanner.vue'
 import { usePapersStore } from '../stores/papers'
 import { useSettingsStore } from '../stores/settings'
+import { fieldOptions } from '../constants/fields'
 
 const papersStore = usePapersStore()
 const settingsStore = useSettingsStore()
@@ -219,6 +220,7 @@ const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
 //   }))
 // })
 
+
 const handleSizeChange = (size: number) => {
   papersStore.pageSize = size
   papersStore.currentPage = 1
@@ -229,36 +231,48 @@ const handleCurrentChange = (page: number) => {
 }
 
 // local search & advanced
+const isAdvanced = ref(false)
 const searchQueryLocal = ref(searchQuery.value)
-const advancedActive = ref<string[]>([])
 const author = ref('')
 const organization = ref('')
-const timeRangeLocal = ref([] as any[])
+const startDateLocal = ref('')
+const endDateLocal = ref('')
 const fieldLocal = ref('')
-const sortLocal = ref('')
-const fields = [
-  '人工智能', '机器学习', '计算机视觉', '自然语言处理', '数据挖掘'
-]
 
+// unified search handler for basic and advanced modes
 const onSearch = async () => {
-  await papersStore.searchPapers(searchQueryLocal.value)
-}
+  // enforce defaults: UI shows 1, backend expects 0-based page
+  papersStore.pageSize = 12
+  papersStore.currentPage = 1
 
-const applyAdvanced = async () => {
   await papersStore.setFilters({
+    // pass empties if not provided — backend supports empty filters
+    q: searchQueryLocal.value || '',
+    author: author.value || '',
+    institution: organization.value || '',
     fields: fieldLocal.value ? [fieldLocal.value] : [],
-    sortBy: sortLocal.value || 'latest',
-    author: author.value
+    startDate: startDateLocal.value || '',
+    endDate: endDateLocal.value || ''
   })
 }
 
 const onClearAdvanced = async () => {
   author.value = ''
   organization.value = ''
-  timeRangeLocal.value = []
+  startDateLocal.value = ''
+  endDateLocal.value = ''
   fieldLocal.value = ''
-  sortLocal.value = ''
-  await papersStore.setFilters({ fields: [], sortBy: 'latest' })
+  searchQueryLocal.value = ''
+  papersStore.pageSize = 12
+  papersStore.currentPage = 1
+  await papersStore.setFilters({
+    q: '',
+    author: '',
+    institution: '',
+    fields: [],
+    startDate: '',
+    endDate: ''
+  })
 }
 
 onMounted(() => {
@@ -272,340 +286,311 @@ onMounted(() => {
 <style scoped lang="scss">
 @mixin mobile { @media (max-width: 767px) { @content; } }
 @mixin tablet { @media (min-width: 768px) and (max-width: 1199px) { @content; } }
-@mixin desktop { @media (min-width: 1200px) { @content; } }
 
 .home-page {
+  // parchment / beige theme scoped to this page
+  --pf-bg: #f7efe2;
+  --pf-ink: #2e2a25;
+  --pf-muted: #7a6f63;
+  --pf-accent: #b8893a; // subtle gold
+  --card-bg: rgba(255, 255, 240, 0.9);
+  font-family: "Noto Serif", Georgia, "Times New Roman", serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: linear-gradient(180deg, var(--pf-bg) 0%, #fdf9f2 100%);
+  color: var(--pf-ink);
 }
 
-.page-content {
-  flex: 1;
-  padding: var(--space-xl) 0;
-}
+.page-content { flex: 1; padding: 36px 16px; }
 
-.main-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
+.container { max-width: 1200px; margin: 0 auto; }
 
-/* --- Swiss Search Section --- */
-.swiss-search-section {
-  margin-bottom: var(--space-xl);
-  display: flex;
-  flex-direction: column;
+.main-content { display: flex; flex-direction: column; gap: 28px; }
+
+/* Search area */
+.swiss-search-section { padding: 18px; border-radius: 12px; background: var(--card-bg); box-shadow: 0 6px 24px rgba(46,42,37,0.06); }
+
+.search-controls { display:flex; gap:18px; align-items:flex-start; flex-direction:column; }
+.segmented { display:flex; gap:8px; align-items:center }
+.segmented :deep(.el-button) {
+  background: rgba(255,252,245,0.82);
+  color: var(--pf-ink);
+  border: 2px solid rgba(46,42,37,0.08);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight:700;
+  min-width: 120px;
+  display: inline-flex;
   align-items: center;
-  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: inset 0 -2px 0 rgba(46,42,37,0.02);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
+.segmented :deep(.el-button):hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(46,42,37,0.06) }
+.segmented :deep(.el-button):focus-visible { outline: 3px solid rgba(184,137,58,0.14); outline-offset: 3px }
+.segmented :deep(.el-button.active) { background: linear-gradient(180deg, var(--pf-accent), #a56f2a); color:#fff; box-shadow: 0 10px 30px rgba(168,129,58,0.16); border-color: rgba(168,129,58,0.12) }
+.segmented :deep(.el-button.active):hover { transform: translateY(-3px) }
 
-.search-wrapper {
-  width: 100%;
-  position: relative;
-  margin-bottom: var(--space-md);
-}
+.search-wrapper { width:100%; }
 
-/* Customizing the large search input */
+
 :deep(.swiss-input-lg) {
   .el-input__wrapper {
-    background: var(--surface) !important;
-    border: 1px solid var(--border-subtle) !important;
-    box-shadow: var(--shadow-md) !important;
-    border-radius: var(--radius-full) !important; /* Pill shape */
-    padding: 8px 24px !important;
-    height: 64px;
-    transition: all 0.3s ease;
-
-    &:hover {
-      border-color: var(--border-light) !important;
-      background: var(--surface-hover) !important;
-      transform: translateY(-1px);
-    }
-
-    &.is-focus {
-      border-color: var(--primary) !important;
-      box-shadow: var(--shadow-lg), 0 0 0 1px var(--primary-dim) !important;
-      background: var(--surface-active) !important;
-    }
+    background: rgba(255,250,240,0.9) !important;
+    border-radius: 14px !important;
+    height:64px;
+    padding:10px 18px !important;
+    border:1px solid rgba(46,42,37,0.08) !important;
+    box-shadow: 0 8px 30px rgba(46,42,37,0.06);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
   }
-
-  .el-input__inner {
-    font-size: 18px;
-    font-weight: 500;
-    color: var(--text-primary);
-    height: 100%;
-    
-    &::placeholder {
-      color: var(--text-tertiary);
-    }
-  }
-
-  .search-icon {
-    font-size: 20px;
-    color: var(--text-tertiary);
-    margin-right: 8px;
-  }
+  .el-input__wrapper:hover { transform: translateY(-2px) }
+  .el-input__wrapper.is-focus { border-color: rgba(184,137,58,0.28) !important; box-shadow: 0 10px 36px rgba(184,137,58,0.06) }
+  .el-input__inner { font-size:18px; color:var(--pf-ink); background: transparent; font-weight:600 }
+  /* leave space for the append icon button to avoid overlap */
+  .el-input__inner { padding-right: 110px; }
+  .el-input__inner::placeholder { color: rgba(46,42,37,0.36) }
+  .search-icon { color: var(--pf-muted); margin-right:8px }
 }
 
-.swiss-search-btn {
-  border-radius: var(--radius-full) !important;
-  padding: 0 24px !important;
-  height: 48px !important;
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  margin-left: 8px;
-  background: var(--primary) !important;
-  border: none !important;
+.swiss-search-btn, :deep(.swiss-search-btn) {
+  background: linear-gradient(180deg, var(--pf-accent), #a56f2a) !important;
   color: #fff !important;
-  
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 63, 129, 0.4);
-  }
+  border-radius: 12px !important;
+  padding: 0 14px !important;
+  width: 64px !important;
+  height: 64px !important;
+  box-shadow: 0 6px 18px rgba(168,129,58,0.14) !important;
+  border: none !important;
+  min-width: 0;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  line-height: 1;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.swiss-search-btn { margin-right: 12px }
+.swiss-search-btn:hover, :deep(.swiss-search-btn:hover) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(168,129,58,0.18) }
+.swiss-search-btn:active, :deep(.swiss-search-btn:active) { transform: translateY(0) }
+
+/* remove browser/element-ui focus ring and replace with subtle accessible focus */
+.swiss-search-btn:focus, :deep(.swiss-search-btn:focus), .swiss-search-btn:focus-visible, :deep(.swiss-search-btn:focus-visible) {
+  outline: none !important;
+  box-shadow: 0 0 0 4px rgba(184,137,58,0.12) !important;
 }
 
-/* --- Advanced Toggle & Panel --- */
-.advanced-toggle-wrapper {
-  width: 100%;
+/* ensure button text inside element-ui structure is visible */
+.swiss-search-btn .el-button__content, :deep(.swiss-search-btn .el-button__content) {
+  color: #fff !important;
+  font-weight: 700 !important;
 }
 
-.swiss-collapse {
-  border: none;
-  background: transparent;
-  
-  :deep(.el-collapse-item__header) {
-    background: transparent;
-    border: none;
-    height: auto;
-    justify-content: center;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 500;
-    transition: color 0.2s;
+.swiss-advanced-panel { border-radius:10px; padding:18px; background: linear-gradient(180deg, rgba(255,250,240,0.7), rgba(255,255,245,0.6)); border:1px solid rgba(46,42,37,0.04); box-shadow: 0 6px 18px rgba(46,42,37,0.04); }
+
+.filter-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items:start }
+@include mobile { .filter-grid { grid-template-columns: 1fr } }
+
+.filter-item label { font-size:12px; color:var(--pf-muted); font-weight:700; margin-bottom:6px; text-transform:uppercase }
+.filter-item :deep(.el-input__inner), .filter-item :deep(.el-select), .filter-item :deep(.el-date-editor__editor) { background: transparent }
+
+/* --- Unified Input Styles (Select & Date Picker) --- */
+/* Force both containers to full width */
+.filter-item :deep(.el-select),
+.filter-item :deep(.el-cascader),
+.filter-item :deep(.el-date-editor) {
+  width: 100% !important;
+}
+
+/* Unified Wrapper Styles: The visible box */
+.filter-item :deep(.el-input__wrapper) {
+  box-sizing: border-box !important;
+  height: 48px !important;
+  padding: 6px 12px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(46,42,37,0.06) !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: all 0.2s ease;
+}
+
+/* Unified Hover Effects */
+.filter-item :deep(.el-input__wrapper:hover) {
+  background: rgba(255,252,245,1) !important;
+  border-color: rgba(184,137,58,0.3) !important;
+}
+
+/* Unified Focus Effects */
+.filter-item :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 3px rgba(184,137,58,0.1) !important;
+  border-color: var(--pf-accent) !important;
+}
+
+/* Unified Inner Text Styles */
+.filter-item :deep(.el-input__inner) {
+  height: 100% !important;
+  line-height: 48px !important; /* match select line-height */
+  font-weight: 600 !important;
+  color: var(--pf-ink) !important;
+  font-size: 14px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  font-family: inherit !important;
+}
+
+/* Unified Icon Styles */
+.filter-item :deep(.el-input__prefix),
+.filter-item :deep(.el-input__suffix) {
+  display: flex !important;
+  height: 100% !important;
+  color: var(--pf-muted) !important;
+  position: static !important;
+}
+.filter-item :deep(.el-input__prefix) { margin-right: 8px !important; }
+.filter-item :deep(.el-input__suffix) { margin-left: 8px !important; }
+
+/* Ensure suffix inner wrapper (Element Plus) aligns center */
+.filter-item :deep(.el-input__suffix-inner) {
+  display: flex !important;
+  align-items: center !important;
+  height: 100% !important;
+}
+
+/* remove append wrapper border/background from Element input group (avoid blue box) */
+:deep(.el-input__group), :deep(.el-input__group__append), :deep(.el-input-group__append), :deep(.el-input__append), :deep(.el-input-group__append) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* ensure append area aligns center and doesn't change input height */
+:deep(.el-input__group), :deep(.el-input__append), :deep(.el-input-group__append) {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 100% !important;
+}
+
+/* ensure append area doesn't show focus ring */
+:deep(.el-input-group__append) :deep(.el-button), :deep(.el-input__append) :deep(.el-button) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* specifically target Element Plus append wrapper border (some versions use class .el-input-group__append with inner border) */
+:deep(.el-input-group__append), :deep(.el-input__group__append) {
+  border-left: none !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+/* additionally remove any focus ring coming from input group or inner elements */
+:deep(.el-input__wrapper.is-focus), :deep(.el-input__inner:focus), :deep(.el-input__inner:focus-visible), :deep(.el-input__group:focus-within) {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: rgba(46,42,37,0.08) !important;
+}
+
+/* ensure el-button inside append has no default outline/shadow */
+:deep(.el-input__append) :deep(.el-button), :deep(.el-input-group__append) :deep(.el-button) {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* icon sizing */
+.search-btn-icon { font-size: 20px; color: #fff; display:inline-block; transform: scale(1); transition: transform 0.12s ease }
+.swiss-search-btn:hover .search-btn-icon { transform: scale(1.12) }
+
+.filter-actions { grid-column: 1 / -1; display:flex; justify-content:flex-end; gap:12px; margin-top:6px }
+.btn-reset { color: var(--pf-muted) }
+.btn-apply { background: var(--pf-accent); color:#fff }
+
+.content-header { display:flex; justify-content:space-between; align-items:center; padding: 0 4px }
+.results-info { color:var(--pf-muted); font-size:14px }
+.search-query { color:var(--pf-accent); font-weight:700 }
+
+.papers-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px }
+.paper-item { background: transparent }
+
+.empty-state { padding: 40px 0 }
+.pagination-wrapper { 
+  margin-top: 18px; 
+  display:flex; 
+  justify-content:center;
+
+  :deep(.el-pagination) {
+    --el-pagination-bg-color: transparent;
+    --el-pagination-button-bg-color: transparent; 
+    --el-color-primary: var(--pf-accent);
+    font-weight: 700;
     
-    &:hover {
-      color: var(--primary);
+    .el-pager li {
+      background: transparent !important;
+      border: 1px solid rgba(46,42,37,0.1);
+      border-radius: 8px;
+      margin: 0 3px;
+      color: var(--pf-muted);
+      transition: all 0.2s;
+      
+      &.is-active {
+        background: var(--pf-accent) !important;
+        color: #fff;
+        border-color: var(--pf-accent);
+        box-shadow: 0 4px 12px rgba(184,137,58,0.3);
+      }
+      
+      &:hover:not(.is-active) {
+        color: var(--pf-accent);
+        border-color: var(--pf-accent);
+      }
     }
-
-    .el-collapse-item__arrow {
-      display: none; /* Hide default arrow */
-    }
-  }
-  
-  :deep(.el-collapse-item__wrap) {
-    background: transparent;
-    border: none;
-  }
-  
-  :deep(.el-collapse-item__content) {
-    padding-bottom: 0;
-    color: var(--text-secondary);
-  }
-}
-
-.toggle-label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: var(--radius-full);
-  transition: background 0.2s;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.03);
-  }
-
-  .arrow-icon {
-    font-size: 12px;
-    margin-left: 4px;
-    transition: transform 0.3s;
     
-    &.is-active {
-      transform: rotate(180deg);
+    button {
+      background: transparent !important;
+      border: 1px solid rgba(46,42,37,0.1);
+      border-radius: 8px;
+      color: var(--pf-muted);
+      
+      &:hover:not(:disabled) {
+        color: var(--pf-accent);
+        border-color: var(--pf-accent);
+      }
     }
   }
 }
 
-.swiss-advanced-panel {
-  background: var(--surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-lg);
-  margin-top: var(--space-md);
-  box-shadow: var(--shadow-md);
-  backdrop-filter: blur(10px);
+/* guide banner tweaks */
+.paper-guide-section { border-radius:10px; overflow:hidden }
+
+/* responsive adjustments */
+@include mobile {
+  .page-content { padding: 20px 12px }
+  .segmented { justify-content: center }
+  .swiss-search-btn { padding: 8px 12px !important }
 }
 
-.filter-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-lg);
-  
-  @include mobile {
-    grid-template-columns: 1fr;
+</style>
+
+<style lang="scss">
+.swiss-cascader-popper {
+  --el-color-primary: #b8893a;
+  .el-cascader-node.in-active-path, .el-cascader-node.is-active {
+    color: var(--el-color-primary);
+    font-weight: 700;
   }
-}
-
-.filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  
-  label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-tertiary);
-    font-weight: 600;
+  .el-radio__input.is-checked .el-radio__inner {
+    border-color: var(--el-color-primary);
+    background: var(--el-color-primary);
   }
-}
-
-.filter-actions {
-  grid-column: 1 / -1;
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-md);
-  margin-top: var(--space-sm);
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--border-subtle);
-}
-
-.btn-reset {
-  color: var(--text-secondary) !important;
-  &:hover { color: var(--text-primary) !important; }
-}
-
-.btn-apply {
-  min-width: 120px;
-}
-
-/* --- Results Info --- */
-.content-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-md);
-  padding: 0 var(--space-sm);
-}
-
-.results-info {
-  font-size: 14px;
-  color: var(--text-secondary);
-  
-  .search-query {
-    color: var(--primary);
-    font-weight: 600;
-  }
-}
-
-/* --- Grid & Cards --- */
-.papers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: var(--space-lg);
-}
-
-.paper-item {
-  height: 100%;
-}
-
-/* --- Empty State --- */
-.empty-state {
-  padding: var(--space-xl) 0;
-  
-  :deep(.el-empty__description) {
-    color: var(--text-tertiary);
-  }
-}
-
-/* --- Pagination --- */
-.pagination-wrapper {
-  margin-top: var(--space-xl);
-  display: flex;
-  justify-content: center;
-}
-
-/* --- Paper Guide (Collections) --- */
-.paper-guide-section {
-  margin-bottom: var(--space-lg);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  transition: transform 0.3s ease;
-  
-  &:hover {
-    transform: translateY(-2px);
-    border-color: var(--border-light);
-  }
-
-  /* Center content vertically in the banner */
-  :deep(.vanta-banner) {
-    display: flex !important;
-    align-items: center !important;
-  }
-  
-  :deep(.vanta-content) {
-    width: 100%;
-  }
-}
-
-.guide-banner-content {
-  padding: var(--space-lg);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.guide-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #fff;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.guide-arrow-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px; /* Increased spacing */
-}
-
-.obtuse-arrow {
-  width: 12px;
-  height: 12px;
-  border-top: 3px solid #fff;
-  border-right: 3px solid #fff;
-  /* Positive skew makes the angle obtuse (>90deg) */
-  transform: rotate(45deg) skew(10deg, 10deg);
-  transform-origin: center;
-  animation: arrow-wave 1.5s infinite ease-in-out;
-}
-
-.arrow-1 {
-  opacity: 0.3;
-  animation-delay: 0s;
-}
-
-.arrow-2 {
-  opacity: 0.6;
-  animation-delay: 0.2s;
-}
-
-.arrow-3 {
-  opacity: 1;
-  animation-delay: 0.4s;
-}
-
-@keyframes arrow-wave {
-  0%, 100% {
-    transform: rotate(45deg) skew(10deg, 10deg) translate(0, 0);
-  }
-  50% {
-    /* Move diagonally to follow the arrow direction */
-    transform: rotate(45deg) skew(10deg, 10deg) translate(4px, -4px);
+  .el-radio__input.is-checked + .el-radio__label {
+    color: var(--el-color-primary);
   }
 }
 </style>
