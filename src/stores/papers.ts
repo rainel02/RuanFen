@@ -74,17 +74,28 @@ export const usePapersStore = defineStore('papers', () => {
     }
   }
 
-  const toggleFavorite = (paperId: string) => {
+  const toggleFavorite = async (paperId: string) => {
     const paper = papers.value.find(p => p.id === paperId)
     if (paper) {
+      const originalState = paper.isfavorited
+      
       paper.isfavorited = !paper.isfavorited
       console.log('Toggled favorite for paper', paperId, 'to', paper.isfavorited)
       paper.favoriteCount += paper.isfavorited ? 1 : -1
-      // call collection API
-      if (paper.isfavorited) {
-        api.addToCollections(paper.id).catch(() => {})
-      } else {
-        api.removeFromCollections(paper.id).catch(() => {})
+      
+      try {
+        // call collection API
+        if (paper.isfavorited) {
+          await api.addToCollections(paper.id)
+        } else {
+          await api.removeFromCollections(paper.id)
+        }
+      } catch (e) {
+        console.error('Failed to toggle favorite, rolling back', e)
+        // rollback
+        paper.isfavorited = originalState
+        paper.favoriteCount += paper.isfavorited ? 1 : -1
+        throw e // re-throw to let UI handle notification
       }
     }
   }

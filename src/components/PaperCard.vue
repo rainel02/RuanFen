@@ -134,33 +134,39 @@ const formatDate = (dateStringOrYear?: string | number) => {
 const toggleFavorite = async () => {
   const id = props.paper.id
   const msgOpts = { customClass: 'swiss-message', duration: 2500, offset: 60 }
+  const errorMsgOpts = { customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 }
 
-  // if the store contains this paper, use store method (keeps central state)
-  const storeHas = !!(papersStore as any).papers?.find((p: any) => p.id === id)
-  if (storeHas) {
-    papersStore.toggleFavorite(id)
-    // if now unfavorited, notify parent
-    const nowFav = (papersStore as any).papers.find((p: any) => p.id === id)?.isfavorited
-    if (!nowFav) {
-      ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
-      emit('removed', id)
-    } else {
+  try {
+    // if the store contains this paper, use store method (keeps central state)
+    const storeHas = !!(papersStore as any).papers?.find((p: any) => p.id === id)
+    if (storeHas) {
+      await papersStore.toggleFavorite(id)
+      // if now unfavorited, notify parent
+      const nowFav = (papersStore as any).papers.find((p: any) => p.id === id)?.isfavorited
+      if (!nowFav) {
+        ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
+        emit('removed', id)
+      } else {
+        ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
+        emit('updated', { id, isfavorited: true })
+      }
+      return
+    }
+
+    // fallback: call API directly and notify parent to update/remove
+    if (!props.paper.isfavorited) {
+      await api.addToCollections(id)
       ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
       emit('updated', { id, isfavorited: true })
+    } else {
+      await api.removeFromCollections(id)
+      ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
+      // regardless of response, emit removed so parent can update UI
+      emit('removed', id)
     }
-    return
-  }
-
-  // fallback: call API directly and notify parent to update/remove
-  if (!props.paper.isfavorited) {
-    await api.addToCollections(id).catch(() => null)
-    ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
-    emit('updated', { id, isfavorited: true })
-  } else {
-    await api.removeFromCollections(id).catch(() => null)
-    ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
-    // regardless of response, emit removed so parent can update UI
-    emit('removed', id)
+  } catch (error) {
+    console.error('Toggle favorite failed', error)
+    ElMessage.error({ message: '操作失败，请稍后重试', ...errorMsgOpts })
   }
 }
 </script>
@@ -473,5 +479,19 @@ const toggleFavorite = async () => {
 }
 .swiss-message .el-message__content {
   color: #2e2a25 !important;
+}
+
+/* 错误/警告样式 - 复古红 */
+.swiss-message.swiss-message-error {
+  --el-message-border-color: rgba(166, 55, 55, 0.3) !important;
+  border-color: rgba(166, 55, 55, 0.25) !important;
+}
+
+.swiss-message.swiss-message-error .el-icon,
+.swiss-message.swiss-message-error .el-message__icon,
+.swiss-message.swiss-message-error .el-icon svg,
+.swiss-message.swiss-message-error .el-icon path {
+  color: #a63737 !important;
+  fill: #a63737 !important;
 }
 </style>
