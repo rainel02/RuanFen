@@ -605,7 +605,59 @@ const handleSubmitVerification = async () => {
 
 const saveProfile = async () => {
   console.log('saveProfile called', editForm)
-  showEditDialog.value = false
+  try {
+    const payload: any = {
+      preferences: {
+        bio: editForm.bio || '',
+        interests: editForm.interests || []
+      }
+    }
+    
+    // username 必须 3-50 字符，只有符合条件时才发送
+    if (editForm.name && editForm.name.trim().length >= 3 && editForm.name.trim().length <= 50) {
+      payload.username = editForm.name.trim()
+    }
+    
+    console.log('Sending update payload:', JSON.stringify(payload, null, 2))
+    console.log('Calling userApi.updateCurrentUser...')
+    
+    // 调用 API 更新用户资料
+    const result = await userApi.updateCurrentUser(payload)
+    
+    console.log('API call successful, result:', result)
+    
+    // 更新本地 authStore 中的用户信息
+    if (authStore.user && result) {
+      if (payload.username) {
+        authStore.user.username = payload.username
+        authStore.user.name = payload.username
+      }
+      
+      // 解析并更新 preferences
+      if (result.preferences) {
+        try {
+          const prefs = typeof result.preferences === 'string' 
+            ? JSON.parse(result.preferences) 
+            : result.preferences
+          authStore.user.bio = prefs.bio || ''
+          authStore.user.interests = prefs.interests || []
+        } catch (e) {
+          console.error('Failed to parse preferences:', e)
+        }
+      }
+    }
+    
+    console.log('Closing dialog...')
+    showEditDialog.value = false
+    
+    console.log('Showing success message...')
+    ElMessage.success('保存成功')
+    console.log('Save complete!')
+  } catch (error: any) {
+    console.error('保存失败:', error)
+    console.error('Error details:', error.response)
+    ElMessage.error(error.message || '保存失败')
+  }
 }
 
 const loadCertificationStatus = async () => {
