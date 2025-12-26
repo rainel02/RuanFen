@@ -43,7 +43,7 @@
 
     <div class="paper-meta">
       <span class="publish-label">摘要：</span>
-      <p>{{ paper.abstract }}</p>
+      <p>{{ paper.abstractText }}</p>
     </div>
 
     <!-- 论文领域 -->
@@ -76,15 +76,15 @@
     <div class="paper-stats">
       <div class="stat-item">
         <el-icon><Star /></el-icon>
-        <span>{{ paper.favoriteCount }}</span>
+        <span>{{ paper.favouriteCount }}</span>
       </div>
       <div class="stat-item">
         <el-icon><Document /></el-icon>
-        <span>{{ paper.citationCount }} 引用</span>
+        <span>{{ paper.citedByCount }} 引用</span>
       </div>
       <div class="stat-item">
         <el-icon><Calendar /></el-icon>
-        <span>{{ formatDate(paper.publication_date) }}</span>
+        <span>{{ formatDate(paper.publicationDate) }}</span>
       </div>
     </div>
   </div>
@@ -133,6 +133,7 @@ const formatDate = (dateStringOrYear?: string | number) => {
 
 const toggleFavorite = async () => {
   const id = props.paper.id
+  console.log('Toggling favorite for paper', id)
   const msgOpts = { customClass: 'swiss-message', duration: 2500, offset: 60 }
   const errorMsgOpts = { customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 }
 

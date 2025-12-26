@@ -8,18 +8,18 @@ export interface Paper {
   id: string
   title: string
   authorships: Author[]
-  publication_date: string
-  abstract: string
-  citationCount: number
-  favoriteCount: number
+  publicationDate: string
+  abstractText: string
+  citedByCount: number
+  favouriteCount: number
   readCount: number
   isfavorited: boolean
   publication: string // 刊物
   institution: string // 机构
   keyword: string[]
-  fields: string[]
+  concepts: string[]
   doi?: string
-  url?: string
+  landingPageUrl?: string
 }
 
 export interface SearchFilters {

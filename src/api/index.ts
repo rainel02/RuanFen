@@ -15,12 +15,14 @@ export async function getMyCollections() {
 }
 
 export async function addToCollections(achievementId: string) {
-  return request.post('/users/me/collections', { achievementId })
+  // some backends expect snake_case keys; send both to maximize compatibility
+  return request.post('/users/me/collections', { achievementId, achievement_id: achievementId })
 }
 
 export async function removeFromCollections(achievementId: string) {
   // Backend uses POST /users/me/collections/delete with body { achievementId }
-  return request.post('/users/me/collections/delete', { achievementId })
+  // send both camelCase and snake_case to match server expectations
+  return request.post('/users/me/collections/delete', { achievementId, achievement_id: achievementId })
 }
 
 export default {
