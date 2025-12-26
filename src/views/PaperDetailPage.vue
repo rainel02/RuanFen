@@ -179,7 +179,7 @@
 import { ref, onMounted, watch } from 'vue'
 import type { Paper } from '@/types/paper'
 import { useRoute } from 'vue-router'
-import { Star, Share, Download, Document, View } from '@element-plus/icons-vue'
+import { Star, Document, View } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import api from '@/api'
 // import { usePapersStore } from '../stores/papers'
@@ -340,7 +340,7 @@ watch(() => route.params.id, (newId, oldId) => {
 :deep(.el-breadcrumb__inner) {
   color: var(--pf-muted) !important;
   font-weight: 500;
-  
+
   &.is-link:hover {
     color: var(--pf-accent) !important;
   }
@@ -363,25 +363,25 @@ watch(() => route.params.id, (newId, oldId) => {
   height: 36px;
   padding: 0 18px;
   transition: all 0.2s ease;
-  
+
   &.el-button--primary {
     background: var(--pf-accent);
     border-color: var(--pf-accent);
     color: #fff;
     box-shadow: 0 4px 12px rgba(184, 137, 58, 0.2);
-    
+
     &:hover {
       background: darken(#b8893a, 5%);
       border-color: darken(#b8893a, 5%);
       transform: translateY(-1px);
     }
   }
-  
+
   &.el-button--default {
     background: transparent;
     border: 1px solid var(--pf-border);
     color: var(--pf-ink);
-    
+
     &:hover {
       border-color: var(--pf-accent);
       color: var(--pf-accent);
@@ -403,9 +403,9 @@ watch(() => route.params.id, (newId, oldId) => {
 .main-content {
   padding: 48px;
   margin-bottom: 32px;
-  
+
   :deep(.el-card__body) { padding: 0; }
-  
+
   @include mobile { padding: 24px; }
 }
 
@@ -428,13 +428,13 @@ watch(() => route.params.id, (newId, oldId) => {
   font-family: var(--font-sans);
   font-size: 14px;
   color: var(--pf-muted);
-  
+
   .publication-info, .doi {
     display: flex;
     align-items: center;
     gap: 6px;
   }
-  
+
   .meta-label {
     font-weight: 600;
     text-transform: uppercase;
@@ -442,20 +442,20 @@ watch(() => route.params.id, (newId, oldId) => {
     letter-spacing: 0.05em;
     color: var(--pf-accent);
   }
-  
+
   a {
     color: var(--pf-ink);
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: border-color 0.2s;
-    
+
     &:hover { border-color: var(--pf-accent); }
   }
 }
 
 .paper-fields {
   margin-bottom: 32px;
-  
+
   .el-tag {
     background: rgba(184, 137, 58, 0.08);
     border: none;
@@ -502,7 +502,7 @@ watch(() => route.params.id, (newId, oldId) => {
     margin-bottom: 12px;
     font-weight: 700;
   }
-  
+
   .el-tag {
     background-color: transparent;
     border: 1px solid rgba(46, 42, 37, 0.15);
@@ -516,7 +516,7 @@ watch(() => route.params.id, (newId, oldId) => {
     transition: all 0.2s ease;
     margin-right: 8px;
     margin-bottom: 8px;
-    
+
     &:hover {
       color: var(--pf-accent);
       border-color: var(--pf-accent);
@@ -537,7 +537,7 @@ watch(() => route.params.id, (newId, oldId) => {
     border-bottom: 1px solid var(--pf-border);
     padding: 16px 24px;
     background: rgba(255, 255, 255, 0.4);
-    
+
     h4 {
       margin: 0;
       font-family: var(--font-sans);
@@ -548,7 +548,7 @@ watch(() => route.params.id, (newId, oldId) => {
       color: var(--pf-muted);
     }
   }
-  
+
   :deep(.el-card__body) {
     padding: 24px;
   }
@@ -559,9 +559,9 @@ watch(() => route.params.id, (newId, oldId) => {
   align-items: center;
   margin-bottom: 16px;
   font-family: var(--font-sans);
-  
+
   &:last-child { margin-bottom: 0; }
-  
+
   .el-icon {
     font-size: 18px;
     color: var(--pf-accent);
@@ -574,7 +574,7 @@ watch(() => route.params.id, (newId, oldId) => {
     font-size: 14px;
     color: var(--pf-muted);
   }
-  
+
   .stat-value {
     font-weight: 700;
     color: var(--pf-ink);
@@ -588,9 +588,9 @@ watch(() => route.params.id, (newId, oldId) => {
   align-items: center;
   gap: 14px;
   margin-bottom: 20px;
-  
+
   &:last-child { margin-bottom: 0; }
-  
+
   .el-avatar {
     background: var(--pf-accent);
     color: #fff;
@@ -599,7 +599,7 @@ watch(() => route.params.id, (newId, oldId) => {
     border: 2px solid rgba(255,255,255,0.5);
     box-shadow: 0 2px 8px rgba(184, 137, 58, 0.2);
   }
-  
+
   .author-info {
     display: flex;
     flex-direction: column;
@@ -611,10 +611,10 @@ watch(() => route.params.id, (newId, oldId) => {
       color: var(--pf-ink);
       text-decoration: none;
       line-height: 1.2;
-      
+
       &:hover { color: var(--pf-accent); }
     }
-    
+
     .author-institution {
       font-family: var(--font-sans);
       font-size: 12px;
@@ -638,13 +638,13 @@ watch(() => route.params.id, (newId, oldId) => {
   padding-bottom: 16px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--pf-border);
-  
+
   &:last-child {
     border-bottom: none;
     padding-bottom: 0;
     margin-bottom: 0;
   }
-  
+
   .related-title {
     display: block;
     font-family: var(--font-serif);
@@ -654,10 +654,10 @@ watch(() => route.params.id, (newId, oldId) => {
     color: var(--pf-ink);
     text-decoration: none;
     margin-bottom: 6px;
-    
+
     &:hover { color: var(--pf-accent); }
   }
-  
+
   .related-authors {
     font-family: var(--font-sans);
     font-size: 12px;

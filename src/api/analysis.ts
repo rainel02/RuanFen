@@ -24,7 +24,7 @@ export const getInfluenceRanking = (domain: 'cs' | 'physics' | 'all' = 'all') =>
   })
 }
 
-export const getInfluenceTrend = (userId: string, timeRange: string = '5y', metric: 'citations' | 'h-index' = 'citations') => {
+export const getInfluenceTrend = (timeRange: string = '5y', metric: 'citations' | 'h-index' = 'citations') => {
   return request({
     url: '/analysis/influence/trend/me',
     method: 'get',
