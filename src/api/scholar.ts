@@ -10,7 +10,8 @@ export const searchScholars = (params?: {
   organization?: string
   field?: string
 }) => {
-  return request.get('/scholars', { params })
+  // Backend expects /api/scholars/search per controller mapping
+  return request.get('/scholars/search', params)
 }
 
 /**

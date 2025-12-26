@@ -1,23 +1,26 @@
 // 基于 index.ts 模式的请求工具
-import { APIFOX_BASE_URL } from './config'
+import { API_BASE_URL } from './config'
 
-const BASE = APIFOX_BASE_URL
+const BASE = API_BASE_URL
 
-// 构建 URL（支持查询参数）
+// 构建 URL（支持查询参数，兼容相对 BASE）
 function buildUrl(path: string, params: Record<string, any> = {}) {
-  // 确保 path 以 / 开头
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  const url = new URL(`${BASE}${normalizedPath}`)
-  Object.keys(params).forEach(k => {
+  const basePath = `${BASE}${normalizedPath}`
+  const search = new URLSearchParams()
+
+  Object.keys(params || {}).forEach(k => {
     const v = params[k]
-    if (v === undefined || v === null || v === '') return
+    if (v === undefined || v === null) return
     if (Array.isArray(v)) {
-      v.forEach(item => url.searchParams.append(k, item))
+      v.forEach(item => search.append(k, String(item)))
     } else {
-      url.searchParams.set(k, String(v))
+      search.set(k, String(v))
     }
   })
-  return url.toString()
+
+  const qs = search.toString()
+  return qs ? `${basePath}?${qs}` : basePath
 }
 
 // 获取请求头（包含 token）
@@ -54,7 +57,21 @@ async function handleResponse<T>(response: Response): Promise<T> {
     }
     throw error
   }
-  return response.json()
+  // Handle 204 No Content
+  if (response.status === 204) {
+    return undefined as unknown as T
+  }
+  const json = await response.json()
+  if (json && typeof json === 'object' && 'code' in json) {
+    const code = Number(json.code)
+    if (Number.isFinite(code) && code !== 200) {
+      const message = json.message || `请求失败: ${code}`
+      const error: any = new Error(message)
+      error.response = { status: code, data: json }
+      throw error
+    }
+  }
+  return (json && typeof json === 'object' && 'data' in json) ? (json.data as T) : (json as T)
 }
 
 // GET 请求
