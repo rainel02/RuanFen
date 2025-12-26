@@ -5,5 +5,5 @@
 const APIFOX_PROJECT_ID = '7413325-7146674-6711292' // 👈 请替换为你的项目 ID
 
 // Apifox Mock 服务基础地址
-export const APIFOX_BASE_URL = `http://127.0.0.1:4523/m1/${APIFOX_PROJECT_ID}`
+export const APIFOX_BASE_URL = `http://127.0.0.1:4523/m1/${APIFOX_PROJECT_ID}/api`
 

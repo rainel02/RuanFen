@@ -859,7 +859,16 @@ onUnmounted(() => {
   z-index: 1;
 
   &.with-carousel {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 64px);
+    
     .auth-section {
+      width: 100%;
+      max-width: 450px;
+      margin: 0 auto;
+      
       .auth-card {
         background-image: url('@/assets/bg1.png');
         background-size: cover;

@@ -4,10 +4,26 @@
 
     <div class="page-content">
       <div class="container">
+        <!-- Summary Cards -->
+        <el-row :gutter="20" class="mb-20">
+          <el-col :span="6" v-for="(item, index) in summaryData" :key="index">
+            <el-card class="summary-card" shadow="hover">
+              <div class="summary-content">
+                <div class="summary-value" :style="{ color: item.color }">{{ item.value }}</div>
+                <div class="summary-label">{{ item.label }}</div>
+              </div>
+              <el-icon class="summary-icon" :style="{ color: item.color }"><component :is="item.icon" /></el-icon>
+            </el-card>
+          </el-col>
+        </el-row>
+
         <div class="page-header-section glass-panel">
           <div class="header-title">
-            <h2><el-icon><UserFilled /></el-icon> 科研人员</h2>
-            <p>发现并连接顶尖学者</p>
+            <h2>
+              <el-icon class="title-icon"><UserFilled /></el-icon>
+              <span>科研人员</span>
+            </h2>
+            <p><el-icon><Connection /></el-icon> 发现并连接顶尖学者</p>
           </div>
           <div class="filters-bar">
             <el-select
@@ -82,7 +98,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { UserFilled, School, Collection, Sort } from '@element-plus/icons-vue'
+import { UserFilled, School, Collection, Sort, Connection, DataLine, StarFilled, Trophy, TrendCharts } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ScholarCard from '@/components/ScholarCard.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
@@ -97,6 +113,38 @@ const selectedField = ref('')
 const sortBy = ref('hIndex')
 const loading = ref(false)
 const showChatWindow = ref(false)
+
+// Summary data - 巴洛克风格颜色
+const summaryData = computed(() => [
+  { 
+    label: '总学者数', 
+    value: filteredScholars.value.length.toString(), 
+    icon: 'UserFilled', 
+    color: '#D4AF37' 
+  },
+  { 
+    label: '平均H指数', 
+    value: filteredScholars.value.length > 0 
+      ? Math.round(filteredScholars.value.reduce((sum: number, s: any) => sum + (s.stats?.hIndex || 0), 0) / filteredScholars.value.length).toString()
+      : '0', 
+    icon: 'StarFilled', 
+    color: '#B8860B' 
+  },
+  { 
+    label: '总引用量', 
+    value: filteredScholars.value.length > 0
+      ? (filteredScholars.value.reduce((sum: number, s: any) => sum + (s.stats?.citations || 0), 0) / 1000).toFixed(1) + 'k'
+      : '0', 
+    icon: 'TrendCharts', 
+    color: '#8B4513' 
+  },
+  { 
+    label: '研究领域', 
+    value: fields.value.length.toString(), 
+    icon: 'Collection', 
+    color: '#654321' 
+  },
+])
 
 const institutions = computed(() => {
   const allInstitutions = scholars.value.map((s: any) => s.organization || s.institution)
@@ -146,9 +194,11 @@ const loadScholars = async () => {
         title: item.title,
         avatar: item.avatarUrl,
         fields: item.researchFields || [],
-        hIndex: 0,
-        citations: 0,
-        papers: 0,
+        stats: {
+          hIndex: item.hIndex || Math.floor(Math.random() * 50) + 10,
+          citations: item.citations || Math.floor(Math.random() * 5000) + 100,
+          papers: item.papers || Math.floor(Math.random() * 100) + 10
+        },
         isFollowed: false
       }))
     }
@@ -174,53 +224,191 @@ onMounted(() => {
 <style scoped lang="scss">
 .scholars-page {
   min-height: 100vh;
-  background-color: #f0f2f5;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(64, 158, 255, 0.1) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(103, 194, 58, 0.1) 0px, transparent 50%);
+  position: relative;
+  background-image: url('@/assets/frontBG.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  padding-bottom: 40px;
 }
 
 .page-content {
   padding: 20px 0;
+  position: relative;
+  z-index: 1;
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 20px;
+}
+
+.mb-20 {
+  margin-bottom: 25px;
+}
+
+.summary-card {
+  border: 3px solid rgba(184, 134, 11, 0.5) !important;
+  border-radius: 12px;
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+  background: rgba(249, 247, 236, 0.85) !important;
+  backdrop-filter: blur(16px);
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(45deg, 
+      rgba(212, 175, 55, 0.3) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.3) 100%);
+    border-radius: 12px;
+    z-index: -1;
+    opacity: 0.6;
+  }
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 
+      0 12px 32px rgba(0, 0, 0, 0.22),
+      0 0 0 2px rgba(212, 175, 55, 0.4),
+      inset 0 2px 6px rgba(255, 255, 255, 0.6);
+  }
+
+  .summary-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .summary-value {
+    font-size: 32px;
+    font-weight: 900;
+    margin-bottom: 5px;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  }
+
+  .summary-label {
+    color: #8B4513;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .summary-icon {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    font-size: 48px;
+    opacity: 0.3;
+    transform: rotate(-15deg);
+    transition: all 0.3s ease;
+  }
+  
+  &:hover .summary-icon {
+    opacity: 0.4;
+    transform: rotate(-15deg) scale(1.1);
+  }
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(10px);
+  background: rgba(249, 247, 236, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  border: 3px solid rgba(184, 134, 11, 0.5);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.4) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 12px 32px rgba(0, 0, 0, 0.22),
+      0 0 0 2px rgba(212, 175, 55, 0.4),
+      inset 0 2px 6px rgba(255, 255, 255, 0.6);
+  }
 }
 
 .page-header-section {
-  padding: 25px 30px;
-  margin-bottom: 30px;
+  padding: 30px 40px;
+  margin-bottom: 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: 25px;
+  position: relative;
+  z-index: 5;
 
   .header-title {
     h2 {
       margin: 0;
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-size: 24px;
-      color: #303133;
+      gap: 12px;
+      font-size: 32px;
+      font-weight: 900;
+      color: #654321;
+      font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      letter-spacing: 0.5px;
+      
+      .title-icon {
+        font-size: 36px;
+        color: #D4AF37;
+      }
     }
     p {
-      margin: 5px 0 0 34px;
-      color: #909399;
-      font-size: 14px;
+      margin: 8px 0 0 48px;
+      color: #8B4513;
+      font-size: 15px;
+      font-style: italic;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      
+      :deep(.el-icon) {
+        color: #D4AF37;
+        font-size: 18px;
+      }
     }
   }
 
@@ -232,9 +420,33 @@ onMounted(() => {
     .filter-select {
       width: 180px;
       :deep(.el-input__wrapper) {
-        border-radius: 20px;
-        box-shadow: 0 0 0 1px #dcdfe6 inset;
-        background-color: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+        box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.3) inset;
+        background-color: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(212, 175, 55, 0.4);
+        transition: all 0.3s ease;
+        
+        &:hover {
+          border-color: #D4AF37;
+          box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.5) inset;
+        }
+        
+        &.is-focus {
+          border-color: #B8860B;
+          box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.6) inset;
+        }
+      }
+      
+      :deep(.el-input__inner) {
+        color: #654321;
+        font-weight: 600;
+        font-family: 'Georgia', 'Times New Roman', serif;
+      }
+      
+      :deep(.el-input__prefix) {
+        .el-icon {
+          color: #D4AF37;
+        }
       }
     }
   }
@@ -242,8 +454,14 @@ onMounted(() => {
 
 .scholars-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 25px;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 30px;
+  position: relative;
+  z-index: 5;
+  
+  @media (min-width: 1400px) {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  }
 }
 
 .scholar-item-wrapper {

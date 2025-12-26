@@ -5,7 +5,9 @@ const BASE = APIFOX_BASE_URL
 
 // 构建 URL（支持查询参数）
 function buildUrl(path: string, params: Record<string, any> = {}) {
-  const url = new URL(`${BASE}${path}`)
+  // 确保 path 以 / 开头
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const url = new URL(`${BASE}${normalizedPath}`)
   Object.keys(params).forEach(k => {
     const v = params[k]
     if (v === undefined || v === null || v === '') return

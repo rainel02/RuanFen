@@ -11,11 +11,8 @@
         <div class="name-row">
           <h3 class="scholar-name" @click="goToDetail">{{ scholar.name }}</h3>
           <el-button 
-            :type="scholar.isFollowed ? 'success' : 'primary'" 
             size="small" 
-            round
-            :plain="scholar.isFollowed"
-            class="follow-btn"
+            :class="['follow-btn', scholar.isFollowed ? 'followed' : 'not-followed']"
             @click.stop="toggleFollow"
           >
             {{ scholar.isFollowed ? '已关注' : '关注' }}
@@ -99,46 +96,108 @@ const formatNumber = (num: number) => {
 
 <style scoped lang="scss">
 .glass-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
+  background: rgba(249, 247, 236, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  border: 3px solid rgba(184, 134, 11, 0.5);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
   height: 100%;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.4) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+  }
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-    border-color: rgba(64, 158, 255, 0.3);
+    transform: translateY(-12px) scale(1.02);
+    box-shadow: 
+      0 20px 48px rgba(0, 0, 0, 0.25),
+      0 0 0 3px rgba(212, 175, 55, 0.6),
+      inset 0 2px 6px rgba(255, 255, 255, 0.6),
+      inset 0 -2px 6px rgba(0, 0, 0, 0.15);
+    border-color: rgba(212, 175, 55, 0.8);
   }
 }
 
 .card-header {
-  padding: 20px;
+  padding: 24px;
   display: flex;
-  gap: 15px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  gap: 18px;
+  border-bottom: 3px solid rgba(184, 134, 11, 0.25);
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.4) 0%, 
+    rgba(249, 247, 236, 0.6) 50%,
+    rgba(255, 255, 255, 0.3) 100%);
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, 
+      transparent 0%, 
+      rgba(212, 175, 55, 0.5) 50%, 
+      transparent 100%);
+  }
 
   .avatar-wrapper {
     position: relative;
     .scholar-avatar {
-      border: 2px solid #fff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border: 4px solid #D4AF37;
+      box-shadow: 
+        0 4px 12px rgba(0,0,0,0.25),
+        0 0 0 2px rgba(184, 134, 11, 0.3),
+        inset 0 2px 4px rgba(255, 255, 255, 0.4);
+      transition: all 0.3s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+        border-color: #B8860B;
+        box-shadow: 
+          0 6px 16px rgba(0,0,0,0.3),
+          0 0 0 3px rgba(212, 175, 55, 0.4),
+          inset 0 2px 4px rgba(255, 255, 255, 0.5);
+      }
     }
     .status-indicator {
       position: absolute;
       bottom: 2px;
       right: 2px;
-      width: 12px;
-      height: 12px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       background-color: #909399;
-      border: 2px solid #fff;
-      &.online { background-color: #67c23a; }
+      border: 3px solid #f9f7ec;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      &.online { 
+        background-color: #B8860B;
+        box-shadow: 0 0 6px rgba(184, 134, 11, 0.8);
+      }
     }
   }
 
@@ -151,33 +210,82 @@ const formatNumber = (num: number) => {
       justify-content: space-between;
       align-items: center;
       margin-bottom: 4px;
+      
+      .follow-btn {
+        border-radius: 16px !important;
+        font-weight: 700 !important;
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        padding: 6px 16px !important;
+        border: 2px solid !important;
+        transition: all 0.3s ease !important;
+        
+        &.not-followed {
+          background: #D4AF37 !important;
+          border-color: #B8860B !important;
+          color: #fff !important;
+          
+          &:hover {
+            background: #B8860B !important;
+            border-color: #8B4513 !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(184, 134, 11, 0.4);
+          }
+        }
+        
+        &.followed {
+          background: rgba(212, 175, 55, 0.1) !important;
+          border-color: #D4AF37 !important;
+          color: #654321 !important;
+          
+          &:hover {
+            background: rgba(212, 175, 55, 0.2) !important;
+            border-color: #B8860B !important;
+          }
+        }
+      }
 
       .scholar-name {
         margin: 0;
-        font-size: 18px;
-        font-weight: 600;
-        color: #303133;
+        font-size: 20px;
+        font-weight: 900;
+        color: #654321;
         cursor: pointer;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        &:hover { color: #409eff; }
+        font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+        letter-spacing: 0.3px;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        
+        &:hover { 
+          color: #D4AF37;
+          text-shadow: 1px 1px 3px rgba(212, 175, 55, 0.5);
+        }
       }
     }
 
     .scholar-title {
-      margin: 0 0 4px 0;
-      font-size: 13px;
-      color: #606266;
+      margin: 0 0 6px 0;
+      font-size: 14px;
+      color: #8B4513;
+      font-style: italic;
+      font-family: 'Georgia', 'Times New Roman', serif;
     }
 
     .scholar-institution {
       margin: 0;
-      font-size: 12px;
-      color: #909399;
+      font-size: 13px;
+      color: #B8860B;
       display: flex;
       align-items: center;
       gap: 4px;
+      font-weight: 600;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      
+      :deep(.el-icon) {
+        color: #D4AF37;
+      }
     }
   }
 }
@@ -189,19 +297,44 @@ const formatNumber = (num: number) => {
   .tags-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
     margin-bottom: 20px;
     height: 28px; 
     overflow: hidden;
+    
+    :deep(.field-tag) {
+      background: rgba(212, 175, 55, 0.15) !important;
+      border: 1px solid rgba(184, 134, 11, 0.4) !important;
+      color: #654321 !important;
+      font-weight: 600 !important;
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      border-radius: 6px !important;
+      
+      &:hover {
+        background: rgba(212, 175, 55, 0.25) !important;
+        border-color: #D4AF37 !important;
+      }
+    }
+    
+    :deep(.more-tag) {
+      background: rgba(139, 69, 19, 0.1) !important;
+      border: 1px solid rgba(139, 69, 19, 0.3) !important;
+      color: #8B4513 !important;
+      font-weight: 700 !important;
+    }
   }
 
   .stats-row {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    background: rgba(245, 247, 250, 0.5);
-    padding: 10px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.1) 0%, 
+      rgba(184, 134, 11, 0.15) 100%);
+    padding: 12px;
     border-radius: 8px;
+    border: 1px solid rgba(184, 134, 11, 0.3);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 
     .stat-item {
       display: flex;
@@ -209,44 +342,75 @@ const formatNumber = (num: number) => {
       align-items: center;
       
       .value {
-        font-size: 16px;
-        font-weight: 700;
-        color: #303133;
+        font-size: 18px;
+        font-weight: 900;
+        color: #654321;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
       }
       .label {
-        font-size: 12px;
-        color: #909399;
-        margin-top: 2px;
+        font-size: 11px;
+        color: #8B4513;
+        margin-top: 4px;
+        font-weight: 600;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
     }
 
     .stat-divider {
-      width: 1px;
-      height: 20px;
-      background-color: #dcdfe6;
+      width: 2px;
+      height: 24px;
+      background: linear-gradient(to bottom, 
+        transparent 0%, 
+        rgba(184, 134, 11, 0.5) 50%, 
+        transparent 100%);
     }
   }
 }
 
 .card-footer {
   display: flex;
-  border-top: 1px solid rgba(0, 0, 0, 0.03);
+  border-top: 2px solid rgba(184, 134, 11, 0.2);
+  background: linear-gradient(135deg, 
+    rgba(249, 247, 236, 0.5) 0%, 
+    rgba(255, 255, 255, 0.3) 100%);
   
   .action-btn {
     flex: 1;
     border-radius: 0;
-    height: 40px;
+    height: 44px;
     margin: 0;
+    font-weight: 700;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: #654321;
+    transition: all 0.3s ease;
     
     &:hover {
-      background-color: rgba(64, 158, 255, 0.05);
-      color: #409eff;
+      background: linear-gradient(135deg, 
+        rgba(212, 175, 55, 0.2) 0%, 
+        rgba(184, 134, 11, 0.15) 100%);
+      color: #D4AF37;
+      text-shadow: 0 1px 2px rgba(212, 175, 55, 0.3);
+    }
+    
+    :deep(.el-icon) {
+      color: #B8860B;
+      transition: color 0.3s ease;
+    }
+    
+    &:hover :deep(.el-icon) {
+      color: #D4AF37;
     }
   }
 
   .divider {
-    width: 1px;
-    background-color: rgba(0, 0, 0, 0.03);
+    width: 2px;
+    background: linear-gradient(to bottom, 
+      transparent 0%, 
+      rgba(184, 134, 11, 0.4) 50%, 
+      transparent 100%);
   }
 }
 </style>

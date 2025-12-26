@@ -4,15 +4,12 @@
       <div class="header-content">
         <!-- Logo -->
         <div class="logo-section" @click="router.push('/')">
-          <div class="logo-icon">
-            <el-icon><School /></el-icon>
-
-          </div>
-          <span class="logo-text">ScholarHub</span>
+          <img src="@/assets/logo.png" alt="Logo" class="logo-image" />
+          <span class="logo-text">HuggingPapers</span>
         </div>
 
-        <!-- Search Bar (Hidden on Home) -->
-        <div class="search-section" v-if="!isHomePage">
+        <!-- Search Bar (Hidden on Home and Profile) -->
+        <div class="search-section" v-if="!isHomePage && !isProfilePage">
           <el-input
             v-model="searchInput"
             placeholder="搜索..."
@@ -28,21 +25,21 @@
         <!-- Navigation -->
         <div class="nav-section">
           <router-link to="/" class="nav-item" :class="{ active: route.path === '/' }">首页</router-link>
+          <router-link to="/collections" class="nav-item" :class="{ active: route.path === '/collections' }">收藏</router-link>
           <router-link to="/scholars" class="nav-item" :class="{ active: route.path.startsWith('/scholar') }">学者</router-link>
           <router-link v-if="showPaperGuide" to="/paper-guide" class="nav-item" :class="{ active: route.path === '/paper-guide' }">导读</router-link>
           <router-link v-if="showForum" to="/forum" class="nav-item" :class="{ active: route.path.startsWith('/forum') }">论坛</router-link>
           <router-link to="/chat" class="nav-item" :class="{ active: route.path === '/chat' }">消息</router-link>
           <router-link to="/analytics" class="nav-item" :class="{ active: route.path === '/analytics' }">分析</router-link>
           
-          <div class="user-menu" @click="router.push('/profile')">
-            <template v-if="isLoggedIn">
-              <el-avatar :size="32" :src="user?.avatar" class="user-avatar">
+          <div class="user-menu" @click="handleUserMenuClick">
+            <template v-if="shouldShowAvatar && isLoggedIn">
+              <el-avatar :size="40" :src="user?.avatar || defaultAvatar" class="user-avatar">
                 {{ user?.name?.charAt(0) }}
               </el-avatar>
-              <span class="user-name">{{ user?.name }}</span>
             </template>
-            <template v-else>
-              <el-button type="primary" round size="small">登录</el-button>
+            <template v-else-if="!isLoginPage">
+              <el-button class="gothic-login-btn" size="small" @click.stop="router.push('/profile')">登录</el-button>
             </template>
           </div>
         </div>
@@ -59,7 +56,8 @@ import { useAuthStore } from '../stores/auth'
 import { usePapersStore } from '../stores/papers'
 import { useSettingsStore } from '../stores/settings'
 
-import { Search, School } from '@element-plus/icons-vue'
+import { Search } from '@element-plus/icons-vue'
+import defaultAvatar from '@/assets/profile.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -70,8 +68,18 @@ const settingsStore = useSettingsStore()
 const searchInput = ref('')
 
 const isHomePage = computed(() => route.path === '/')
+const isProfilePage = computed(() => route.path === '/profile')
+const isLoginPage = computed(() => route.path === '/profile' && !authStore.isLoggedIn)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user)
+
+// 是否显示头像（除了登录注册页面外都显示）
+const shouldShowAvatar = computed(() => {
+  // 如果已登录，总是显示头像
+  if (isLoggedIn.value) return true
+  // 如果未登录且不在登录页面，显示登录按钮
+  return !isLoginPage.value
+})
 
 // 根据设置显示功能
 const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
@@ -86,15 +94,27 @@ const handleSearchSubmit = () => {
   }
 }
 
+const handleUserMenuClick = () => {
+  if (isLoggedIn.value) {
+    router.push('/profile')
+  } else {
+    router.push('/profile')
+  }
+}
+
 </script>
 
 <style>
 
 .glass-header {
-  background: rgba(255, 255, 255, 0.85);
+  background-image: url('@/assets/bg1.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+  height: 64px;
 }
 
 .container {
@@ -117,42 +137,20 @@ const handleSearchSubmit = () => {
   gap: 10px;
   cursor: pointer;
   
-  .logo-icon {
-    width: 36px;
-    height: 36px;
-    background: linear-gradient(135deg, #409eff, #36d1dc);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
+  .logo-image {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
 
-    text-decoration: none;
-    color: var(--text-color);
-    font-weight: 600;
-    gap: 10px;
-
-    .logo-image {
-      width: 40px;
-      height: 40px;
-      object-fit: contain;
-      flex-shrink: 0;
-    }
-
-    .logo-avatar {
-      cursor: pointer;
-      border: 2px solid var(--primary-color);
-      transition: all 0.3s ease;
-      flex-shrink: 0;
-
-      &:hover {
-        transform: scale(1.1);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      }
-    }
-
-    .logo-text {
-      font-size: 18px;
-      color: var(--primary-color);
-    }
+  .logo-text {
+    font-size: 20px;
+    font-weight: 900;
+    color: #000;
+    font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+    letter-spacing: 0.5px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
   }
 }
 
@@ -178,6 +176,8 @@ const handleSearchSubmit = () => {
   display: flex;
   align-items: center;
   gap: 25px;
+  position: relative;
+  z-index: 100;
 
   .nav-item {
     text-decoration: none;
@@ -186,13 +186,16 @@ const handleSearchSubmit = () => {
     font-weight: 500;
     transition: color 0.2s;
     position: relative;
+    cursor: pointer;
+    z-index: 10;
+    pointer-events: auto;
 
     &:hover {
-      color: #409eff;
+      color: #D4AF37;
     }
 
     &.active {
-      color: #409eff;
+      color: #B8860B;
       font-weight: 600;
       
       &::after {
@@ -202,7 +205,7 @@ const handleSearchSubmit = () => {
         left: 0;
         width: 100%;
         height: 3px;
-        background-color: #409eff;
+        background-color: #D4AF37;
         border-radius: 3px 3px 0 0;
       }
     }
@@ -216,6 +219,17 @@ const handleSearchSubmit = () => {
     padding-left: 15px;
     border-left: 1px solid #ebeef5;
     
+    .user-avatar {
+      transition: all 0.3s ease;
+      border: 2px solid rgba(212, 175, 55, 0.3);
+      
+      &:hover {
+        transform: scale(1.1);
+        border-color: #D4AF37;
+        box-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+      }
+    }
+    
     .user-name {
       font-size: 14px;
       color: #303133;
@@ -224,6 +238,57 @@ const handleSearchSubmit = () => {
     
     &:hover .user-name {
       color: #409eff;
+    }
+  }
+
+  .gothic-login-btn {
+    background: #8B4513 !important;
+    border: 2px solid #654321 !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    border-radius: 20px !important;
+    padding: 14px 24px !important;
+    min-width: 80px !important;
+    box-shadow: 
+      0 2px 4px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, 
+        rgba(255, 255, 255, 0.1) 0%, 
+        transparent 50%, 
+        rgba(0, 0, 0, 0.1) 100%);
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    
+    &:hover {
+      background: #654321 !important;
+      border-color: #5a3a1f !important;
+      box-shadow: 
+        0 4px 8px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3) !important;
+      transform: translateY(-1px) !important;
+    }
+    
+    &:active {
+      transform: translateY(0) !important;
+      box-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.3),
+        inset 0 2px 4px rgba(0, 0, 0, 0.2) !important;
     }
   }
 }

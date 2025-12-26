@@ -1,4 +1,6 @@
-const BASE = 'http://127.0.0.1:4523/m1/7413325-7146674-6711292/api'
+import { APIFOX_BASE_URL } from './config'
+
+const BASE = APIFOX_BASE_URL
 
 function buildUrl(path: string, params: Record<string, any> = {}) {
   const url = new URL(`${BASE}${path}`)
