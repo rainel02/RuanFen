@@ -270,11 +270,10 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+@import '@/styles/retro-theme.scss';
+
 .forum-page {
-  min-height: 100vh;
-  background-color: #f0f2f5;
-  background-image: radial-gradient(#e0e4e8 1px, transparent 1px);
-  background-size: 20px 20px;
+  @extend .retro-page-bg;
 }
 
 .forum-layout {
@@ -283,14 +282,8 @@ onMounted(() => {
   display: flex;
   gap: 20px;
   padding: 0 20px;
-}
-
-.glass-panel {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 1;
 }
 
 .sidebar {
@@ -308,14 +301,19 @@ onMounted(() => {
       align-items: center;
       gap: 10px;
       font-size: 18px;
-      color: #303133;
+      @extend .text-retro-dark;
+      @extend .font-serif;
+      
+      .el-icon {
+        @extend .text-retro-gold;
+      }
     }
   }
 
   .board-list {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
 
     .board-item {
       display: flex;
@@ -324,26 +322,31 @@ onMounted(() => {
       padding: 12px 15px;
       border-radius: 8px;
       cursor: pointer;
-      color: #606266;
+      @extend .text-retro-brown;
       transition: all 0.3s ease;
+      border: 1px solid transparent;
 
       &:hover {
-        background-color: rgba(64, 158, 255, 0.1);
-        color: #409eff;
+        background-color: rgba(212, 175, 55, 0.1);
+        color: #654321;
+        border-color: rgba(212, 175, 55, 0.3);
       }
 
       &.active {
-        background-color: #409eff;
-        color: white;
-        box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+        background-color: rgba(212, 175, 55, 0.2);
+        color: #654321;
+        border-color: #D4AF37;
+        box-shadow: 0 2px 8px rgba(184, 134, 11, 0.2);
+        font-weight: 600;
       }
 
       .badge {
         margin-left: auto;
-        background: rgba(0,0,0,0.1);
-        padding: 2px 6px;
+        background: rgba(184, 134, 11, 0.15);
+        padding: 2px 8px;
         border-radius: 10px;
         font-size: 12px;
+        color: #8B4513;
       }
     }
   }
@@ -352,14 +355,18 @@ onMounted(() => {
     margin-top: 30px;
     .create-btn {
       width: 100%;
-      height: 40px;
+      height: 44px;
       font-size: 16px;
-      background: linear-gradient(45deg, #409eff, #36d1dc);
+      background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
       border: none;
+      box-shadow: 0 4px 12px rgba(184, 134, 11, 0.3);
+      @extend .font-serif;
+      font-weight: 600;
       
       &:hover {
-        opacity: 0.9;
+        opacity: 0.95;
         transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(184, 134, 11, 0.4);
       }
     }
   }
@@ -378,16 +385,22 @@ onMounted(() => {
     align-items: center;
 
     .header-left {
-      h2 { margin: 0 0 5px 0; font-size: 22px; color: #303133; }
-      .subtitle { font-size: 13px; color: #909399; }
+      h2 { 
+        margin: 0 0 5px 0; 
+        font-size: 24px; 
+        @extend .text-retro-dark;
+        @extend .font-serif;
+      }
+      .subtitle { 
+        font-size: 14px; 
+        @extend .text-retro-brown;
+        font-style: italic;
+      }
     }
 
     .search-input {
       width: 250px;
-      :deep(.el-input__wrapper) {
-        border-radius: 20px;
-        box-shadow: 0 0 0 1px #dcdfe6 inset;
-      }
+      @extend .retro-input;
     }
   }
 
@@ -395,6 +408,20 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 15px;
+
+    :deep(.el-empty) {
+      padding: 60px 0;
+      .el-empty__description p {
+        color: #8B4513;
+        font-family: 'Georgia', serif;
+        font-size: 16px;
+        font-style: italic;
+      }
+      .el-empty__image svg {
+        filter: sepia(1) hue-rotate(10deg) saturate(1.5);
+        opacity: 0.8;
+      }
+    }
 
     .post-card {
       padding: 20px 25px;
@@ -404,8 +431,8 @@ onMounted(() => {
 
       &:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        border-left-color: #409eff;
+        box-shadow: 0 8px 24px rgba(184, 134, 11, 0.15);
+        border-left-color: #D4AF37;
       }
 
       .post-header {
@@ -414,23 +441,27 @@ onMounted(() => {
         gap: 10px;
         margin-bottom: 10px;
 
+        .board-tag {
+          background-color: rgba(212, 175, 55, 0.15);
+          border-color: rgba(212, 175, 55, 0.3);
+          color: #8B4513;
+        }
+
         .post-title {
           margin: 0;
-          font-size: 18px;
-          color: #303133;
+          font-size: 20px;
+          @extend .text-retro-dark;
+          @extend .font-serif;
           font-weight: 600;
         }
       }
 
       .post-summary {
-        color: #606266;
-        font-size: 14px;
+        color: #5d4037;
+        font-size: 15px;
         line-height: 1.6;
         margin-bottom: 15px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        font-family: 'Georgia', serif;
       }
 
       .post-meta {
@@ -438,15 +469,15 @@ onMounted(() => {
         justify-content: space-between;
         align-items: center;
         font-size: 13px;
-        color: #909399;
+        color: #8d6e63;
 
         .author {
           display: flex;
           align-items: center;
           gap: 8px;
           
-          .name { color: #606266; font-weight: 500; }
-          .dot { margin: 0 2px; }
+          .name { color: #654321; font-weight: 600; }
+          .dot { margin: 0 2px; color: #D4AF37; }
         }
 
         .stats {
@@ -457,6 +488,7 @@ onMounted(() => {
             display: flex;
             align-items: center;
             gap: 4px;
+            .el-icon { color: #D4AF37; }
           }
         }
       }
