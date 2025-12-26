@@ -66,12 +66,16 @@ export async function addToCollections(achievementId: string) {
 }
 
 export async function removeFromCollections(achievementId: string) {
-  const url = `${BASE}/users/me/collections/${achievementId}`
+  const url = `${BASE}/users/me/collections/delete`
   const res = await fetch(url, { 
-    method: 'DELETE',
-    headers: getHeaders()
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({})
   })
-  if (!res.ok) throw new Error('Failed to remove collection')
+  if (!res.ok) {
+    console.error('Remove failed:', res.status, res.statusText)
+    throw new Error('Failed to remove collection')
+  }
   return res
 }
 
