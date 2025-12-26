@@ -1,0 +1,325 @@
+0 Medicine
+1 Internal medicine
+1 Pathology
+1 Oncology
+1 Surgery
+1 Intensive care medicine
+1 Cardiology
+1 Pharmacology
+1 Anatomy
+1 Pediatrics
+1 Anesthesia
+1 Radiology
+1 Psychiatry
+1 Physical therapy
+1 Gastroenterology
+1 Family medicine
+1 Cancer research
+1 Medical education
+1 Medical emergency
+1 Dermatology
+1 Nuclear medicine
+1 Obstetrics
+1 Gynecology
+1 Emergency medicine
+1 Nursing
+1 Audiology
+1 Urology
+1 Andrology
+1 Veterinary medicine
+1 Orthodontics
+1 General surgery
+1 Optometry
+1 Traditional medicine
+1 Endocrinology
+1 Gerontology
+1 Physical medicine and rehabilitation
+1 Dentistry
+1 Ophthalmology
+
+0 Biology
+1 Cell biology
+1 Computational biology
+1 Botany
+1 Molecular biology
+1 Genetics
+1 Immunology
+1 Neuroscience
+1 Ecology
+1 Microbiology
+1 Virology
+1 Food science
+1 Zoology
+1 Evolutionary biology
+1 Biotechnology
+1 Animal science
+1 Biological system
+1 Agronomy
+1 Astrobiology
+1 Agricultural science
+1 Agroforestry
+1 Fishery
+1 Horticulture
+1 Physiology
+
+0 Chemistry
+1 Biochemistry
+1 Inorganic chemistry
+1 Chromatography
+1 Organic chemistry
+1 Stereochemistry
+1 Environmental chemistry
+1 Nuclear chemistry
+1 Polymer chemistry
+1 Photochemistry
+1 Combinatorial chemistry
+1 Physical chemistry
+1 Medicinal chemistry
+1 Radiochemistry
+1 Toxicology
+1 Computational chemistry
+
+0 Computer science
+1 Algorithm
+1 Data mining
+1 Machine learning
+1 Computer vision
+1 Bioinformatics
+1 Data science
+1 Human–computer interaction
+1 Natural language processing
+1 Theoretical computer science
+1 World Wide Web
+1 Information retrieval
+1 Computer security
+1 Internet privacy
+1 Distributed computing
+1 Computer network
+1 Software engineering
+1 Database
+1 Multimedia
+1 Programming language
+1 Computer graphics (images)
+1 Embedded system
+1 Operating system
+1 Parallel computing
+1 Computer hardware
+1 Computer engineering
+1 Computer architecture
+1 Real-time computing
+1 Speech recognition
+1 Simulation
+1 Computational science
+1 Artificial intelligence
+
+0 Business
+1 Public relations
+1 Marketing
+1 Management science
+1 Process management
+1 Accounting
+1 Advertising
+1 Management
+1 Commerce
+1 Business administration
+1 Finance
+1 Operations management
+1 Knowledge management
+
+0 Sociology
+1 Demography
+1 Communication
+1 Gender studies
+1 Social science
+1 Criminology
+1 Media studies
+1 Anthropology
+1 Library science
+1 Ethnology
+1 Socioeconomics
+1 Linguistics
+
+0 Political science
+1 Political science
+1 Law
+1 Public administration
+
+0 Geology
+1 Mineralogy
+1 Geochemistry
+1 Geomorphology
+1 Seismology
+1 Geophysics
+1 Petrology
+1 Earth science
+1 Soil science
+1 Geodesy
+1 Paleontology
+
+0 Philosophy
+1 Epistemology
+1 Humanities
+1 Pedagogy
+1 Aesthetics
+1 Environmental ethics
+1 Theology
+1 Religious studies
+
+0 History
+1 History
+1 Ancient history
+1 Economic history
+1 Classics
+1 Genealogy
+1 Literature
+1 Archaeology
+
+0 Materials science
+1 Nanotechnology
+1 Composite material
+1 Crystallography
+1 Metallurgy
+1 Polymer science
+1 Optoelectronics
+1 Pulp and paper industry
+
+0 Psychology
+1 Social psychology
+1 Developmental psychology
+1 Clinical psychology
+1 Cognitive psychology
+1 Applied psychology
+1 Cognitive science
+1 Psychotherapist
+1 Psychoanalysis
+
+0 Physics
+1 Atomic physics
+1 Condensed matter physics
+1 Statistical physics
+1 Optics
+1 Thermodynamics
+1 Classical mechanics
+1 Quantum mechanics
+1 Particle physics
+1 Astrophysics
+1 Astronomy
+1 Nuclear magnetic resonance
+1 Nuclear physics
+1 Molecular physics
+1 Quantum electrodynamics
+1 Theoretical physics
+1 Mathematical physics
+1 Biophysics
+1 Acoustics
+1 Medical physics
+1 Chemical physics
+1 Computational physics
+
+0 Environmental science
+1 Environmental health
+1 Waste management
+1 Environmental resource management
+1 Atmospheric sciences
+1 Climatology
+1 Meteorology
+1 Environmental planning
+1 Environmental protection
+1 Water resource management
+1 Forestry
+1 Oceanography
+1 Environmental engineering
+
+0 Mathematics
+1 Statistics
+1 Applied mathematics
+1 Mathematical analysis
+1 Mathematical optimization
+1 Geometry
+1 Pure mathematics
+1 Discrete mathematics
+1 Combinatorics
+1 Arithmetic
+1 Actuarial science
+1 Operations research
+1 Mathematics education
+
+0 Engineering
+1 Transport engineering
+1 Chemical engineering
+1 Biomedical engineering
+1 Electronic engineering
+1 Mechanical engineering
+1 Nuclear engineering
+1 Engineering ethics
+1 Structural engineering
+1 Process engineering
+1 Biochemical engineering
+1 Forensic engineering
+1 Engineering drawing
+1 Reliability engineering
+1 Manufacturing engineering
+1 Marine engineering
+1 Mining engineering
+1 Aerospace engineering
+1 Automotive engineering
+1 Civil engineering
+1 Architectural engineering
+1 Construction engineering
+1 Telecommunications
+1 Engineering management
+1 Petroleum engineering
+1 Industrial engineering
+1 Engineering physics
+1 Control engineering
+1 Mechanics
+1 Risk analysis (engineering)
+1 Geotechnical engineering
+1 Systems engineering
+1 Agricultural engineering
+1 Aeronautics
+1 Electrical engineering
+
+0 Geography
+1 Physical geography
+1 Remote sensing
+1 Cartography
+1 Economic geography
+1 Regional science
+
+0 Economics
+1 Econometrics
+1 Economic growth
+1 Financial economics
+1 Macroeconomics
+1 Microeconomics
+1 Monetary economics
+1 Labour economics
+1 Market economy
+1 International economics
+1 Development economics
+1 Agricultural economics
+1 Neoclassical economics
+1 Keynesian economics
+1 Classical economics
+1 Public economics
+1 Positive economics
+1 Demographic economics
+1 Welfare economics
+1 Financial system
+1 Economic policy
+1 International trade
+1 Economic system
+1 Mathematical economics
+1 Law and economics
+1 Political economy
+1 Economy
+1 Natural resource economics
+1 Industrial organization
+1 Environmental economics
+
+0 Art
+1 Art
+1 Visual arts
+1 Art history
+

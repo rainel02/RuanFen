@@ -80,7 +80,6 @@
                       :key="keyword"
                       effect="plain"
                       size="small"
-                      style="padding-left: 5px; padding-right: 5px;"
                     >
                       {{ keyword }}
                     </el-tag>
@@ -124,20 +123,25 @@
                     <h4>作者信息</h4>
                   </template>
                     <div class="authors-list">
-                      <div
-                        v-for="(author, idx) in (paper.authorships || [])"
-                        :key="authorKey(author, idx)"
-                        class="author-item"
-                      >
-                        <el-avatar :size="40">{{ authorInitial(author) }}</el-avatar>
-                        <div class="author-info">
-                          <router-link v-if="author && author.id" :to="`/scholar/${author.id}`" class="author-name">
-                            {{ authorLabel(author) }}
-                          </router-link>
-                          <span v-else class="author-name">{{ authorLabel(author) }}</span>
-                          <p class="author-institution">{{ typeof author === 'string' ? '' : (author.institution || '') }}</p>
-                        </div>
+                      <div v-if="!paper.authorships || paper.authorships.length === 0" class="empty-authors">
+                        暂无详细信息
                       </div>
+                      <template v-else>
+                        <div
+                          v-for="(author, idx) in paper.authorships"
+                          :key="authorKey(author, idx)"
+                          class="author-item"
+                        >
+                          <el-avatar :size="40">{{ authorInitial(author) }}</el-avatar>
+                          <div class="author-info">
+                            <router-link v-if="author && author.id" :to="`/scholar/${author.id}`" class="author-name">
+                              {{ authorLabel(author) }}
+                            </router-link>
+                            <span v-else class="author-name">{{ authorLabel(author) }}</span>
+                            <p class="author-institution">{{ typeof author === 'string' ? '' : (author.institution || '') }}</p>
+                          </div>
+                        </div>
+                      </template>
                     </div>
                 </el-card>
 
@@ -281,249 +285,359 @@ watch(() => route.params.id, (newId, oldId) => {
 @mixin mobile { @media (max-width: 767px) { @content; } }
 
 .paper-detail-page {
+  // Theme Variables - Parchment / Beige / Gold
+  --pf-bg: #f7efe2;
+  --pf-ink: #2e2a25;
+  --pf-muted: #7a6f63;
+  --pf-accent: #b8893a;
+  --pf-border: rgba(46, 42, 37, 0.08);
+  --card-bg: #fffcf5;
+  --shadow-soft: 0 12px 32px rgba(46, 42, 37, 0.04);
+  --font-serif: "Noto Serif", Georgia, "Times New Roman", serif;
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  background: linear-gradient(180deg, var(--pf-bg) 0%, #fdf9f2 100%);
+  color: var(--pf-ink);
+  font-family: var(--font-serif);
 }
 
 .page-content {
   flex: 1;
-  padding: var(--space-xl) 0;
+  padding: 48px 24px;
+  @include mobile { padding: 24px 16px; }
 }
 
 .container {
-  max-width: 1200px;
-  width: 100%;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 0 var(--space-md);
 }
 
-/* Breadcrumb & Header */
+/* Header Area */
 .paper-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-lg);
-  padding-bottom: var(--space-md);
-  border-bottom: 1px solid var(--border-subtle);
+  align-items: flex-end;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--pf-border);
 
   @include mobile {
     flex-direction: column;
     align-items: flex-start;
-    gap: var(--space-md);
+    gap: 16px;
   }
 }
 
+:deep(.el-breadcrumb) {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
 :deep(.el-breadcrumb__inner) {
-  color: var(--text-tertiary) !important;
+  color: var(--pf-muted) !important;
   font-weight: 500;
   
   &.is-link:hover {
-    color: var(--primary) !important;
+    color: var(--pf-accent) !important;
   }
 }
 
 :deep(.el-breadcrumb__item:last-child .el-breadcrumb__inner) {
-  color: var(--text-secondary) !important;
+  color: var(--pf-ink) !important;
 }
 
 .paper-actions {
   display: flex;
-  gap: var(--space-sm);
+  gap: 12px;
 }
 
-/* Main Content Card */
-.main-content {
-  background: var(--surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-xl);
-  box-shadow: var(--shadow-sm);
-  margin-bottom: var(--space-lg);
+/* Buttons - Minimalist & Retro */
+:deep(.el-button) {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  border-radius: 8px;
+  height: 36px;
+  padding: 0 18px;
+  transition: all 0.2s ease;
   
-  /* Override Element Plus Card styles if needed, but class is on el-card */
-  :deep(.el-card__body) {
-    padding: 0;
+  &.el-button--primary {
+    background: var(--pf-accent);
+    border-color: var(--pf-accent);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(184, 137, 58, 0.2);
+    
+    &:hover {
+      background: darken(#b8893a, 5%);
+      border-color: darken(#b8893a, 5%);
+      transform: translateY(-1px);
+    }
   }
+  
+  &.el-button--default {
+    background: transparent;
+    border: 1px solid var(--pf-border);
+    color: var(--pf-ink);
+    
+    &:hover {
+      border-color: var(--pf-accent);
+      color: var(--pf-accent);
+      background: rgba(184, 137, 58, 0.05);
+    }
+  }
+}
+
+/* Cards General */
+.main-content, .stats-card, .authors-card, .related-papers {
+  background: var(--card-bg);
+  border: 1px solid var(--pf-border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Main Content Specifics */
+.main-content {
+  padding: 48px;
+  margin-bottom: 32px;
+  
+  :deep(.el-card__body) { padding: 0; }
+  
+  @include mobile { padding: 24px; }
 }
 
 .paper-title {
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 700;
   line-height: 1.3;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  margin: 0 0 var(--space-lg) 0;
+  color: var(--pf-ink);
+  margin: 0 0 24px 0;
+  letter-spacing: -0.01em;
 }
 
 .paper-meta {
-  display: grid;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-xl);
-  padding-bottom: var(--space-lg);
-  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 36px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--pf-border);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--pf-muted);
   
-  .publication-info {
-    font-size: 14px;
-    color: var(--text-secondary);
+  .publication-info, .doi {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
-
+  
   .meta-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-tertiary);
     font-weight: 600;
-    margin-right: 4px;
+    text-transform: uppercase;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    color: var(--pf-accent);
   }
   
   a {
-    color: var(--primary);
+    color: var(--pf-ink);
     text-decoration: none;
-    &:hover { text-decoration: underline; }
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+    
+    &:hover { border-color: var(--pf-accent); }
   }
 }
 
 .paper-fields {
-  margin-bottom: var(--space-lg);
+  margin-bottom: 32px;
   
   .el-tag {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: var(--border-subtle);
-    color: var(--text-secondary);
+    background: rgba(184, 137, 58, 0.08);
+    border: none;
+    color: var(--pf-ink);
+    font-family: var(--font-sans);
+    font-weight: 600;
+    padding: 6px 14px;
+    height: 32px;
+    border-radius: 6px;
     margin-right: 8px;
     margin-bottom: 8px;
+    font-size: 13px;
   }
 }
 
 .paper-abstract {
-  margin-bottom: var(--space-xl);
+  margin-bottom: 48px;
 
   h3 {
-    font-size: 14px;
+    font-family: var(--font-sans);
+    font-size: 16px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-tertiary);
-    margin-bottom: var(--space-md);
-    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--pf-muted);
+    margin-bottom: 16px;
+    font-weight: 700;
   }
 
   p {
-    font-size: 16px;
+    font-size: 18px;
     line-height: 1.8;
-    color: var(--text-secondary);
+    color: var(--pf-ink);
     text-align: justify;
   }
 }
 
 .paper-keywords {
   h3 {
-    font-size: 14px;
+    font-family: var(--font-sans);
+    font-size: 16px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-tertiary);
-    margin-bottom: var(--space-md);
-    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--pf-muted);
+    margin-bottom: 12px;
+    font-weight: 700;
+  }
+  
+  .el-tag {
+    background-color: transparent;
+    border: 1px solid rgba(46, 42, 37, 0.15);
+    color: var(--pf-muted);
+    font-family: var(--font-serif);
+    font-size: 13px;
+    border-radius: 99px; /* Pill shape */
+    padding: 0 12px;
+    height: 26px;
+    line-height: 24px;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    
+    &:hover {
+      color: var(--pf-accent);
+      border-color: var(--pf-accent);
+      background-color: rgba(184, 137, 58, 0.04);
+    }
   }
 }
 
-/* Sidebar */
+/* Sidebar Cards */
 .sidebar {
   display: flex;
   flex-direction: column;
-  gap: var(--space-lg);
+  gap: 24px;
 }
 
 .stats-card, .authors-card, .related-papers {
-  background: var(--surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  
   :deep(.el-card__header) {
-    border-bottom: 1px solid var(--border-subtle);
-    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--pf-border);
+    padding: 16px 24px;
+    background: rgba(255, 255, 255, 0.4);
     
     h4 {
       margin: 0;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--pf-muted);
     }
   }
   
   :deep(.el-card__body) {
-    padding: var(--space-lg);
+    padding: 24px;
   }
 }
 
 .stat-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  color: var(--text-secondary);
+  margin-bottom: 16px;
+  font-family: var(--font-sans);
   
   &:last-child { margin-bottom: 0; }
+  
+  .el-icon {
+    font-size: 18px;
+    color: var(--pf-accent);
+    margin-right: 8px;
+  }
 
   .stat-label {
     display: flex;
     align-items: center;
-    gap: 8px;
     font-size: 14px;
+    color: var(--pf-muted);
   }
   
   .stat-value {
-    font-weight: 600;
-    color: var(--text-primary);
+    font-weight: 700;
+    color: var(--pf-ink);
+    font-size: 16px;
+    margin-left: auto;
   }
 }
 
 .author-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 20px;
   
   &:last-child { margin-bottom: 0; }
   
   .el-avatar {
-    background: var(--surface-hover);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-subtle);
+    background: var(--pf-accent);
+    color: #fff;
+    font-family: var(--font-serif);
+    font-weight: 700;
+    border: 2px solid rgba(255,255,255,0.5);
+    box-shadow: 0 2px 8px rgba(184, 137, 58, 0.2);
   }
-
+  
   .author-info {
     display: flex;
     flex-direction: column;
-    
+
     .author-name {
-      font-size: 14px;
+      font-family: var(--font-sans);
+      font-size: 15px;
       font-weight: 600;
-      color: var(--text-primary);
+      color: var(--pf-ink);
       text-decoration: none;
-      transition: color 0.2s;
+      line-height: 1.2;
       
-      &:hover { color: var(--primary); }
+      &:hover { color: var(--pf-accent); }
     }
     
     .author-institution {
+      font-family: var(--font-sans);
       font-size: 12px;
-      color: var(--text-tertiary);
-      margin: 2px 0 0 0;
+      color: var(--pf-muted);
+      margin-top: 4px;
+      line-height: 1.4;
     }
   }
 }
 
+.empty-authors {
+  color: var(--pf-muted);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  text-align: center;
+  padding: 12px 0;
+  font-style: italic;
+}
+
 .related-item {
-  padding-bottom: 12px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--pf-border);
   
   &:last-child {
     border-bottom: none;
@@ -533,21 +647,26 @@ watch(() => route.params.id, (newId, oldId) => {
   
   .related-title {
     display: block;
-    font-size: 14px;
-    font-weight: 500;
+    font-family: var(--font-serif);
+    font-size: 15px;
+    font-weight: 600;
     line-height: 1.4;
-    color: var(--text-secondary);
+    color: var(--pf-ink);
     text-decoration: none;
-    margin-bottom: 4px;
-    transition: color 0.2s;
+    margin-bottom: 6px;
     
-    &:hover { color: var(--primary); }
+    &:hover { color: var(--pf-accent); }
   }
   
   .related-authors {
+    font-family: var(--font-sans);
     font-size: 12px;
-    color: var(--text-tertiary);
+    color: var(--pf-muted);
     margin: 0;
   }
+}
+
+.loading-state {
+  padding: 40px;
 }
 </style>

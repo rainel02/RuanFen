@@ -62,8 +62,6 @@ export const usePapersStore = defineStore('papers', () => {
       // pagination: API expects 0-based page, UI uses 1-based currentPage
       params.page = Math.max(0, currentPage.value - 1)
       params.size = pageSize.value
-      if (sortBy.value === 'citations') params.sort_by = 'citations'
-      if (sortBy.value === 'latest') params.sort_by = 'time'
 
       const data = await api.searchAchievements(params)
       // api returns { results, total }

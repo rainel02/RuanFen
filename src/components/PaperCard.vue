@@ -9,13 +9,14 @@
           {{ paper.title }}
         </router-link>
       </h3>
-      <el-button
-        :type="paper.isfavorited ? 'primary' : 'default'"
-        :icon="Star"
-        circle
-        size="small"
-        @click="toggleFavorite"
-      />
+      <button
+        class="btn-favorite"
+        :class="{ 'is-active': paper.isfavorited }"
+        @click.stop="toggleFavorite"
+        aria-label="收藏"
+      >
+        <el-icon><Star /></el-icon>
+      </button>
     </div>
 
     <div class="paper-authors">
@@ -132,6 +133,7 @@ const formatDate = (dateStringOrYear?: string | number) => {
 
 const toggleFavorite = async () => {
   const id = props.paper.id
+  const msgOpts = { customClass: 'swiss-message', duration: 2500, offset: 60 }
 
   // if the store contains this paper, use store method (keeps central state)
   const storeHas = !!(papersStore as any).papers?.find((p: any) => p.id === id)
@@ -140,10 +142,10 @@ const toggleFavorite = async () => {
     // if now unfavorited, notify parent
     const nowFav = (papersStore as any).papers.find((p: any) => p.id === id)?.isfavorited
     if (!nowFav) {
-      ElMessage.success('取消收藏成功')
+      ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
       emit('removed', id)
     } else {
-      ElMessage.success('加入收藏成功')
+      ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
       emit('updated', { id, isfavorited: true })
     }
     return
@@ -152,11 +154,11 @@ const toggleFavorite = async () => {
   // fallback: call API directly and notify parent to update/remove
   if (!props.paper.isfavorited) {
     await api.addToCollections(id).catch(() => null)
-    ElMessage.success('收藏成功')
+    ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
     emit('updated', { id, isfavorited: true })
   } else {
-    const res = await api.removeFromCollections(id).catch(() => null)
-    ElMessage.success('取消收藏成功')
+    await api.removeFromCollections(id).catch(() => null)
+    ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
     // regardless of response, emit removed so parent can update UI
     emit('removed', id)
   }
@@ -165,68 +167,161 @@ const toggleFavorite = async () => {
 
 <style scoped lang="scss">
 .paper-card {
+  /* 核心变量定义 - 羊皮纸风格 */
+  --pc-bg: #fffcf5; /* 比背景稍亮的纸张色 */
+  --pc-border: rgba(46, 42, 37, 0.08);
+  --pc-ink: #2e2a25;
+  --pc-ink-light: #5c554b;
+  --pc-accent: #b8893a;
+  --pc-shadow: 0 2px 8px rgba(46, 42, 37, 0.04);
+  --pc-shadow-hover: 0 12px 32px rgba(46, 42, 37, 0.08);
+  
+  font-family: "Noto Serif", Georgia, "Times New Roman", serif;
+  background: var(--pc-bg);
+  border: 1px solid var(--pc-border);
+  border-radius: 2px; /* 稍微锐利一点的圆角，更像纸张 */
+  padding: 28px;
   height: 100%;
   display: flex;
   flex-direction: column;
-  /* Note: Background and border are handled by the global .paper-card class in main.scss */
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-sizing: border-box;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--pc-shadow-hover);
+    border-color: rgba(184, 137, 58, 0.2);
+  }
 
   .paper-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: var(--space-md);
+    margin-bottom: 16px;
+    gap: 16px;
 
     .paper-title {
       flex: 1;
       margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 1.4;
-      letter-spacing: -0.01em;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.3;
+      letter-spacing: -0.02em;
+      color: var(--pc-ink);
 
       .title-link {
         text-decoration: none;
-        color: var(--text-primary);
-        transition: color 0.2s;
+        color: inherit;
+        background-image: linear-gradient(var(--pc-ink), var(--pc-ink));
+        background-position: 0% 100%;
+        background-repeat: no-repeat;
+        background-size: 0% 1px;
+        transition: background-size 0.3s ease, color 0.3s ease;
 
         &:hover {
-          color: var(--primary);
+          color: var(--pc-accent);
+          background-size: 100% 1px;
+          background-image: linear-gradient(var(--pc-accent), var(--pc-accent));
         }
       }
+    }
+
+    .btn-favorite {
+      background: transparent !important;
+      border: 1px solid rgba(46, 42, 37, 0.08) !important;
+      cursor: pointer;
+      padding: 6px !important;
+      border-radius: 50% !important;
+      color: var(--pc-ink-light) !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease !important;
+      width: 28px !important;
+      height: 28px !important;
+      flex-shrink: 0;
+
+      &:hover {
+        background: rgba(184, 137, 58, 0.06) !important;
+        color: var(--pc-accent) !important;
+        transform: translateY(-1px) scale(1.03) !important;
+        border-color: rgba(184, 137, 58, 0.18) !important;
+      }
+
+      &.is-active {
+        background: var(--pc-accent) !important;
+        color: #ffffff !important;
+        border-color: transparent !important;
+        box-shadow: 0 6px 18px rgba(184, 137, 58, 0.18) !important;
+
+        &:hover {
+          transform: translateY(-1px) scale(1.06) !important;
+          box-shadow: 0 8px 22px rgba(184, 137, 58, 0.22) !important;
+        }
+      }
+
+      .el-icon {
+        font-size: 14px !important;
+        line-height: 1 !important;
+      }
+      /* 强制图标使用当前颜色并覆盖 Element Plus 的默认填充 */
+      .el-icon svg,
+      .el-icon path {
+        fill: currentColor !important;
+      }
+      /* 确保按钮与图标颜色被覆盖（防止 Element Plus 主题色生效） */
+      color: var(--pc-ink-light) !important;
     }
   }
 
   .paper-authors {
-    margin-bottom: var(--space-sm);
-    font-size: 14px;
-    color: var(--text-secondary);
+    margin-bottom: 20px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--pc-ink-light);
+    font-style: italic;
+    font-family: "Georgia", serif;
 
     .authors-label {
-      color: var(--text-tertiary);
-      margin-right: 4px;
+      font-weight: 600;
+      font-style: normal;
+      opacity: 0.6;
+      margin-right: 6px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
 
     .author-link {
-      color: var(--text-secondary);
+      color: var(--pc-ink-light);
       text-decoration: none;
-      transition: color 0.2s;
+      border-bottom: 1px dotted rgba(92, 85, 75, 0.3);
+      transition: all 0.2s;
 
       &:hover {
-        color: var(--primary);
+        color: var(--pc-accent);
+        border-bottom-color: var(--pc-accent);
       }
     }
   }
 
   .paper-meta {
-    margin-bottom: var(--space-md);
-    font-size: 14px;
-    color: var(--text-secondary);
-    line-height: 1.6;
+    margin-bottom: 24px;
+    font-size: 16px;
+    color: var(--pc-ink);
+    line-height: 1.75;
+    flex-grow: 1; /* 让摘要占据剩余空间 */
 
     .publish-label {
-      color: var(--text-tertiary);
-      font-weight: 500;
-      margin-right: 4px;
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--pc-accent);
+      display: block;
+      margin-bottom: 8px;
+      opacity: 0.9;
     }
     
     p {
@@ -235,49 +330,148 @@ const toggleFavorite = async () => {
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
+      opacity: 0.85;
     }
   }
 
   .paper-keywords {
-    margin-bottom: var(--space-md);
-    font-size: 13px;
+    margin-bottom: 24px;
     display: flex;
-    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
 
     .keywords-label {
-      color: var(--text-tertiary);
-      margin-right: 8px;
-      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--pc-ink-light);
+      text-transform: uppercase;
+      margin-right: 4px;
+      opacity: 0.7;
     }
 
     .keywords-list {
       display: flex;
-      gap: 6px;
       flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* 自定义 Tag 样式以符合复古风格 */
+    :deep(.el-tag) {
+      background-color: transparent;
+      border: 1px solid rgba(46, 42, 37, 0.15);
+      color: var(--pc-ink-light);
+      font-family: "Noto Serif", serif;
+      font-size: 13px;
+      border-radius: 99px; /* 药丸形状 */
+      padding: 0 12px;
+      height: 26px;
+      line-height: 24px;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        color: var(--pc-accent);
+        border-color: var(--pc-accent);
+        background-color: rgba(184, 137, 58, 0.04);
+      }
     }
   }
 
   .paper-stats {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(46, 42, 37, 0.08);
     margin-top: auto;
-    padding-top: var(--space-md);
-    border-top: 1px solid var(--border-subtle);
 
     .stat-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
       font-size: 13px;
-      color: var(--text-tertiary);
-      font-weight: 500;
+      color: var(--pc-ink-light);
+      font-weight: 600;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* 数字用无衬线体更清晰 */
+      opacity: 0.8;
+      transition: opacity 0.2s;
+
+      &:hover {
+        opacity: 1;
+        color: var(--pc-accent);
+      }
 
       .el-icon {
-        font-size: 14px;
-        color: var(--text-secondary);
+        font-size: 16px;
+        color: var(--pc-accent);
       }
     }
   }
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .paper-card {
+    padding: 20px;
+    
+    .paper-header .paper-title {
+      font-size: 19px;
+    }
+    
+    .paper-meta {
+      font-size: 15px;
+      line-height: 1.6;
+      
+      p {
+        -webkit-line-clamp: 4; /* 移动端多显示一行 */
+      }
+    }
+  }
+}
+</style>
+
+<style lang="scss">
+/* 全局样式 - 用于 ElMessage 等插入到 body 的元素 */
+.swiss-message {
+  --el-message-bg-color: #fffcf5 !important;
+  --el-message-border-color: rgba(184, 137, 58, 0.3) !important;
+  --el-message-text-color: #2e2a25 !important;
+  --el-color-success: #b8893a !important; /* 将成功图标颜色改为金色 */
+  
+  font-family: "Noto Serif", Georgia, serif !important;
+  border-radius: 4px !important;
+  box-shadow: 0 8px 24px rgba(46, 42, 37, 0.12) !important;
+  border-width: 1px !important;
+  padding: 12px 24px !important;
+  min-width: 300px !important;
+  
+  .el-message__content {
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+  }
+  
+  .el-icon {
+    font-size: 18px !important;
+  }
+}
+
+/* 强制覆盖 Element Plus 成功/图标颜色（有时 Element 使用更高优先级的选择器） */
+.swiss-message,
+.swiss-message * {
+  color: #2e2a25 !important;
+}
+.swiss-message {
+  background-color: #fffcf5 !important;
+  border: 1px solid rgba(184, 137, 58, 0.18) !important;
+}
+.swiss-message .el-icon,
+.swiss-message .el-message__icon,
+.swiss-message .el-icon svg,
+.swiss-message .el-icon path {
+  color: var(--pc-accent) !important;
+  fill: var(--pc-accent) !important;
+}
+.swiss-message .el-message__content {
+  color: #2e2a25 !important;
 }
 </style>
