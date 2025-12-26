@@ -26,6 +26,14 @@
             <p><el-icon><Connection /></el-icon> 发现并连接顶尖学者</p>
           </div>
           <div class="filters-bar">
+            <el-input
+              v-model="searchName"
+              placeholder="姓名关键词"
+              clearable
+              class="filter-select"
+            >
+              <template #prefix><el-icon><UserFilled /></el-icon></template>
+            </el-input>
             <el-select
               v-model="selectedInstitution"
               placeholder="选择机构"
@@ -108,6 +116,7 @@ import * as scholarApi from '../api/scholar'
 const scholars = ref<any[]>([])
 
 const chatStore = useChatStore()
+const searchName = ref('')
 const selectedInstitution = ref('')
 const selectedField = ref('')
 const sortBy = ref('hIndex')
@@ -182,6 +191,7 @@ const loadScholars = async () => {
   loading.value = true
   try {
     const params: any = {}
+    params.name = searchName.value || ''
     if (selectedInstitution.value) params.organization = selectedInstitution.value
     if (selectedField.value) params.field = selectedField.value
 

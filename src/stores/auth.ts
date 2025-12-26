@@ -15,7 +15,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.log('开始登录请求，参数:', { account, password })
       const response = await authApi.login({ account, password })
       console.log('登录响应:', response)
-      
+
       if (response && response.token && response.user) {
         token.value = response.token
         user.value = response.user as User
@@ -23,6 +23,21 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('user', JSON.stringify(response.user))
         return { success: true }
       }
+
+      if (response && (response as any).data && (response as any).data.token) {
+        const t = (response as any).data.token as string
+        token.value = t
+        localStorage.setItem('token', t)
+        return { success: true }
+      }
+
+      if (response && (response as any).token) {
+        const t = (response as any).token as string
+        token.value = t
+        localStorage.setItem('token', t)
+        return { success: true }
+      }
+
       console.warn('登录响应格式不正确:', response)
       return { success: false, message: '登录失败：响应格式不正确' }
     } catch (error: any) {
