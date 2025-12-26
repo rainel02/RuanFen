@@ -1,5 +1,5 @@
 <template>
-  <div class="home-page">
+  <div class="home-page" ref="homePageRef">
     <AppHeader />
 <!--    <div>正常渲染</div>-->
     <div class="page-content">
@@ -185,7 +185,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { Search, ArrowRight } from '@element-plus/icons-vue'
 import AppHeader from '../components/AppHeader.vue'
 import PaperCard from '../components/PaperCard.vue'
@@ -196,6 +196,21 @@ import { fieldOptions } from '../constants/fields'
 
 const papersStore = usePapersStore()
 const settingsStore = useSettingsStore()
+
+const homePageRef = ref<HTMLElement | null>(null)
+let vantaEffect: any = null
+
+function loadScript(src: string) {
+  return new Promise<void>((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) return resolve()
+    const s = document.createElement('script')
+    s.src = src
+    s.async = true
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error('Failed to load ' + src))
+    document.head.appendChild(s)
+  })
+}
 
 const loading = computed(() => papersStore.loading)
 const paginatedPapers = computed(() => papersStore.paginatedPapers)
@@ -279,9 +294,42 @@ const onClearAdvanced = async () => {
   })
 }
 
-onMounted(() => {
+onMounted(async () => {
   // initial load
   papersStore.fetchPapers()
+
+  // Vanta Init
+  try {
+    if (!(window as any).THREE) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js')
+    }
+    await loadScript('https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.net.min.js')
+
+    if ((window as any).VANTA && homePageRef.value) {
+      vantaEffect = (window as any).VANTA.NET({
+        el: homePageRef.value,
+        mouseControls: true,
+        touchControls: true,
+        gyroControls: false,
+        minHeight: 200.00,
+        minWidth: 200.00,
+        scale: 1.00,
+        scaleMobile: 1.00,
+        color: 0xb8893a,       // Retro Gold/Accent
+        backgroundColor: 0xf7efe2, // Parchment
+        points: 10.00,
+        maxDistance: 20.00,
+        spacing: 14.00,
+        showDots: true
+      })
+    }
+  } catch (e) {
+    console.error('Failed to init Vanta', e)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (vantaEffect) vantaEffect.destroy()
 })
 
 
@@ -297,13 +345,32 @@ onMounted(() => {
   --pf-ink: #2e2a25;
   --pf-muted: #7a6f63;
   --pf-accent: #b8893a; // subtle gold
-  --card-bg: rgba(255, 255, 240, 0.9);
+  --pf-brown: #8B4513; // Match login button
+  --pf-brown-dark: #654321; // Match login button border
+  --card-bg: rgba(251, 246, 236, 0.85); // #fbf6ec with opacity
   font-family: "Noto Serif", Georgia, "Times New Roman", serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, var(--pf-bg) 0%, #fdf9f2 100%);
+  background: var(--pf-bg); /* Fallback */
   color: var(--pf-ink);
+  position: relative;
+  overflow: hidden; /* Ensure no scrollbars from canvas */
+}
+
+.home-page > * {
+  position: relative;
+  z-index: 1;
+}
+
+.home-page :deep(canvas) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0 !important;
+  pointer-events: none;
 }
 
 .page-content { flex: 1; padding: 36px 16px; }
@@ -318,9 +385,9 @@ onMounted(() => {
 .search-controls { display:flex; gap:18px; align-items:flex-start; flex-direction:column; }
 .segmented { display:flex; gap:8px; align-items:center }
 .segmented :deep(.el-button) {
-  background: rgba(255,252,245,0.82);
+  background: #fbf6ec;
   color: var(--pf-ink);
-  border: 2px solid rgba(46,42,37,0.08);
+  border: 1px solid rgba(184, 137, 58, 0.2);
   padding: 10px 16px;
   border-radius: 999px;
   font-weight:700;
@@ -329,14 +396,19 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: inset 0 -2px 0 rgba(46,42,37,0.02);
+  box-shadow: 0 2px 4px rgba(46,42,37,0.03);
   cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
-.segmented :deep(.el-button):hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(46,42,37,0.06) }
-.segmented :deep(.el-button):focus-visible { outline: 3px solid rgba(184,137,58,0.14); outline-offset: 3px }
-.segmented :deep(.el-button.active) { background: linear-gradient(180deg, var(--pf-accent), #a56f2a); color:#fff; box-shadow: 0 10px 30px rgba(168,129,58,0.16); border-color: rgba(168,129,58,0.12) }
-.segmented :deep(.el-button.active):hover { transform: translateY(-3px) }
+.segmented :deep(.el-button):hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(139, 69, 19, 0.15) }
+.segmented :deep(.el-button):focus-visible { outline: 3px solid rgba(139, 69, 19, 0.14); outline-offset: 3px }
+.segmented :deep(.el-button.active) { 
+  background: var(--pf-brown); 
+  color: #fff; 
+  border-color: var(--pf-brown-dark);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+}
+.segmented :deep(.el-button.active):hover { transform: translateY(-3px); background: var(--pf-brown-dark); }
 
 .search-wrapper { width:100%; }
 
@@ -344,12 +416,12 @@ onMounted(() => {
 .premium-search-bar {
   display: flex;
   align-items: center;
-  background: #fffcf5; /* Lighter parchment */
-  border: 1px solid rgba(46, 42, 37, 0.08);
+  background: #fbf6ec; /* Matches card/parchment tone */
+  border: 1px solid rgba(184, 137, 58, 0.2);
   border-radius: 16px; /* Smooth pill shape */
   padding: 6px;
   box-shadow: 
-    0 2px 6px rgba(46, 42, 37, 0.02),
+    0 2px 8px rgba(46, 42, 37, 0.03),
     0 8px 24px rgba(46, 42, 37, 0.04); /* Soft ambient shadow */
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   height: 64px;
@@ -358,12 +430,12 @@ onMounted(() => {
 }
 
 .premium-search-bar.is-focused {
-  border-color: rgba(184, 137, 58, 0.3);
+  border-color: var(--pf-accent);
   box-shadow: 
-    0 4px 12px rgba(184, 137, 58, 0.08),
-    0 12px 32px rgba(184, 137, 58, 0.12);
+    0 4px 12px rgba(184, 137, 58, 0.1),
+    0 12px 32px rgba(184, 137, 58, 0.15);
   transform: translateY(-1px);
-  background: #ffffff;
+  background: #fffcf5; /* Slightly lighter on focus */
 }
 
 .search-icon-prefix {
@@ -394,33 +466,35 @@ onMounted(() => {
 }
 
 .premium-search-btn {
-  background: var(--pf-accent);
+  background: var(--pf-brown);
   color: #ffffff;
-  border: none;
+  border: 1px solid var(--pf-brown-dark);
   border-radius: 12px;
   height: 52px; /* Slightly smaller than container to fit inside */
   padding: 0 24px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* Sans-serif for UI elements */
+  font-family: "Noto Serif", serif;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(184, 137, 58, 0.2);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.2);
   flex-shrink: 0;
 }
 
 .premium-search-btn:hover {
-  background: #a67b33; /* Slightly darker gold */
+  background: var(--pf-brown-dark); /* Slightly darker gold */
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(184, 137, 58, 0.3);
+  box-shadow: 0 6px 16px rgba(139, 69, 19, 0.3);
 }
 
 .premium-search-btn:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(184, 137, 58, 0.2);
+  box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
 }
 
 .premium-search-btn .btn-icon {
@@ -455,7 +529,13 @@ onMounted(() => {
   }
 }
 
-.swiss-advanced-panel { border-radius:10px; padding:18px; background: linear-gradient(180deg, rgba(255,250,240,0.7), rgba(255,255,245,0.6)); border:1px solid rgba(46,42,37,0.04); box-shadow: 0 6px 18px rgba(46,42,37,0.04); }
+.swiss-advanced-panel { 
+  border-radius:10px; 
+  padding:18px; 
+  background: #fbf6ec; 
+  border:1px solid rgba(184, 137, 58, 0.2); 
+  box-shadow: 0 6px 24px rgba(46,42,37,0.05); 
+}
 
 .filter-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items:start }
 @include mobile { .filter-grid { grid-template-columns: 1fr } }
@@ -576,7 +656,20 @@ onMounted(() => {
 
 .filter-actions { grid-column: 1 / -1; display:flex; justify-content:flex-end; gap:12px; margin-top:6px }
 .btn-reset { color: var(--pf-muted) }
-.btn-apply { background: var(--pf-accent); color:#fff }
+.btn-apply { 
+  background: var(--pf-brown); 
+  border-color: var(--pf-brown-dark);
+  color: #fff;
+  font-family: "Noto Serif", serif;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.btn-apply:hover {
+  background: var(--pf-brown-dark);
+  border-color: var(--pf-brown-dark);
+  color: #fff;
+}
 
 .content-header { display:flex; justify-content:space-between; align-items:center; padding: 0 4px }
 .results-info { color:var(--pf-muted); font-size:14px }
