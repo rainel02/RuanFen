@@ -67,10 +67,10 @@ export async function addToCollections(achievementId: string) {
 
 export async function removeFromCollections(achievementId: string) {
   const url = `${BASE}/users/me/collections/delete`
-  const res = await fetch(url, { 
+  const res = await fetch(url, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({})
+    body: JSON.stringify({achievementId})
   })
   if (!res.ok) {
     console.error('Remove failed:', res.status, res.statusText)

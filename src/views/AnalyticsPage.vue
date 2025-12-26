@@ -158,7 +158,7 @@ const fetchHotTopics = async () => {
   try {
     const res = await getHotTopics(hotTopicRange.value)
     const data = (res as any).data || res
-    
+
     wordCloudOption.value = {
       tooltip: {},
       series: [{
@@ -235,9 +235,9 @@ const fetchRanking = async () => {
 
 const fetchTrend = async () => {
   try {
-    const res = await getInfluenceTrend('me', '5y', trendMetric.value)
+    const res = await getInfluenceTrend('5y', trendMetric.value)
     const data = (res as any).data || res
-    
+
     trendOption.value = {
       tooltip: {
         trigger: 'axis',
@@ -318,7 +318,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  
+
   h2 {
     margin: 0;
     @extend .text-retro-dark;
@@ -335,11 +335,11 @@ onMounted(() => {
   margin-bottom: 25px;
 }
 
-/* Summary Card styles are imported from retro-theme.scss via class name match, 
-   but we need to ensure they apply if scoped. 
-   Since we imported the scss, the mixins/classes are available. 
-   However, .summary-card in retro-theme is a class, not a mixin. 
-   We need to extend it or just let the global class apply if it was global. 
+/* Summary Card styles are imported from retro-theme.scss via class name match,
+   but we need to ensure they apply if scoped.
+   Since we imported the scss, the mixins/classes are available.
+   However, .summary-card in retro-theme is a class, not a mixin.
+   We need to extend it or just let the global class apply if it was global.
    But it's scoped here. So we extend. */
 .summary-card {
   @extend .summary-card;
@@ -348,7 +348,7 @@ onMounted(() => {
 .chart-card {
   @extend .glass-panel;
   padding: 0; /* Reset padding if needed, glass-panel has its own */
-  
+
   .card-header {
     display: flex;
     justify-content: space-between;
@@ -382,13 +382,13 @@ onMounted(() => {
   .scholar-detail {
     display: flex;
     flex-direction: column;
-    
+
     .name {
       font-weight: 600;
       @extend .text-retro-dark;
       @extend .font-serif;
     }
-    
+
     .institution {
       font-size: 12px;
       color: #8B4513;
@@ -400,13 +400,13 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  
+
   .rank-icon {
     width: 24px;
     height: 24px;
     filter: sepia(1) hue-rotate(10deg);
   }
-  
+
   .rank-text {
     font-weight: bold;
     color: #654321;
@@ -426,13 +426,13 @@ onMounted(() => {
   --el-table-header-bg-color: rgba(212, 175, 55, 0.1);
   --el-table-row-hover-bg-color: rgba(212, 175, 55, 0.15);
   --el-table-border-color: rgba(184, 134, 11, 0.2);
-  
+
   th.el-table__cell {
     color: #654321;
     font-family: 'Georgia', serif;
     font-weight: bold;
   }
-  
+
   td.el-table__cell {
     color: #5d4037;
   }

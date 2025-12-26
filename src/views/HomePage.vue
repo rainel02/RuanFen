@@ -14,7 +14,7 @@
 
               <div class="search-wrapper">
                 <template v-if="!isAdvanced">
-                  <div 
+                  <div
                     class="premium-search-bar"
                     :class="{ 'is-focused': isInputFocused }"
                   >
@@ -185,17 +185,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { Search, ArrowRight } from '@element-plus/icons-vue'
 import AppHeader from '../components/AppHeader.vue'
 import PaperCard from '../components/PaperCard.vue'
-import VantaBanner from '../components/VantaBanner.vue'
 import { usePapersStore } from '../stores/papers'
-import { useSettingsStore } from '../stores/settings'
+// import { useSettingsStore } from '../stores/settings'
 import { fieldOptions } from '../constants/fields'
 
 const papersStore = usePapersStore()
-const settingsStore = useSettingsStore()
+// const settingsStore = useSettingsStore()
 
 const homePageRef = ref<HTMLElement | null>(null)
 let vantaEffect: any = null
@@ -228,7 +227,7 @@ const totalPages = computed(() => papersStore.totalPages)
 const papersStoreTotal = computed(() => (papersStore.total ?? filteredPapers.value.length))
 
 // 显示论文导读功能
-const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
+// const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
 
 // // 推荐论文（简化版）
 // const recommendedPapers = computed(() => {
@@ -402,9 +401,9 @@ onBeforeUnmount(() => {
 }
 .segmented :deep(.el-button):hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(139, 69, 19, 0.15) }
 .segmented :deep(.el-button):focus-visible { outline: 3px solid rgba(139, 69, 19, 0.14); outline-offset: 3px }
-.segmented :deep(.el-button.active) { 
-  background: var(--pf-brown); 
-  color: #fff; 
+.segmented :deep(.el-button.active) {
+  background: var(--pf-brown);
+  color: #fff;
   border-color: var(--pf-brown-dark);
   box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
 }
@@ -420,7 +419,7 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(184, 137, 58, 0.2);
   border-radius: 16px; /* Smooth pill shape */
   padding: 6px;
-  box-shadow: 
+  box-shadow:
     0 2px 8px rgba(46, 42, 37, 0.03),
     0 8px 24px rgba(46, 42, 37, 0.04); /* Soft ambient shadow */
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -431,7 +430,7 @@ onBeforeUnmount(() => {
 
 .premium-search-bar.is-focused {
   border-color: var(--pf-accent);
-  box-shadow: 
+  box-shadow:
     0 4px 12px rgba(184, 137, 58, 0.1),
     0 12px 32px rgba(184, 137, 58, 0.15);
   transform: translateY(-1px);
@@ -507,21 +506,21 @@ onBeforeUnmount(() => {
     height: 56px;
     border-radius: 12px;
   }
-  
+
   .premium-input {
     font-size: 16px;
   }
-  
+
   .premium-search-btn {
     height: 44px;
     padding: 0 16px;
     border-radius: 8px;
   }
-  
+
   .premium-search-btn .btn-text {
     display: none; /* Icon only on mobile */
   }
-  
+
   .search-icon-prefix {
     margin-left: 12px;
     margin-right: 8px;
@@ -529,12 +528,12 @@ onBeforeUnmount(() => {
   }
 }
 
-.swiss-advanced-panel { 
-  border-radius:10px; 
-  padding:18px; 
-  background: #fbf6ec; 
-  border:1px solid rgba(184, 137, 58, 0.2); 
-  box-shadow: 0 6px 24px rgba(46,42,37,0.05); 
+.swiss-advanced-panel {
+  border-radius:10px;
+  padding:18px;
+  background: #fbf6ec;
+  border:1px solid rgba(184, 137, 58, 0.2);
+  box-shadow: 0 6px 24px rgba(46,42,37,0.05);
 }
 
 .filter-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items:start }
@@ -656,8 +655,8 @@ onBeforeUnmount(() => {
 
 .filter-actions { grid-column: 1 / -1; display:flex; justify-content:flex-end; gap:12px; margin-top:6px }
 .btn-reset { color: var(--pf-muted) }
-.btn-apply { 
-  background: var(--pf-brown); 
+.btn-apply {
+  background: var(--pf-brown);
   border-color: var(--pf-brown-dark);
   color: #fff;
   font-family: "Noto Serif", serif;
@@ -679,17 +678,17 @@ onBeforeUnmount(() => {
 .paper-item { background: transparent }
 
 .empty-state { padding: 40px 0 }
-.pagination-wrapper { 
-  margin-top: 18px; 
-  display:flex; 
+.pagination-wrapper {
+  margin-top: 18px;
+  display:flex;
   justify-content:center;
 
   :deep(.el-pagination) {
     --el-pagination-bg-color: transparent;
-    --el-pagination-button-bg-color: transparent; 
+    --el-pagination-button-bg-color: transparent;
     --el-color-primary: var(--pf-accent);
     font-weight: 700;
-    
+
     .el-pager li {
       background: transparent !important;
       border: 1px solid rgba(46,42,37,0.1);
@@ -697,26 +696,26 @@ onBeforeUnmount(() => {
       margin: 0 3px;
       color: var(--pf-muted);
       transition: all 0.2s;
-      
+
       &.is-active {
         background: var(--pf-accent) !important;
         color: #fff;
         border-color: var(--pf-accent);
         box-shadow: 0 4px 12px rgba(184,137,58,0.3);
       }
-      
+
       &:hover:not(.is-active) {
         color: var(--pf-accent);
         border-color: var(--pf-accent);
       }
     }
-    
+
     button {
       background: transparent !important;
       border: 1px solid rgba(46,42,37,0.1);
       border-radius: 8px;
       color: var(--pf-muted);
-      
+
       &:hover:not(:disabled) {
         color: var(--pf-accent);
         border-color: var(--pf-accent);
