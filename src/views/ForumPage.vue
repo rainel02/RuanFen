@@ -205,7 +205,7 @@ const newPost = ref({
 const fetchPosts = async () => {
   loading.value = true
   try {
-    const res = await getPosts()
+    const res = await getPosts(activeBoard.value || undefined)
     // API returns { posts: [...] }
     allPosts.value = (res as any).posts || (res as any).data || res
   } catch (error) {
@@ -218,6 +218,7 @@ const fetchPosts = async () => {
 
 const handleBoardSelect = (id: string) => {
   activeBoard.value = id
+  fetchPosts()
 }
 
 const handleCreatePost = async () => {

@@ -259,23 +259,17 @@
         <el-form-item label="真实姓名" prop="realName">
           <el-input v-model="verificationForm.realName" placeholder="请输入真实姓名" />
         </el-form-item>
-        
-        <el-form-item label="教育邮箱" prop="email">
-          <el-input v-model="verificationForm.email" placeholder="请输入edu邮箱">
-            <template #append>
-              <el-button 
-                @click="handleSendCode" 
-                :disabled="codeSending || codeCountdown > 0"
-              >
-                {{ codeCountdown > 0 ? `${codeCountdown}s` : '发送验证码' }}
-              </el-button>
-            </template>
-          </el-input>
+        <el-form-item label="所属机构" prop="organization">
+          <el-input v-model="verificationForm.organization" placeholder="请输入所属机构" />
+        </el-form-item>
+        <el-form-item label="机构邮箱（可选）" prop="email">
+          <el-input v-model="verificationForm.email" placeholder="请输入机构邮箱（可选）" />
+        </el-form-item>
+        <el-form-item label="职称/学位（可选）" prop="title">
+          <el-input v-model="verificationForm.title" placeholder="如：教授、博士（可选）" />
         </el-form-item>
 
-        <el-form-item label="验证码" prop="code" :rules="[{ required: true, message: '请输入验证码', trigger: 'blur' }]">
-          <el-input v-model="verificationForm.code" placeholder="请输入验证码" />
-        </el-form-item>
+        
       </el-form>
       <template #footer>
         <span class="dialog-footer">
@@ -428,18 +422,16 @@ const editForm = reactive({
 })
 
 const verificationForm = ref({
-  email: '',
   realName: '',
-  code: ''
+  organization: '',
+  email: '',
+  title: ''
 })
 const verificationFormRef = ref<FormInstance>()
 const verificationStatus = ref('unverified')
 const showVerificationDialog = ref(false)
 const submittingVerification = ref(false)
-const codeSending = ref(false)
-const codeCountdown = ref(0)
-let codeTimer: any = null
-const sentCode = ref('')
+// 已取消验证码流程，无需倒计时或发送状态
 
 const loginRules = reactive<FormRules>({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -477,19 +469,14 @@ const verificationRules = {
   realName: [
     { required: true, message: '请输入真实姓名', trigger: 'blur' }
   ],
+  organization: [
+    { required: true, message: '请输入所属机构', trigger: 'blur' }
+  ],
   email: [
-    { required: true, message: '请输入edu邮箱', trigger: 'blur' },
-    {
-      validator: (_rule: any, value: string, callback: Function) => {
-        if (!value) return callback(new Error('请输入edu邮箱'))
-        if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.edu(\.[A-Za-z]{2,})?$/.test(value)) {
-          callback(new Error('请输入有效的edu邮箱'))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'blur'
-    }
+    // 邮箱可选，不做强校验
+  ],
+  title: [
+    // 职称/学位可选
   ]
 }
 
@@ -549,28 +536,11 @@ const handleLogout = () => {
 // 认证相关方法
 const handleSendCode = async () => {
   const email = verificationForm.value.email
-  if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.edu(\.[A-Za-z]{2,})?$/.test(email)) {
-    ElMessage.error('请输入有效的edu邮箱')
+  if (!email) {
+    ElMessage.warning('请输入邮箱（可非 edu），无需验证码')
     return
   }
-  codeSending.value = true
-  try {
-    await authApi.forgotPassword({ email })
-    ElMessage.success('验证码已发送到邮箱')
-    codeCountdown.value = 60
-    codeTimer && clearInterval(codeTimer)
-    codeTimer = setInterval(() => {
-      codeCountdown.value--
-      if (codeCountdown.value <= 0) {
-        clearInterval(codeTimer)
-        codeCountdown.value = 0
-      }
-    }, 1000)
-  } catch (error: any) {
-    ElMessage.error(error.message || '发送验证码失败')
-  } finally {
-    codeSending.value = false
-  }
+  ElMessage.success('学者认证无需验证码，直接提交即可')
 }
 
 const handleSubmitVerification = async () => {
@@ -585,9 +555,9 @@ const handleSubmitVerification = async () => {
     try {
       await userApi.submitCertification({
         realName: verificationForm.value.realName,
-        organization: '', // 需要从表单获取
-        orgEmail: verificationForm.value.email,
-        title: '', // 需要从表单获取
+        organization: verificationForm.value.organization,
+        orgEmail: verificationForm.value.email || undefined,
+        title: verificationForm.value.title || undefined,
         proofMaterials: []
       })
       verificationStatus.value = 'pending'
@@ -679,12 +649,10 @@ const loadCertificationStatus = async () => {
 const resetVerificationForm = () => {
   verificationForm.value = {
     realName: '',
+    organization: '',
     email: '',
-    code: ''
+    title: ''
   }
-  sentCode.value = ''
-  codeCountdown.value = 0
-  codeTimer && clearInterval(codeTimer)
 }
 
 // 轮播方法
