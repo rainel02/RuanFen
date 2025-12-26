@@ -30,9 +30,9 @@
               <div class="card-header">
                 <span class="card-title">学科热点词云</span>
                 <el-radio-group v-model="hotTopicRange" size="small" @change="fetchHotTopics">
-                  <el-radio-button label="1y">近1年</el-radio-button>
-                  <el-radio-button label="3m">近3月</el-radio-button>
-                  <el-radio-button label="all">全部</el-radio-button>
+                  <el-radio-button value="1y">近1年</el-radio-button>
+                  <el-radio-button value="3m">近3月</el-radio-button>
+                  <el-radio-button value="all">全部</el-radio-button>
                 </el-radio-group>
               </div>
             </template>
@@ -50,10 +50,27 @@
             <template #header>
               <div class="card-header">
                 <span class="card-title">影响力排行榜</span>
-                <el-select v-model="rankingDomain" size="small" style="width: 100px" @change="fetchRanking">
+                <el-select v-model="rankingDomain" size="small" style="width: 160px" @change="fetchRanking">
                   <el-option label="全部" value="all" />
-                  <el-option label="计算机" value="cs" />
-                  <el-option label="物理" value="physics" />
+                  <el-option label="Medicine" value="Medicine" />
+                  <el-option label="Biology" value="Biology" />
+                  <el-option label="Chemistry" value="Chemistry" />
+                  <el-option label="Computer science" value="Computer science" />
+                  <el-option label="Business" value="Business" />
+                  <el-option label="Sociology" value="Sociology" />
+                  <el-option label="Political science" value="Political science" />
+                  <el-option label="Geology" value="Geology" />
+                  <el-option label="Philosophy" value="Philosophy" />
+                  <el-option label="History" value="History" />
+                  <el-option label="Materials science" value="Materials science" />
+                  <el-option label="Psychology" value="Psychology" />
+                  <el-option label="Physics" value="Physics" />
+                  <el-option label="Environmental science" value="Environmental science" />
+                  <el-option label="Mathematics" value="Mathematics" />
+                  <el-option label="Engineering" value="Engineering" />
+                  <el-option label="Geography" value="Geography" />
+                  <el-option label="Economics" value="Economics" />
+                  <el-option label="Art" value="Art" />
                 </el-select>
               </div>
             </template>
@@ -92,8 +109,8 @@
               <div class="card-header">
                 <span class="card-title">影响力趋势 (我的)</span>
                 <el-radio-group v-model="trendMetric" size="small" @change="fetchTrend">
-                  <el-radio-button label="citations">引用量</el-radio-button>
-                  <el-radio-button label="h-index">H指数</el-radio-button>
+                  <el-radio-button value="citations">引用量</el-radio-button>
+                  <el-radio-button value="h-index">H指数</el-radio-button>
                 </el-radio-group>
               </div>
             </template>
@@ -122,7 +139,7 @@ import * as echarts from 'echarts/core'
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent])
 
 const hotTopicRange = ref<'1y' | '3m' | 'all'>('all')
-const rankingDomain = ref<'cs' | 'physics' | 'all'>('all')
+const rankingDomain = ref<string>('all')
 const trendMetric = ref<'citations' | 'h-index'>('citations')
 
 const wordCloudOption = ref<any>({})
@@ -157,7 +174,8 @@ const tableRowClassName = ({ rowIndex }: { rowIndex: number }) => {
 const fetchHotTopics = async () => {
   try {
     const res = await getHotTopics(hotTopicRange.value)
-    const data = (res as any).data || res
+    // API returns { topics: [...] }
+    const data = (res as any).topics || (res as any).data || res
 
     wordCloudOption.value = {
       tooltip: {},
@@ -219,7 +237,8 @@ const fetchHotTopics = async () => {
 const fetchRanking = async () => {
   try {
     const res = await getInfluenceRanking(rankingDomain.value)
-    rankingData.value = (res as any).data || res
+    // API returns { ranking: [...] }
+    rankingData.value = (res as any).ranking || (res as any).data || res
   } catch (error) {
     console.error(error)
     // Mock
@@ -236,7 +255,8 @@ const fetchRanking = async () => {
 const fetchTrend = async () => {
   try {
     const res = await getInfluenceTrend('5y', trendMetric.value)
-    const data = (res as any).data || res
+    // API returns { trend: [...] }
+    const data = (res as any).trend || (res as any).data || res
 
     trendOption.value = {
       tooltip: {

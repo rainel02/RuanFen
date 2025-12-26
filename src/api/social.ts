@@ -54,13 +54,6 @@ export const getFollowing = (userId: string) => {
   })
 }
 
-export const getBoards = () => {
-  return request({
-    url: '/social/forum/boards',
-    method: 'get'
-  })
-}
-
 // Forum
 export const getPosts = (boardId?: string) => {
   return request({
