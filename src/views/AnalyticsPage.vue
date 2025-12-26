@@ -174,8 +174,8 @@ const fetchHotTopics = async () => {
           fontFamily: 'sans-serif',
           fontWeight: 'bold',
           color: function () {
-            // Tech colors
-            const colors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#36cfc9', '#9254de']
+            // Retro colors
+            const colors = ['#8B4513', '#D4AF37', '#A0522D', '#CD853F', '#DEB887', '#556B2F', '#800000']
             return colors[Math.floor(Math.random() * colors.length)];
           }
         },
@@ -270,15 +270,16 @@ const fetchTrend = async () => {
         smooth: true,
         lineStyle: {
           width: 3,
-          shadowColor: 'rgba(0,0,0,0.3)',
+          color: '#D4AF37',
+          shadowColor: 'rgba(184, 134, 11, 0.3)',
           shadowBlur: 10,
           shadowOffsetY: 8
         },
         areaStyle: {
           opacity: 0.8,
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(64, 158, 255, 0.5)' },
-            { offset: 1, color: 'rgba(64, 158, 255, 0.01)' }
+            { offset: 0, color: 'rgba(212, 175, 55, 0.5)' },
+            { offset: 1, color: 'rgba(212, 175, 55, 0.01)' }
           ])
         },
         emphasis: {
@@ -300,10 +301,10 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
+@import '@/styles/retro-theme.scss';
+
 .analytics-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e7ed 100%);
-  padding-bottom: 40px;
+  @extend .retro-page-bg;
 }
 
 .container {
@@ -320,12 +321,13 @@ onMounted(() => {
   
   h2 {
     margin: 0;
-    color: #303133;
-    font-size: 28px;
-    font-weight: 600;
-    background: -webkit-linear-gradient(315deg, #409eff 25%, #36cfc9);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    @extend .text-retro-dark;
+    font-size: 32px;
+    font-weight: 900;
+    @extend .font-serif;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    background: none;
+    -webkit-text-fill-color: initial;
   }
 }
 
@@ -333,68 +335,38 @@ onMounted(() => {
   margin-bottom: 25px;
 }
 
+/* Summary Card styles are imported from retro-theme.scss via class name match, 
+   but we need to ensure they apply if scoped. 
+   Since we imported the scss, the mixins/classes are available. 
+   However, .summary-card in retro-theme is a class, not a mixin. 
+   We need to extend it or just let the global class apply if it was global. 
+   But it's scoped here. So we extend. */
 .summary-card {
-  border: none;
-  border-radius: 12px;
-  transition: transform 0.3s, box-shadow 0.3s;
-  position: relative;
-  overflow: hidden;
-  
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-  }
-
-  .summary-content {
-    position: relative;
-    z-index: 1;
-  }
-
-  .summary-value {
-    font-size: 28px;
-    font-weight: bold;
-    margin-bottom: 5px;
-  }
-
-  .summary-label {
-    color: #909399;
-    font-size: 14px;
-  }
-
-  .summary-icon {
-    position: absolute;
-    right: 20px;
-    bottom: 20px;
-    font-size: 48px;
-    opacity: 0.2;
-    transform: rotate(-15deg);
-  }
+  @extend .summary-card;
 }
 
 .chart-card {
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
+  @extend .glass-panel;
+  padding: 0; /* Reset padding if needed, glass-panel has its own */
   
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ebeef5;
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(184, 134, 11, 0.2);
   }
 
   .card-title {
     font-size: 18px;
-    font-weight: 600;
-    color: #303133;
+    font-weight: 700;
+    @extend .text-retro-dark;
+    @extend .font-serif;
   }
 
   .chart-container {
     height: 400px;
-    padding: 10px;
+    padding: 20px;
     .chart {
       height: 100%;
       width: 100%;
@@ -412,13 +384,14 @@ onMounted(() => {
     flex-direction: column;
     
     .name {
-      font-weight: 500;
-      color: #303133;
+      font-weight: 600;
+      @extend .text-retro-dark;
+      @extend .font-serif;
     }
     
     .institution {
       font-size: 12px;
-      color: #909399;
+      color: #8B4513;
     }
   }
 }
@@ -431,27 +404,47 @@ onMounted(() => {
   .rank-icon {
     width: 24px;
     height: 24px;
+    filter: sepia(1) hue-rotate(10deg);
   }
   
   .rank-text {
     font-weight: bold;
-    color: #606266;
+    color: #654321;
+    font-family: 'Georgia', serif;
   }
 }
 
 .score-text {
-  font-family: 'Roboto', sans-serif;
+  font-family: 'Georgia', serif;
   font-weight: bold;
-  color: #409EFF;
+  color: #D4AF37;
+}
+
+:deep(.el-table) {
+  background-color: transparent;
+  --el-table-tr-bg-color: transparent;
+  --el-table-header-bg-color: rgba(212, 175, 55, 0.1);
+  --el-table-row-hover-bg-color: rgba(212, 175, 55, 0.15);
+  --el-table-border-color: rgba(184, 134, 11, 0.2);
+  
+  th.el-table__cell {
+    color: #654321;
+    font-family: 'Georgia', serif;
+    font-weight: bold;
+  }
+  
+  td.el-table__cell {
+    color: #5d4037;
+  }
 }
 
 :deep(.el-table .rank-row-1) {
-  background: #fdf6ec;
+  background: rgba(255, 215, 0, 0.15);
 }
 :deep(.el-table .rank-row-2) {
-  background: #f0f9eb;
+  background: rgba(192, 192, 192, 0.15);
 }
 :deep(.el-table .rank-row-3) {
-  background: #ecf5ff;
+  background: rgba(205, 127, 50, 0.15);
 }
 </style>
