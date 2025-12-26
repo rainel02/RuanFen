@@ -14,22 +14,24 @@
 
               <div class="search-wrapper">
                 <template v-if="!isAdvanced">
-                  <el-input
-                    v-model="searchQueryLocal"
-                    placeholder="搜索论文关键词..."
-                    class="swiss-input-lg"
-                    clearable
-                    @keyup.enter="onSearch"
+                  <div 
+                    class="premium-search-bar"
+                    :class="{ 'is-focused': isInputFocused }"
                   >
-                    <template #prefix>
-                      <el-icon class="search-icon"><Search /></el-icon>
-                    </template>
-                    <template #append>
-                      <el-button class="swiss-search-btn" @click="onSearch" aria-label="搜索">
-                        <el-icon class="search-btn-icon"><Search /></el-icon>
-                      </el-button>
-                    </template>
-                  </el-input>
+                    <el-icon class="search-icon-prefix"><Search /></el-icon>
+                    <input
+                      v-model="searchQueryLocal"
+                      class="premium-input"
+                      placeholder="搜索论文关键词..."
+                      @focus="isInputFocused = true"
+                      @blur="isInputFocused = false"
+                      @keyup.enter="onSearch"
+                    />
+                    <button class="premium-search-btn" @click="onSearch" aria-label="搜索">
+                      <span class="btn-text">搜索</span>
+                      <el-icon class="btn-icon"><ArrowRight /></el-icon>
+                    </button>
+                  </div>
                 </template>
 
                 <template v-else>
@@ -184,6 +186,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted, nextTick } from 'vue'
+import { Search, ArrowRight } from '@element-plus/icons-vue'
 import AppHeader from '../components/AppHeader.vue'
 import PaperCard from '../components/PaperCard.vue'
 import VantaBanner from '../components/VantaBanner.vue'
@@ -238,6 +241,7 @@ const organization = ref('')
 const startDateLocal = ref('')
 const endDateLocal = ref('')
 const fieldLocal = ref('')
+const isInputFocused = ref(false)
 
 // unified search handler for basic and advanced modes
 const onSearch = async () => {
@@ -336,57 +340,119 @@ onMounted(() => {
 
 .search-wrapper { width:100%; }
 
+/* --- Premium Search Bar (Integrated) --- */
+.premium-search-bar {
+  display: flex;
+  align-items: center;
+  background: #fffcf5; /* Lighter parchment */
+  border: 1px solid rgba(46, 42, 37, 0.08);
+  border-radius: 16px; /* Smooth pill shape */
+  padding: 6px;
+  box-shadow: 
+    0 2px 6px rgba(46, 42, 37, 0.02),
+    0 8px 24px rgba(46, 42, 37, 0.04); /* Soft ambient shadow */
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  height: 64px;
+  box-sizing: border-box;
+  position: relative;
+}
 
-:deep(.swiss-input-lg) {
-  .el-input__wrapper {
-    background: rgba(255,250,240,0.9) !important;
-    border-radius: 14px !important;
-    height:64px;
-    padding:10px 18px !important;
-    border:1px solid rgba(46,42,37,0.08) !important;
-    box-shadow: 0 8px 30px rgba(46,42,37,0.06);
-    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+.premium-search-bar.is-focused {
+  border-color: rgba(184, 137, 58, 0.3);
+  box-shadow: 
+    0 4px 12px rgba(184, 137, 58, 0.08),
+    0 12px 32px rgba(184, 137, 58, 0.12);
+  transform: translateY(-1px);
+  background: #ffffff;
+}
+
+.search-icon-prefix {
+  font-size: 20px;
+  color: rgba(46, 42, 37, 0.4);
+  margin-left: 18px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.premium-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: "Noto Serif", serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--pf-ink);
+  padding: 0;
+  height: 100%;
+  min-width: 0; /* Prevent flex overflow */
+}
+
+.premium-input::placeholder {
+  color: rgba(46, 42, 37, 0.3);
+  font-weight: 500;
+}
+
+.premium-search-btn {
+  background: var(--pf-accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  height: 52px; /* Slightly smaller than container to fit inside */
+  padding: 0 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* Sans-serif for UI elements */
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(184, 137, 58, 0.2);
+  flex-shrink: 0;
+}
+
+.premium-search-btn:hover {
+  background: #a67b33; /* Slightly darker gold */
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(184, 137, 58, 0.3);
+}
+
+.premium-search-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(184, 137, 58, 0.2);
+}
+
+.premium-search-btn .btn-icon {
+  font-size: 16px;
+}
+
+/* Mobile Adaptation */
+@include mobile {
+  .premium-search-bar {
+    height: 56px;
+    border-radius: 12px;
   }
-  .el-input__wrapper:hover { transform: translateY(-2px) }
-  .el-input__wrapper.is-focus { border-color: rgba(184,137,58,0.28) !important; box-shadow: 0 10px 36px rgba(184,137,58,0.06) }
-  .el-input__inner { font-size:18px; color:var(--pf-ink); background: transparent; font-weight:600 }
-  /* leave space for the append icon button to avoid overlap */
-  .el-input__inner { padding-right: 110px; }
-  .el-input__inner::placeholder { color: rgba(46,42,37,0.36) }
-  .search-icon { color: var(--pf-muted); margin-right:8px }
-}
-
-.swiss-search-btn, :deep(.swiss-search-btn) {
-  background: linear-gradient(180deg, var(--pf-accent), #a56f2a) !important;
-  color: #fff !important;
-  border-radius: 12px !important;
-  padding: 0 14px !important;
-  width: 64px !important;
-  height: 64px !important;
-  box-shadow: 0 6px 18px rgba(168,129,58,0.14) !important;
-  border: none !important;
-  min-width: 0;
-  font-weight: 700 !important;
-  font-size: 16px !important;
-  line-height: 1;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-.swiss-search-btn { margin-right: 12px }
-.swiss-search-btn:hover, :deep(.swiss-search-btn:hover) { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(168,129,58,0.18) }
-.swiss-search-btn:active, :deep(.swiss-search-btn:active) { transform: translateY(0) }
-
-/* remove browser/element-ui focus ring and replace with subtle accessible focus */
-.swiss-search-btn:focus, :deep(.swiss-search-btn:focus), .swiss-search-btn:focus-visible, :deep(.swiss-search-btn:focus-visible) {
-  outline: none !important;
-  box-shadow: 0 0 0 4px rgba(184,137,58,0.12) !important;
-}
-
-/* ensure button text inside element-ui structure is visible */
-.swiss-search-btn .el-button__content, :deep(.swiss-search-btn .el-button__content) {
-  color: #fff !important;
-  font-weight: 700 !important;
+  
+  .premium-input {
+    font-size: 16px;
+  }
+  
+  .premium-search-btn {
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 8px;
+  }
+  
+  .premium-search-btn .btn-text {
+    display: none; /* Icon only on mobile */
+  }
+  
+  .search-icon-prefix {
+    margin-left: 12px;
+    margin-right: 8px;
+    font-size: 18px;
+  }
 }
 
 .swiss-advanced-panel { border-radius:10px; padding:18px; background: linear-gradient(180deg, rgba(255,250,240,0.7), rgba(255,255,245,0.6)); border:1px solid rgba(46,42,37,0.04); box-shadow: 0 6px 18px rgba(46,42,37,0.04); }
