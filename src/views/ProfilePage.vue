@@ -335,6 +335,40 @@ let isDragging = ref(false)
 let dragStartX = 0
 let dragOffset = ref(0)
 
+let vantaEffect: any = null
+let vantaPromise: Promise<void> | null = null
+
+// 动态加载外部脚本
+const loadScript = (src: string) => {
+  return new Promise<void>((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve()
+      return
+    }
+    const script = document.createElement('script')
+    script.src = src
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error(`Failed to load script ${src}`))
+    document.head.appendChild(script)
+  })
+}
+
+const ensureVantaBirds = async () => {
+  if (typeof window === 'undefined') return
+  if (!vantaPromise) {
+    vantaPromise = (async () => {
+      if (!(window as any).THREE) {
+        await loadScript('https://cdn.jsdelivr.net/npm/three@0.121.1/build/three.min.js')
+      }
+      if (!(window as any).VANTA || !(window as any).VANTA.BIRDS) {
+        await loadScript('https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.birds.min.js')
+      }
+    })()
+  }
+  await vantaPromise
+}
+
 // 获取显示的索引（用于指示器）
 const getDisplayIndex = () => {
   if (currentIndex.value === 0) {
@@ -723,18 +757,17 @@ const handleMouseUp = () => {
   startAutoPlay()
 }
 
-let vantaEffect: any = null
-
 onMounted(async () => {
   await authStore.initAuth()
   settingsStore.loadSettings()
   
   if (authStore.isLoggedIn) {
     await loadCertificationStatus()
+    await ensureVantaBirds()
     // 等待 DOM 渲染后再初始化 Vanta.js
     setTimeout(() => {
-      if (typeof window !== 'undefined' && window.VANTA) {
-        vantaEffect = window.VANTA.BIRDS({
+      if (typeof window !== 'undefined' && (window as any).VANTA) {
+        vantaEffect = (window as any).VANTA.BIRDS({
           el: '#vanta-birds-bg',
           mouseControls: true,
           touchControls: true,

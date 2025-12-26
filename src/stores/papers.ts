@@ -52,14 +52,19 @@ export const usePapersStore = defineStore('papers', () => {
     loading.value = true
     try {
       const params: Record<string, any> = {}
+      
+      // Backend requires at least one search condition
+      // Always provide q parameter (empty string searches all)
+      params.q = searchQuery.value || ''
+      
       // optional filters
-      if (searchQuery.value) params.q = searchQuery.value
       if (author.value) params.author = author.value
       if (institution.value) params.institution = institution.value
       if (selectedFields.value.length) params.field = selectedFields.value[0]
       if (startDate.value) params.startDate = startDate.value
       if (endDate.value) params.endDate = endDate.value
-      // pagination: API expects 0-based page, UI uses 1-based currentPage
+      
+      // pagination: backend uses 0-based page numbers
       params.page = Math.max(0, currentPage.value - 1)
       params.size = pageSize.value
 

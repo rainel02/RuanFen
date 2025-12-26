@@ -2,6 +2,7 @@
 import { API_BASE_URL } from './config'
 
 const BASE = API_BASE_URL
+const DEFAULT_TIMEOUT = 15000
 
 // 构建 URL（支持查询参数，兼容相对 BASE）
 function buildUrl(path: string, params: Record<string, any> = {}) {
@@ -74,10 +75,21 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return (json && typeof json === 'object' && 'data' in json) ? (json.data as T) : (json as T)
 }
 
+// 包装 fetch，增加超时控制
+async function doFetch(url: string, init: RequestInit, timeoutMs: number = DEFAULT_TIMEOUT) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 // GET 请求
 export async function get<T = any>(path: string, params?: Record<string, any>): Promise<T> {
   const url = buildUrl(path, params)
-  const response = await fetch(url, {
+  const response = await doFetch(url, {
     method: 'GET',
     headers: getHeaders()
   })
@@ -87,7 +99,7 @@ export async function get<T = any>(path: string, params?: Record<string, any>): 
 // POST 请求
 export async function post<T = any>(path: string, data?: any): Promise<T> {
   const url = buildUrl(path)
-  const response = await fetch(url, {
+  const response = await doFetch(url, {
     method: 'POST',
     headers: getHeaders(),
     body: data ? JSON.stringify(data) : undefined
@@ -98,7 +110,7 @@ export async function post<T = any>(path: string, data?: any): Promise<T> {
 // PUT 请求
 export async function put<T = any>(path: string, data?: any): Promise<T> {
   const url = buildUrl(path)
-  const response = await fetch(url, {
+  const response = await doFetch(url, {
     method: 'PUT',
     headers: getHeaders(),
     body: data ? JSON.stringify(data) : undefined
@@ -109,7 +121,7 @@ export async function put<T = any>(path: string, data?: any): Promise<T> {
 // DELETE 请求
 export async function del<T = any>(path: string): Promise<T> {
   const url = buildUrl(path)
-  const response = await fetch(url, {
+  const response = await doFetch(url, {
     method: 'DELETE',
     headers: getHeaders()
   })
