@@ -10,6 +10,30 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!user.value && !!token.value)
 
+  // 解析后端返回的 preferences 字符串并合并到 user 对象
+  const normalizeUser = (userData: any): User => {
+    let parsed = userData
+    if (userData.preferences && typeof userData.preferences === 'string') {
+      try {
+        const prefs = JSON.parse(userData.preferences)
+        parsed = {
+          ...userData,
+          bio: prefs.bio || '',
+          interests: prefs.interests || [],
+          // 保留原始 preferences 字符串
+          preferences: userData.preferences
+        }
+      } catch (e) {
+        console.error('Failed to parse user preferences:', e)
+      }
+    }
+    // 确保 name 有值（部分接口只返回 username）
+    if (!parsed.name && parsed.username) {
+      parsed.name = parsed.username
+    }
+    return parsed
+  }
+
   const login = async (account: string, password: string) => {
     try {
       console.log('开始登录请求，参数:', { account, password })
@@ -18,9 +42,10 @@ export const useAuthStore = defineStore('auth', () => {
 
       if (response && response.token && response.user) {
         token.value = response.token
-        user.value = response.user as User
+        const normalized = normalizeUser(response.user)
+        user.value = normalized as User
         localStorage.setItem('token', response.token)
-        localStorage.setItem('user', JSON.stringify(response.user))
+        localStorage.setItem('user', JSON.stringify(normalized))
         return { success: true }
       }
 
@@ -70,8 +95,9 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         // 获取当前用户信息
         const userData = await userApi.getCurrentUser()
-        user.value = userData as User
-        localStorage.setItem('user', JSON.stringify(userData))
+        const normalized = normalizeUser(userData)
+        user.value = normalized as User
+        localStorage.setItem('user', JSON.stringify(normalized))
       } catch (error) {
         // token可能已过期，清除
         logout()
@@ -82,8 +108,9 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshUserInfo = async () => {
     try {
       const userData = await userApi.getCurrentUser()
-      user.value = userData as User
-      localStorage.setItem('user', JSON.stringify(userData))
+      const normalized = normalizeUser(userData)
+      user.value = normalized as User
+      localStorage.setItem('user', JSON.stringify(normalized))
     } catch (error) {
       console.error('获取用户信息失败', error)
     }
