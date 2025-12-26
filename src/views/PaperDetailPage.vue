@@ -134,7 +134,7 @@
                         >
                           <el-avatar :size="40">{{ authorInitial(author) }}</el-avatar>
                           <div class="author-info">
-                            <router-link v-if="author && author.id" :to="`/scholar/${author.id}`" class="author-name">
+                            <router-link v-if="author && author.id" :to="`/scholars/${author.id}`" class="author-name">
                               {{ authorLabel(author) }}
                             </router-link>
                             <span v-else class="author-name">{{ authorLabel(author) }}</span>

@@ -312,7 +312,7 @@ const handleStartChat = () => {
 
 const handleNodeClick = (params: any) => {
   if (params.dataType === 'node' && params.data.id) {
-    router.push(`/scholar/${params.data.id}`)
+    router.push(`/scholars/${params.data.id}`)
   }
 }
 

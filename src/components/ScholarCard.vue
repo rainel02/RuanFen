@@ -81,7 +81,7 @@ const emit = defineEmits(['start-chat'])
 const router = useRouter()
 
 const goToDetail = () => {
-  router.push(`/scholar/${props.scholar.id}`)
+  router.push(`/scholars/${props.scholar.id}`)
 }
 
 const toggleFollow = () => {

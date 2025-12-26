@@ -39,7 +39,7 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '论文详情' }
   },
   {
-    path: '/scholar/:id',
+    path: '/scholars/:id',
     name: 'ScholarDetail',
     component: () => import('../views/ScholarDetailPage.vue'),
     meta: { title: '学者详情' }
