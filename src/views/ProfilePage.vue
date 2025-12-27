@@ -160,7 +160,7 @@
         <div v-if="isLoggedIn" class="profile-content">
           <!-- Profile Header Card -->
           <div class="profile-header-card glass-panel">
-            <div class="header-bg"></div>
+            <div class="header-bg" :style="{ backgroundImage: `url(${headerBgImage})` }"></div>
             <div class="header-content">
               <div class="avatar-section">
                 <el-avatar :src="user?.avatar || defaultAvatar" :size="140" class="main-avatar">
@@ -303,7 +303,7 @@
     </div>
 
     <!-- Edit Profile Dialog -->
-    <el-dialog v-model="showEditDialog" title="编辑个人资料" width="500px">
+    <el-dialog v-model="showEditDialog" title="编辑个人资料" width="500px" class="gothic-dialog">
       <el-form :model="editForm" label-position="top">
         <el-form-item label="姓名">
           <el-input v-model="editForm.name" />
@@ -335,7 +335,7 @@
     </el-dialog>
 
     <!-- Verification Dialog -->
-    <el-dialog v-model="showVerificationDialog" title="学者身份认证" width="500px">
+    <el-dialog v-model="showVerificationDialog" title="学者身份认证" width="500px" class="gothic-dialog">
       <el-form 
         ref="verificationFormRef"
         :model="verificationForm" 
@@ -483,6 +483,9 @@ import * as userApi from '../api/user'
 import * as achievementApi from '../api/index'
 import * as socialApi from '../api/social'
 import defaultAvatar from '@/assets/profile.png'
+import pic1 from '@/assets/pic1.jpg'
+import pic2 from '@/assets/pic2.jpg'
+import pic3 from '@/assets/pic3.jpg'
 
 // 导入登录背景图片
 import login1 from '@/assets/login1.png'
@@ -511,6 +514,10 @@ let dragOffset = ref(0)
 
 let vantaEffect: any = null
 let vantaPromise: Promise<void> | null = null
+
+// 随机选择背景图片
+const backgroundImages = [pic1, pic2, pic3]
+const headerBgImage = ref(backgroundImages[Math.floor(Math.random() * backgroundImages.length)])
 
 // 动态加载外部脚本
 const loadScript = (src: string) => {
@@ -1902,10 +1909,9 @@ onUnmounted(() => {
 
   .header-bg {
     height: 140px;
-    background: linear-gradient(135deg,
-      rgba(212, 175, 55, 0.3) 0%,
-      rgba(184, 134, 11, 0.4) 50%,
-      rgba(139, 69, 19, 0.3) 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     position: relative;
 
     &::after {
@@ -1915,9 +1921,9 @@ onUnmounted(() => {
       left: 0;
       right: 0;
       bottom: 0;
-      background:
-        radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.2) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(184, 134, 11, 0.2) 0%, transparent 50%);
+      background: linear-gradient(to bottom, 
+        rgba(0, 0, 0, 0.1) 0%,
+        rgba(0, 0, 0, 0.2) 100%);
     }
   }
 
@@ -2289,6 +2295,174 @@ onUnmounted(() => {
     .info-section {
       .name-row { justify-content: center; }
       .email { justify-content: center; }
+    }
+  }
+}
+
+// 中世纪复古风格弹窗
+:deep(.gothic-dialog) {
+  .el-dialog {
+    background: rgba(249, 247, 236, 0.95) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 16px !important;
+    border: 3px solid rgba(184, 134, 11, 0.5) !important;
+    box-shadow: 
+      0 8px 24px rgba(0, 0, 0, 0.18),
+      0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+      inset 0 2px 4px rgba(255, 255, 255, 0.5),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.1) !important;
+    overflow: hidden;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      right: -3px;
+      bottom: -3px;
+      background: linear-gradient(135deg, 
+        rgba(212, 175, 55, 0.4) 0%, 
+        transparent 25%, 
+        transparent 75%, 
+        rgba(212, 175, 55, 0.4) 100%);
+      border-radius: 16px;
+      z-index: -1;
+      opacity: 0.6;
+    }
+
+    .el-dialog__header {
+      padding: 24px 32px 16px !important;
+      background: linear-gradient(135deg, 
+        rgba(212, 175, 55, 0.2) 0%, 
+        rgba(184, 134, 11, 0.15) 100%);
+      border-bottom: 2px solid rgba(184, 134, 11, 0.3);
+      
+      .el-dialog__title {
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-size: 24px !important;
+        font-weight: 900 !important;
+        color: #654321 !important;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) !important;
+        letter-spacing: 0.5px;
+      }
+
+      .el-dialog__headerbtn {
+        .el-dialog__close {
+          color: #8B4513 !important;
+          font-size: 20px;
+          
+          &:hover {
+            color: #654321 !important;
+          }
+        }
+      }
+    }
+
+    .el-dialog__body {
+      padding: 24px 32px !important;
+      
+      :deep(.el-form-item__label) {
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-weight: 700 !important;
+        color: #654321 !important;
+        font-size: 15px !important;
+        margin-bottom: 8px;
+      }
+
+      :deep(.el-input__wrapper) {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 2px solid rgba(184, 134, 11, 0.4) !important;
+        border-radius: 8px !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.3s ease;
+
+        &:hover {
+          border-color: rgba(212, 175, 55, 0.6) !important;
+        }
+
+        &.is-focus {
+          border-color: #D4AF37 !important;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(212, 175, 55, 0.3) !important;
+        }
+      }
+
+      :deep(.el-input__inner) {
+        font-family: 'Georgia', serif !important;
+        color: #654321 !important;
+        font-weight: 600;
+
+        &::placeholder {
+          color: rgba(101, 67, 33, 0.5) !important;
+        }
+      }
+
+      :deep(.el-textarea__inner) {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 2px solid rgba(184, 134, 11, 0.4) !important;
+        border-radius: 8px !important;
+        font-family: 'Georgia', serif !important;
+        color: #654321 !important;
+        font-weight: 600;
+
+        &:focus {
+          border-color: #D4AF37 !important;
+        }
+      }
+
+      :deep(.el-select) {
+        .el-input__wrapper {
+          background: rgba(255, 255, 255, 0.9) !important;
+        }
+      }
+    }
+
+    .el-dialog__footer {
+      padding: 20px 32px 24px !important;
+      border-top: 2px solid rgba(184, 134, 11, 0.3);
+      background: linear-gradient(135deg, 
+        rgba(249, 247, 236, 0.5) 0%, 
+        rgba(255, 255, 255, 0.3) 100%);
+
+      .dialog-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      :deep(.el-button) {
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-weight: 700 !important;
+        border-radius: 8px !important;
+        padding: 10px 20px !important;
+        transition: all 0.3s ease;
+
+        &.el-button--default {
+          background: linear-gradient(135deg, #8B4513 0%, #654321 100%) !important;
+          border-color: #654321 !important;
+          color: #f9f7ec !important;
+
+          &:hover {
+            background: linear-gradient(135deg, #654321 0%, #4a2c1a 100%) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          }
+        }
+
+        &.el-button--primary {
+          background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+          border-color: #B8860B !important;
+          color: #654321 !important;
+          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3) !important;
+
+          &:hover {
+            background: linear-gradient(135deg, #B8860B 0%, #9a7209 100%) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4) !important;
+          }
+        }
+      }
     }
   }
 }

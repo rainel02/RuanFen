@@ -91,7 +91,7 @@
             >
               <ScholarCard
                 :scholar="scholar"
-                @follow-changed="loadScholars"
+                @follow-changed="handleFollowChanged"
               />
             </div>
           </transition-group>
@@ -114,8 +114,11 @@ import { UserFilled, School, Collection, Sort, Connection } from '@element-plus/
 import AppHeader from '@/components/AppHeader.vue'
 import ScholarCard from '@/components/ScholarCard.vue'
 import * as scholarApi from '../api/scholar'
+import * as socialApi from '../api/social'
+import { useAuthStore } from '../stores/auth'
 
 const scholars = ref<any[]>([])
+const authStore = useAuthStore()
 
 const searchName = ref('')
 const selectedInstitution = ref('')
@@ -203,8 +206,11 @@ const loadScholars = async () => {
         citations: item.citations || Math.floor(Math.random() * 5000) + 100,
         papers: item.papers || Math.floor(Math.random() * 100) + 10
       },
-      isFollowed: item.isFollowed || false
+      isFollowed: false // 初始化为 false，后续通过 updateFollowStatus 更新
     }))
+    
+    // 加载完学者列表后，更新关注状态
+    await updateFollowStatus()
   } catch (error: any) {
     ElMessage.error(error.message || '加载学者列表失败')
     scholars.value = []
@@ -215,6 +221,44 @@ const loadScholars = async () => {
 
 const handleSearch = () => {
   loadScholars()
+}
+
+// 处理关注状态变化
+const handleFollowChanged = (payload: { scholarId: string; isFollowed: boolean }) => {
+  const scholar = scholars.value.find(s => s.id === payload.scholarId)
+  if (scholar) {
+    scholar.isFollowed = payload.isFollowed
+  }
+}
+
+// 检查并更新学者的关注状态
+const updateFollowStatus = async () => {
+  if (!authStore.isLoggedIn || !authStore.user?.id) {
+    // 如果未登录，所有学者都是未关注状态
+    scholars.value.forEach(s => s.isFollowed = false)
+    return
+  }
+  
+  try {
+    // 获取当前用户的关注列表
+    const followingResponse: any = await socialApi.getFollowing(authStore.user.id)
+    const followingData = followingResponse?.data || followingResponse
+    const followingList = followingData.following || followingData.results || (Array.isArray(followingData) ? followingData : [])
+    
+    // 提取关注列表中的用户ID
+    const followingIds = new Set(
+      followingList.map((item: any) => item.userId || item.id || item.scholarId)
+    )
+    
+    // 更新每个学者的关注状态
+    scholars.value.forEach(scholar => {
+      scholar.isFollowed = followingIds.has(scholar.id)
+    })
+  } catch (error) {
+    console.error('获取关注状态失败:', error)
+    // 如果获取失败，将所有学者设为未关注状态
+    scholars.value.forEach(s => s.isFollowed = false)
+  }
 }
 
 onMounted(() => {

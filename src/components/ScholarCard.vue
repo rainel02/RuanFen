@@ -80,7 +80,9 @@ const props = defineProps<{
   scholar: any
 }>()
 
-const emit = defineEmits(['follow-changed'])
+const emit = defineEmits<{
+  'follow-changed': [payload: { scholarId: string; isFollowed: boolean }]
+}>()
 const router = useRouter()
 const authStore = useAuthStore()
 
@@ -103,6 +105,7 @@ const toggleFollow = async () => {
     return
   }
   try {
+    const newFollowStatus = !props.scholar.isFollowed
     if (props.scholar.isFollowed) {
       await unfollowUser(props.scholar.id)
       ElMessage.success('已取消关注')
@@ -110,8 +113,8 @@ const toggleFollow = async () => {
       await followUser(props.scholar.id)
       ElMessage.success('已关注')
     }
-    props.scholar.isFollowed = !props.scholar.isFollowed
-    emit('follow-changed') // 通知父组件刷新列表
+    // 通过 emit 通知父组件更新状态，而不是直接修改 props
+    emit('follow-changed', { scholarId: props.scholar.id, isFollowed: newFollowStatus })
   } catch (error: any) {
     ElMessage.error(error.message || '操作失败')
   }
