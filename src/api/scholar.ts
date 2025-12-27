@@ -4,13 +4,14 @@ import request from './request'
 
 /**
  * 检索学者门户
+ * 后端实际路径：GET /scholars/search，支持可选参数 name, organization, field
  */
 export const searchScholars = (params?: {
   name?: string
   organization?: string
   field?: string
 }) => {
-  // Backend expects /api/scholars/search per controller mapping
+  // 后端实际实现使用 /scholars/search
   return request.get('/scholars/search', params)
 }
 

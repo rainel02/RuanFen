@@ -41,24 +41,24 @@
 
       <div class="stats-row">
         <div class="stat-item">
-          <span class="value">{{ scholar.stats.hIndex }}</span>
+          <span class="value">{{ scholar.stats?.hIndex || 0 }}</span>
           <span class="label">H-Index</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
-          <span class="value">{{ formatNumber(scholar.stats.citations) }}</span>
+          <span class="value">{{ formatNumber(scholar.stats?.citations || 0) }}</span>
           <span class="label">引用</span>
         </div>
         <div class="stat-divider"></div>
         <div class="stat-item">
-          <span class="value">{{ scholar.stats.papers }}</span>
+          <span class="value">{{ scholar.stats?.papers || 0 }}</span>
           <span class="label">论文</span>
         </div>
       </div>
     </div>
 
     <div class="card-footer">
-      <el-button class="action-btn" text @click.stop="$emit('start-chat', scholar.id)">
+      <el-button class="action-btn" text @click.stop="$emit('start-chat', scholar.id, scholar.name, scholar.avatar)">
         <el-icon><ChatLineRound /></el-icon> 私信
       </el-button>
       <div class="divider"></div>
@@ -72,21 +72,40 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { School, ChatLineRound, Right } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { followUser, unfollowUser } from '../api/social'
+import { useAuthStore } from '../stores/auth'
 
 const props = defineProps<{
   scholar: any
 }>()
 
-const emit = defineEmits(['start-chat'])
+const emit = defineEmits(['start-chat', 'follow-changed'])
 const router = useRouter()
+const authStore = useAuthStore()
 
 const goToDetail = () => {
-  router.push(`/scholars/${props.scholar.id}`)
+  router.push(`/scholar/${props.scholar.id}`)
 }
 
-const toggleFollow = () => {
-  // Toggle logic would go here
-  props.scholar.isFollowed = !props.scholar.isFollowed
+const toggleFollow = async () => {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('请先登录才能关注学者')
+    return
+  }
+  try {
+    if (props.scholar.isFollowed) {
+      await unfollowUser(props.scholar.id)
+      ElMessage.success('已取消关注')
+    } else {
+      await followUser(props.scholar.id)
+      ElMessage.success('已关注')
+    }
+    props.scholar.isFollowed = !props.scholar.isFollowed
+    emit('follow-changed') // 通知父组件刷新列表
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败')
+  }
 }
 
 const formatNumber = (num: number) => {

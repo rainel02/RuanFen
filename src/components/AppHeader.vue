@@ -31,6 +31,14 @@
           <router-link v-if="showForum" to="/forum" class="nav-item" :class="{ active: route.path.startsWith('/forum') }">论坛</router-link>
           <router-link to="/chat" class="nav-item" :class="{ active: route.path === '/chat' }">消息</router-link>
           <router-link to="/analytics" class="nav-item" :class="{ active: route.path === '/analytics' }">分析</router-link>
+          <router-link 
+            v-if="isLoggedIn && isAdmin" 
+            to="/admin" 
+            class="nav-item" 
+            :class="{ active: route.path.startsWith('/admin') }"
+          >
+            控制台
+          </router-link>
           
           <div class="user-menu" @click="handleUserMenuClick">
             <template v-if="shouldShowAvatar && isLoggedIn">
@@ -72,6 +80,10 @@ const isProfilePage = computed(() => route.path === '/profile')
 const isLoginPage = computed(() => route.path === '/profile' && !authStore.isLoggedIn)
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user)
+const isAdmin = computed(() => {
+  const role = user.value?.role
+  return role === 'admin' || role === 'ADMIN' || role === 'administrator'
+})
 
 // 是否显示头像（除了登录注册页面外都显示）
 const shouldShowAvatar = computed(() => {

@@ -118,10 +118,26 @@
                     </el-form-item>
 
                     <el-form-item label="用户角色" prop="role">
-                      <el-radio-group v-model="registerForm.role">
+                      <el-radio-group v-model="registerForm.role" @change="handleRoleChange">
                         <el-radio label="user">普通用户</el-radio>
                         <el-radio label="admin">管理员</el-radio>
                       </el-radio-group>
+                    </el-form-item>
+
+                    <el-form-item 
+                      v-if="registerForm.role === 'admin'" 
+                      label="邀请码" 
+                      prop="inviteCode"
+                    >
+                      <el-input 
+                        v-model="registerForm.inviteCode" 
+                        placeholder="请输入管理员邀请码" 
+                        type="password"
+                        show-password
+                      />
+                      <div style="font-size: 12px; color: #909399; margin-top: 5px;">
+                        只有输入正确的邀请码才能注册为管理员
+                      </div>
                     </el-form-item>
 
                     <el-form-item>
@@ -142,73 +158,143 @@
         </div>
 
         <div v-if="isLoggedIn" class="profile-content">
-          <el-row :gutter="24">
-            <el-col :md="8" :sm="24" :xs="24">
-              <el-card class="profile-card">
-                <div class="profile-header">
-                  <el-avatar :src="user?.avatar || defaultAvatar" :size="80">
-                    {{ user?.name?.charAt(0) }}
-                  </el-avatar>
-                  <h3>{{ user?.name }}</h3>
-                  <p class="user-title">{{ user?.title }}</p>
-                  <p class="user-institution">{{ user?.institution }}</p>
+          <!-- Profile Header Card -->
+          <div class="profile-header-card glass-panel">
+            <div class="header-bg"></div>
+            <div class="header-content">
+              <div class="avatar-section">
+                <el-avatar :src="user?.avatar || defaultAvatar" :size="140" class="main-avatar">
+                  {{ user?.name?.charAt(0) || '?' }}
+                </el-avatar>
+              </div>
+              <div class="info-section">
+                <div class="name-row">
+                  <h1>{{ user?.name }}</h1>
+                  <el-tag v-if="verificationStatus === 'certified' || verificationStatus === 'verified'" type="success" effect="dark" round size="small" class="verified-tag">
+                    <el-icon><Select /></el-icon> 认证学者
+                  </el-tag>
+                  <el-tag v-else-if="verificationStatus === 'pending'" type="warning" effect="dark" round size="small" class="pending-tag">
+                    审核中
+                  </el-tag>
                 </div>
-                <p class="email"><el-icon><Message /></el-icon> {{ user.email }}</p>
-                <p class="bio">{{ user.bio || '这个人很懒，什么都没有写...' }}</p>
-              </el-card>
+                <p class="title">{{ user?.title || '用户' }}</p>
+                <p class="institution">
+                  <el-icon><School /></el-icon> 
+                  {{ user?.institution || '未设置机构' }}
+                </p>
+                <div class="bio-preview">{{ user?.bio || '这个人很懒，什么都没有写...' }}</div>
+                
+                <div class="action-buttons">
+                  <el-button 
+                    class="gothic-btn"
+                    @click="showEditDialog = true"
+                  >
+                    <el-icon><Edit /></el-icon> 编辑资料
+                  </el-button>
+                  <el-button 
+                    v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'"
+                    class="gothic-btn"
+                    @click="showVerificationDialog = true"
+                  >
+                    <el-icon><DocumentChecked /></el-icon> 申请认证
+                  </el-button>
+                  <el-button 
+                    class="gothic-btn danger-btn"
+                    @click="handleLogout"
+                  >
+                    <el-icon><SwitchButton /></el-icon> 退出登录
+                  </el-button>
+                </div>
+              </div>
+              
+              <div class="stats-section">
+                <div class="stat-box clickable" @click="showFollowingDialog = true">
+                  <div class="value">{{ followingCount }}</div>
+                  <div class="label">关注</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box clickable" @click="showFollowersDialog = true">
+                  <div class="value">{{ followersCount }}</div>
+                  <div class="label">粉丝</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box">
+                  <div class="value">0</div>
+                  <div class="label">获赞</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-              <div class="actions-section">
-                <el-button type="primary" plain round @click="showEditDialog = true">编辑资料</el-button>
-                <el-button 
-                  v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'"
-                  type="success" 
-                  plain 
-                  round 
-                  @click="showVerificationDialog = true"
-                >
-                  申请认证
-                </el-button>
-                <el-tag v-else-if="verificationStatus === 'pending'" type="warning" class="status-tag">认证审核中</el-tag>
-                <el-tag v-else-if="verificationStatus === 'verified'" type="success" class="status-tag">已认证学者</el-tag>
-                <el-button type="danger" plain round @click="handleLogout">退出登录</el-button>
+          <!-- Main Content -->
+          <el-row :gutter="24" class="main-body">
+            <!-- Left Column -->
+            <el-col :lg="8" :md="24" :sm="24" :xs="24">
+              <div class="sidebar-stack">
+                <!-- About Card -->
+                <div class="glass-panel sidebar-card">
+                  <h3><el-icon><UserFilled /></el-icon> 个人信息</h3>
+                  <div class="info-group">
+                    <label><el-icon><Message /></el-icon> 邮箱</label>
+                    <div class="contact-row">{{ user?.email }}</div>
+                  </div>
+                  <div class="info-group" v-if="user?.bio">
+                    <label><el-icon><Document /></el-icon> 个人简介</label>
+                    <div class="bio-text">{{ user?.bio }}</div>
+                  </div>
+                </div>
               </div>
             </el-col>
-          </el-row>
 
-          <el-row :gutter="24">
-            <el-col :span="16">
+            <!-- Right Column -->
+            <el-col :lg="16" :md="24" :sm="24" :xs="24">
               <div class="glass-panel content-card">
-                <el-tabs v-model="activeTab">
+                <el-tabs v-model="activeTab" class="custom-tabs">
                   <el-tab-pane label="我的收藏" name="favorites">
-                    <el-empty description="暂无收藏内容" />
+                    <template #label>
+                      <span><el-icon><Star /></el-icon> 我的收藏</span>
+                    </template>
+                    <div class="collections-content">
+                      <div v-if="collections.length === 0" class="empty-state">
+                        <el-empty description="暂无收藏内容" />
+                      </div>
+                      <div v-else class="collections-list">
+                        <div 
+                          v-for="item in collections" 
+                          :key="item.id"
+                          class="collection-item glass-panel"
+                        >
+                          <div class="item-info">
+                            <h4>{{ item.title || '未命名成果' }}</h4>
+                            <p class="item-meta">{{ item.authors?.join(', ') || '未知作者' }} · {{ item.year || '未知年份' }}</p>
+                          </div>
+                          <el-button 
+                            class="gothic-btn-small"
+                            @click="removeFromCollection(item.id)"
+                          >
+                            <el-icon><Delete /></el-icon> 取消收藏
+                          </el-button>
+                        </div>
+                      </div>
+                    </div>
                   </el-tab-pane>
                   <el-tab-pane label="浏览历史" name="history">
-                    <el-empty description="暂无浏览记录" />
+                    <template #label>
+                      <span><el-icon><Clock /></el-icon> 浏览历史</span>
+                    </template>
+                    <div class="empty-state">
+                      <el-empty description="暂无浏览历史" />
+                    </div>
                   </el-tab-pane>
                   <el-tab-pane label="我的帖子" name="posts">
-                    <el-empty description="暂无发帖记录" />
+                    <template #label>
+                      <span><el-icon><ChatLineRound /></el-icon> 我的帖子</span>
+                    </template>
+                    <div class="empty-state">
+                      <el-empty description="暂无帖子" />
+                    </div>
                   </el-tab-pane>
                 </el-tabs>
-              </div>
-            </el-col>
-            
-            <el-col :span="8">
-              <div class="glass-panel sidebar-card">
-                <h3>账户统计</h3>
-                <div class="stats-grid">
-                  <div class="stat-item">
-                    <div class="value">0</div>
-                    <div class="label">关注</div>
-                  </div>
-                  <div class="stat-item">
-                    <div class="value">0</div>
-                    <div class="label">粉丝</div>
-                  </div>
-                  <div class="stat-item">
-                    <div class="value">0</div>
-                    <div class="label">获赞</div>
-                  </div>
-                </div>
               </div>
             </el-col>
           </el-row>
@@ -284,6 +370,48 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- Following List Dialog -->
+    <el-dialog v-model="showFollowingDialog" title="我关注的学者" width="500px" class="gothic-dialog">
+      <div v-if="followingList.length === 0" class="empty-state">
+        <el-empty description="暂无关注的学者" />
+      </div>
+      <div v-else class="following-list">
+        <div 
+          v-for="item in followingList" 
+          :key="item.userId || item.id"
+          class="follow-item glass-panel"
+          @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false;"
+        >
+          <el-avatar :src="item.avatarUrl || defaultAvatar" :size="40">{{ item.name?.charAt(0) || '?' }}</el-avatar>
+          <div class="item-info">
+            <h4>{{ item.name }}</h4>
+            <p>{{ item.organization }}</p>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- Followers List Dialog -->
+    <el-dialog v-model="showFollowersDialog" title="我的粉丝" width="500px" class="gothic-dialog">
+      <div v-if="followersList.length === 0" class="empty-state">
+        <el-empty description="暂无粉丝" />
+      </div>
+      <div v-else class="followers-list">
+        <div 
+          v-for="item in followersList" 
+          :key="item.userId || item.id"
+          class="follow-item glass-panel"
+          @click="router.push(`/scholars/${item.userId || item.id}`); showFollowersDialog = false;"
+        >
+          <el-avatar :src="item.avatarUrl || defaultAvatar" :size="40">{{ item.name?.charAt(0) || '?' }}</el-avatar>
+          <div class="item-info">
+            <h4>{{ item.name }}</h4>
+            <p>{{ item.organization }}</p>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -294,14 +422,17 @@ import type { FormRules, FormInstance } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
- 
-  Message
+  Message, UserFilled, School, Document, Edit, DocumentChecked, SwitchButton,
+  Select, Star, Clock, ChatLineRound, Delete
 } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
 import * as authApi from '../api/auth'
 import * as userApi from '../api/user'
+import * as achievementApi from '../api/index'
+import * as socialApi from '../api/social'
+import defaultAvatar from '@/assets/profile.png'
 
 // 导入登录背景图片
 import login1 from '@/assets/login1.png'
@@ -314,7 +445,6 @@ import login7 from '@/assets/login7.png'
 import login8 from '@/assets/login8.png'
 import login9 from '@/assets/login9.png'
 import login10 from '@/assets/login10.png'
-import defaultAvatar from '@/assets/profile.png'
 
 // 轮播相关
 const loginImages = [login1, login2, login3, login4, login5, login6, login7, login8, login9, login10]
@@ -412,7 +542,8 @@ const registerForm = reactive({
   email: '',
   password: '',
   confirmPassword: '',
-  role: 'user' as 'user' | 'admin' | 'administrator'
+  role: 'user' as 'user' | 'admin' | 'administrator',
+  inviteCode: ''
 })
 
 const editForm = reactive({
@@ -431,7 +562,19 @@ const verificationFormRef = ref<FormInstance>()
 const verificationStatus = ref('unverified')
 const showVerificationDialog = ref(false)
 const submittingVerification = ref(false)
-// 已取消验证码流程，无需倒计时或发送状态
+
+// 收藏和成果相关
+const collections = ref<any[]>([])
+const showAchievementDialog = ref(false)
+const editingAchievement = ref<any>(null)
+
+// 关注和粉丝相关
+const followingCount = ref(0)
+const followersCount = ref(0)
+const followingList = ref<any[]>([])
+const followersList = ref<any[]>([])
+const showFollowingDialog = ref(false)
+const showFollowersDialog = ref(false)
 
 const loginRules = reactive<FormRules>({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -461,6 +604,24 @@ const registerRules = reactive<FormRules>({
   ],
   role: [
     { required: true, message: '请选择用户角色', trigger: 'change' }
+  ],
+  inviteCode: [
+    {
+      validator: (_rule: any, value: string, callback: Function) => {
+        if (registerForm.role === 'admin') {
+          if (!value || value.trim() === '') {
+            callback(new Error('请输入管理员邀请码'))
+          } else if (value !== '123456') {
+            callback(new Error('邀请码错误，请输入正确的管理员邀请码'))
+          } else {
+            callback()
+          }
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ]
 })
 
@@ -504,7 +665,32 @@ const handleLogin = async () => {
   }
 }
 
+const handleRoleChange = () => {
+  // 切换角色时清空邀请码
+  registerForm.inviteCode = ''
+  // 清除邀请码的验证错误
+  if (registerFormRef.value) {
+    registerFormRef.value.clearValidate('inviteCode')
+  }
+}
+
 const handleRegister = async () => {
+  if (!registerFormRef.value) return
+  
+  // 如果是管理员，验证邀请码
+  if (registerForm.role === 'admin' && registerForm.inviteCode !== '123456') {
+    ElMessage.error('管理员邀请码错误，请输入123456')
+    return
+  }
+  
+  // 验证表单
+  await registerFormRef.value.validate(async (valid) => {
+    if (!valid) {
+      registerLoading.value = false
+      return
+    }
+  })
+  
   registerLoading.value = true
   try {
     const result = await authStore.register(
@@ -514,13 +700,27 @@ const handleRegister = async () => {
       registerForm.role
     )
     if (result.success) {
-      ElMessage.success('注册成功，请登录')
+      // 确保使用绿色成功提示
+      ElMessage({
+        message: '注册成功，请登录',
+        type: 'success',
+        duration: 3000
+      })
       authTab.value = 'login'
+      // 重置表单
+      registerForm.name = ''
+      registerForm.email = ''
+      registerForm.password = ''
+      registerForm.confirmPassword = ''
+      registerForm.role = 'user'
+      registerForm.inviteCode = ''
     } else {
       ElMessage.error(result.message || '注册失败')
     }
-  } catch (error) {
-    ElMessage.error('注册失败')
+  } catch (error: any) {
+    // 如果注册API调用失败，显示错误信息
+    const errorMsg = error?.message || error?.response?.data?.message || '注册失败'
+    ElMessage.error(errorMsg)
   } finally {
     registerLoading.value = false
   }
@@ -556,8 +756,8 @@ const handleSubmitVerification = async () => {
       await userApi.submitCertification({
         realName: verificationForm.value.realName,
         organization: verificationForm.value.organization,
-        orgEmail: verificationForm.value.email || undefined,
-        title: verificationForm.value.title || undefined,
+        orgEmail: verificationForm.value.email,
+        title: verificationForm.value.title,
         proofMaterials: []
       })
       verificationStatus.value = 'pending'
@@ -610,7 +810,10 @@ const saveProfile = async () => {
             ? JSON.parse(result.preferences) 
             : result.preferences
           authStore.user.bio = prefs.bio || ''
-          authStore.user.interests = prefs.interests || []
+          // @ts-ignore - interests 属性可能不在类型定义中，但实际存在
+          if (authStore.user) {
+            (authStore.user as any).interests = prefs.interests || []
+          }
         } catch (e) {
           console.error('Failed to parse preferences:', e)
         }
@@ -777,12 +980,62 @@ const handleMouseUp = () => {
   startAutoPlay()
 }
 
+// 加载收藏
+const loadCollections = async () => {
+  try {
+    const response = await achievementApi.getMyCollections()
+    collections.value = response?.collections || response || []
+  } catch (error) {
+    console.error('加载收藏失败', error)
+    collections.value = []
+  }
+}
+
+// 取消收藏
+const removeFromCollection = async (achievementId: string) => {
+  try {
+    await achievementApi.removeFromCollections(achievementId)
+    ElMessage.success('已取消收藏')
+    await loadCollections()
+  } catch (error: any) {
+    ElMessage.error(error.message || '取消收藏失败')
+  }
+}
+
+// 加载关注和粉丝数据
+const loadFollowingAndFollowers = async () => {
+  if (!authStore.user?.id) {
+    followingCount.value = 0
+    followersCount.value = 0
+    followingList.value = []
+    followersList.value = []
+    return
+  }
+  try {
+    const followingResponse = await socialApi.getFollowing(authStore.user.id)
+    followingList.value = followingResponse.following || followingResponse.data?.following || []
+    followingCount.value = followingResponse.total || followingResponse.data?.total || followingList.value.length
+
+    const followersResponse = await socialApi.getFollowers(authStore.user.id)
+    followersList.value = followersResponse.followers || followersResponse.data?.followers || []
+    followersCount.value = followersResponse.total || followersResponse.data?.total || followersList.value.length
+  } catch (error) {
+    console.error('加载关注和粉丝数据失败', error)
+    followingCount.value = 0
+    followersCount.value = 0
+    followingList.value = []
+    followersList.value = []
+  }
+}
+
 onMounted(async () => {
   await authStore.initAuth()
   settingsStore.loadSettings()
   
   if (authStore.isLoggedIn) {
     await loadCertificationStatus()
+    await loadCollections()
+    await loadFollowingAndFollowers()
     await ensureVantaBirds()
     // 等待 DOM 渲染后再初始化 Vanta.js
     setTimeout(() => {
@@ -797,12 +1050,11 @@ onMounted(async () => {
           scale: 1.00,
           scaleMobile: 1.00,
           backgroundColor: 0xf9f7ec,
-          colorMode: "lerpGradient",
-          color1: 0xff0000,
-          color2: 0xd1ff,
-          birdSize: 1.40,
-          quantity: 5.00,
-          wingSpan: 30.00,
+          color1: 0x8b4513,
+          color2: 0xd4af37,
+          colorMode: 'lerp',
+          birdSize: 1.00,
+          wingSpan: 20.00,
           speedLimit: 5.00,
           separation: 20.00,
           alignment: 20.00,
@@ -1270,65 +1522,40 @@ onUnmounted(() => {
   
 
   .content-card {
-    background-image: url('@/assets/accept.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2),
-                0 2px 8px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
-    overflow: hidden;
-    position: relative;
-
-    // 添加半透明遮罩层，使文字更清晰
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.75));
-      z-index: 0;
-    }
-
-    :deep(.el-card__body) {
-      position: relative;
-      z-index: 1;
-    }
+    padding: 30px;
+    min-height: 400px;
 
     :deep(.el-tabs) {
-      position: relative;
-      z-index: 1;
-
       .el-tabs__header {
-        margin-bottom: 20px;
+        margin-bottom: 25px;
       }
 
       .el-tabs__item {
-        color: #34495e;
+        color: #654321;
         font-weight: 600;
+        font-family: 'Georgia', 'Times New Roman', serif;
         font-size: 16px;
-        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
+        transition: all 0.3s ease;
 
         &.is-active {
-          color: #1890ff;
+          color: #8b4513;
           font-weight: 700;
         }
 
         &:hover {
-          color: #1890ff;
+          color: #B8860B;
         }
       }
 
       .el-tabs__active-bar {
-        display: none;
+        background: linear-gradient(90deg, #d4af37 0%, #b8860b 100%);
+        height: 3px;
+        border-radius: 2px;
       }
 
       .el-tabs__nav-wrap::after {
-        background-color: rgba(24, 144, 255, 0.2);
+        background-color: rgba(184, 134, 11, 0.2);
+        height: 2px;
       }
     }
 
@@ -1548,26 +1775,403 @@ onUnmounted(() => {
     }
 
 
+// 巴洛克风格样式
+.glass-panel {
+  background: rgba(249, 247, 236, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  border: 3px solid rgba(184, 134, 11, 0.5);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg,
+      rgba(212, 175, 55, 0.4) 0%,
+      transparent 25%,
+      transparent 75%,
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+  }
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 12px 32px rgba(0, 0, 0, 0.22),
+      0 0 0 2px rgba(212, 175, 55, 0.4),
+      inset 0 2px 6px rgba(255, 255, 255, 0.6);
+  }
+}
+
+.profile-header-card {
+  margin-bottom: 30px;
+  position: relative;
+  overflow: hidden;
+
+  .header-bg {
+    height: 140px;
+    background: linear-gradient(135deg,
+      rgba(212, 175, 55, 0.3) 0%,
+      rgba(184, 134, 11, 0.4) 50%,
+      rgba(139, 69, 19, 0.3) 100%);
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(184, 134, 11, 0.2) 0%, transparent 50%);
+    }
+  }
+
+  .header-content {
+    padding: 0 40px 30px;
+    display: flex;
+    align-items: flex-end;
+    gap: 30px;
+    margin-top: -70px;
+    position: relative;
+    z-index: 1;
+
+    .avatar-section {
+      position: relative;
+
+      .main-avatar {
+        border: 4px solid #f9f7ec;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+    }
+
+    .info-section {
+      flex: 1;
+
+      .name-row {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 10px;
+
+        h1 {
+          margin: 0;
+          font-size: 36px;
+          font-weight: 900;
+          color: #654321;
+          font-family: 'Georgia', 'Times New Roman', serif;
+          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+      }
+
+      .title {
+        font-size: 18px;
+        color: #8b4513;
+        margin: 5px 0;
+        font-family: 'Georgia', serif;
+      }
+
+      .institution {
+        font-size: 16px;
+        color: #8b4513;
+        margin: 5px 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: 'Georgia', serif;
+      }
+
+      .bio-preview {
+        margin-top: 15px;
+        color: #654321;
+        font-size: 14px;
+        line-height: 1.6;
+        max-width: 600px;
+      }
+
+      .action-buttons {
+        margin-top: 20px;
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+    }
+
+    .stats-section {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+
+      .stat-box {
+        text-align: center;
+        padding: 15px 20px;
+        background: rgba(249, 247, 236, 0.6);
+        border-radius: 12px;
+        border: 2px solid rgba(212, 175, 55, 0.3);
+        min-width: 80px;
+        transition: all 0.3s ease;
+
+        &.clickable {
+          cursor: pointer;
+
+          &:hover {
+            background: rgba(212, 175, 55, 0.2);
+            transform: translateY(-2px);
+          }
+        }
+
+        .value {
+          font-size: 28px;
+          font-weight: 900;
+          color: #8b4513;
+          font-family: 'Georgia', serif;
+          margin-bottom: 5px;
+        }
+
+        .label {
+          font-size: 14px;
+          color: #654321;
+          font-weight: 600;
+          font-family: 'Georgia', serif;
+        }
+      }
+
+      .stat-divider {
+        width: 2px;
+        height: 50px;
+        background: rgba(212, 175, 55, 0.3);
+      }
+    }
+  }
+}
+
+.gothic-btn {
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+  border: none;
+  color: #654321;
+  font-weight: bold;
+  border-radius: 8px;
+  padding: 10px 20px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #b8860b 0%, #8b6914 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(139, 69, 19, 0.3);
+  }
+
+  &.danger-btn {
+    background: linear-gradient(135deg, #8b0000 0%, #654321 100%);
+    color: #f9f7ec;
+
+    &:hover {
+      background: linear-gradient(135deg, #654321 0%, #4a2c1a 100%);
+    }
+  }
+}
+
+.gothic-btn-small {
+  background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+  border: none;
+  color: #654321;
+  font-weight: bold;
+  border-radius: 6px;
+  padding: 6px 12px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(135deg, #b8860b 0%, #8b6914 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(139, 69, 19, 0.3);
+  }
+}
+
 .content-card {
-  padding: 20px;
+  padding: 30px;
   min-height: 400px;
+
+  :deep(.el-tabs) {
+    .el-tabs__header {
+      margin-bottom: 25px;
+    }
+
+    .el-tabs__item {
+      color: #654321;
+      font-weight: 600;
+      font-family: 'Georgia', serif;
+      font-size: 16px;
+
+      &.is-active {
+        color: #8b4513;
+        font-weight: 700;
+      }
+    }
+
+    .el-tabs__active-bar {
+      background: linear-gradient(90deg, #d4af37 0%, #b8860b 100%);
+      height: 3px;
+    }
+  }
 }
 
 .sidebar-card {
-  padding: 20px;
-  h3 { margin: 0 0 20px 0; font-size: 16px; color: #303133; }
+  padding: 25px;
 
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    text-align: center;
+  h3 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    color: #654321;
+    font-family: 'Georgia', serif;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
-    .stat-item {
-      .value { font-size: 20px; font-weight: 700; color: #303133; }
-      .label { font-size: 12px; color: #909399; margin-top: 5px; }
+    :deep(.el-icon) {
+      color: #d4af37;
     }
   }
+
+  .info-group {
+    margin-bottom: 20px;
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      color: #8b4513;
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-family: 'Georgia', serif;
+
+      :deep(.el-icon) {
+        color: #d4af37;
+      }
+    }
+
+    .contact-row {
+      color: #654321;
+      font-size: 15px;
+      padding: 8px 0;
+    }
+
+    .bio-text {
+      color: #654321;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 8px 0;
+    }
+  }
+}
+
+.collections-content {
+  .collections-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .collection-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      transform: translateX(5px);
+    }
+
+    .item-info {
+      flex: 1;
+
+      h4 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+        color: #654321;
+        font-family: 'Georgia', serif;
+        font-weight: 700;
+      }
+
+      .item-meta {
+        margin: 0;
+        font-size: 14px;
+        color: #8b4513;
+      }
+    }
+  }
+}
+
+.follow-item {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 14px;
+
+  &:hover {
+    background: rgba(249, 247, 236, 0.8);
+    box-shadow: 
+      0 6px 16px rgba(0, 0, 0, 0.12),
+      0 0 0 2px rgba(212, 175, 55, 0.3);
+    transform: translateY(-3px) translateX(4px);
+  }
+
+  :deep(.el-avatar) {
+    border: 3px solid #D4AF37;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .item-info {
+    flex-grow: 1;
+
+    h4 {
+      margin: 0;
+      font-size: 18px;
+      color: #654321;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    p {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: #8b4513;
+      font-family: 'Georgia', serif;
+      font-style: italic;
+      font-weight: 500;
+    }
+  }
+}
+
+.main-body {
+  margin-top: 30px;
+}
+
+.sidebar-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 @media (max-width: 768px) {
