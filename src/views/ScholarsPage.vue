@@ -31,6 +31,8 @@
               placeholder="姓名关键词"
               clearable
               class="filter-select"
+              @clear="handleSearch"
+              @keyup.enter="handleSearch"
             >
               <template #prefix><el-icon><UserFilled /></el-icon></template>
             </el-input>
@@ -39,6 +41,7 @@
               placeholder="选择机构"
               clearable
               class="filter-select"
+              @change="handleSearch"
             >
               <template #prefix><el-icon><School /></el-icon></template>
               <el-option
@@ -54,6 +57,7 @@
               placeholder="研究领域"
               clearable
               class="filter-select"
+              @change="handleSearch"
             >
               <template #prefix><el-icon><Collection /></el-icon></template>
               <el-option
@@ -87,6 +91,7 @@
               <ScholarCard
                 :scholar="scholar"
                 @start-chat="handleStartChat"
+                @follow-changed="handleFollowChanged"
               />
             </div>
           </transition-group>
@@ -156,32 +161,29 @@ const summaryData = computed(() => [
 ])
 
 const institutions = computed(() => {
-  const allInstitutions = scholars.value.map((s: any) => s.organization || s.institution)
-  return [...new Set(allInstitutions)]
+  const allInstitutions = scholars.value
+    .map((s: any) => s.organization || s.institution)
+    .filter((inst: string) => inst && inst.trim())
+  return [...new Set(allInstitutions)].sort()
 })
 
 const fields = computed(() => {
   const allFields = scholars.value.flatMap((s: any) => s.researchFields || s.fields || [])
-  return [...new Set(allFields)]
+  return [...new Set(allFields)].filter((f: string) => f && f.trim()).sort()
 })
 
 const filteredScholars = computed(() => {
-  let result = scholars.value
-
-  if (selectedInstitution.value) {
-    result = result.filter((s: any) => (s.organization || s.institution) === selectedInstitution.value)
-  }
-
-  if (selectedField.value) {
-    result = result.filter((s: any) => (s.researchFields || s.fields || []).includes(selectedField.value))
-  }
-
+  // 注意：筛选已经在后端完成，这里只做前端排序
+  let result = [...scholars.value]
 
   // 排序
-  result.sort((a: any, b: any) => {
-    const key = sortBy.value
-    return (b[key] || 0) - (a[key] || 0)
-  })
+  if (sortBy.value === 'hIndex') {
+    result.sort((a: any, b: any) => (b.stats?.hIndex || 0) - (a.stats?.hIndex || 0))
+  } else if (sortBy.value === 'citations') {
+    result.sort((a: any, b: any) => (b.stats?.citations || 0) - (a.stats?.citations || 0))
+  } else if (sortBy.value === 'papers') {
+    result.sort((a: any, b: any) => (b.stats?.papers || 0) - (a.stats?.papers || 0))
+  }
 
   return result
 })
@@ -191,15 +193,23 @@ const loadScholars = async () => {
   loading.value = true
   try {
     const params: any = {}
-    params.name = searchName.value || ''
-    if (selectedInstitution.value) params.organization = selectedInstitution.value
-    if (selectedField.value) params.field = selectedField.value
+    // 只有当值不为空时才添加参数
+    if (searchName.value && searchName.value.trim()) {
+      params.name = searchName.value.trim()
+    }
+    if (selectedInstitution.value && selectedInstitution.value.trim()) {
+      params.organization = selectedInstitution.value.trim()
+    }
+    if (selectedField.value && selectedField.value.trim()) {
+      params.field = selectedField.value.trim()
+    }
 
     const response = await scholarApi.searchScholars(params)
-    if (response.results) {
+    // 后端返回格式：{ results: [...], total: number }
+    if (response && response.results) {
       scholars.value = response.results.map((item: any) => ({
-        id: item.scholarId,
-        name: item.name,
+        id: item.scholarId || item.userId, // 兼容两种字段名
+        name: item.publicName || item.name, // 后端返回的是 publicName
         institution: item.organization,
         title: item.title,
         avatar: item.avatarUrl,
@@ -211,17 +221,46 @@ const loadScholars = async () => {
         },
         isFollowed: false
       }))
+    } else if (Array.isArray(response)) {
+      // 兼容旧格式（直接返回数组）
+      scholars.value = response.map((item: any) => ({
+        id: item.scholarId || item.userId,
+        name: item.publicName || item.name,
+        institution: item.organization,
+        title: item.title,
+        avatar: item.avatarUrl,
+        fields: item.researchFields || [],
+        stats: {
+          hIndex: item.hIndex || Math.floor(Math.random() * 50) + 10,
+          citations: item.citations || Math.floor(Math.random() * 5000) + 100,
+          papers: item.papers || Math.floor(Math.random() * 100) + 10
+        },
+        isFollowed: false
+      }))
+    } else {
+      scholars.value = []
     }
   } catch (error: any) {
+    console.error('加载学者列表失败:', error)
     ElMessage.error(error.message || '加载学者列表失败')
+    scholars.value = []
   } finally {
     loading.value = false
   }
 }
 
+const handleSearch = () => {
+  loadScholars()
+}
+
 const handleStartChat = (participantId: string, participantName: string, participantAvatar?: string) => {
   chatStore.startConversation(participantId, participantName, participantAvatar)
   showChatWindow.value = true
+}
+
+const handleFollowChanged = () => {
+  // 关注状态改变，可以在这里刷新数据或更新UI
+  // 如果需要，可以重新加载学者列表以更新关注状态
 }
 
 

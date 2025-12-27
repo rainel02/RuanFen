@@ -11,7 +11,7 @@
             <div class="header-content">
               <div class="avatar-section">
                 <el-avatar :src="scholar.avatar || defaultAvatar" :size="140" class="main-avatar">
-                  {{ scholar.name.charAt(0) }}
+                  {{ scholar?.name?.charAt(0) || '?' }}
                 </el-avatar>
                 <div class="status-indicator" v-if="scholar.isOnline"></div>
               </div>
@@ -175,7 +175,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { 
@@ -324,15 +324,25 @@ const formatNumber = (num: number) => {
 
 const loadScholarDetail = async () => {
   const scholarId = route.params.id as string
+  if (!scholarId) {
+    ElMessage.error('学者ID不能为空')
+    router.push('/scholars')
+    return
+  }
   try {
     const response = await scholarApi.getScholarDetail(scholarId)
+    if (!response) {
+      ElMessage.error('学者信息不存在')
+      router.push('/scholars')
+      return
+    }
     scholar.value = {
-      id: response.scholarId,
-      name: response.name,
-      institution: response.organization,
+      id: response.scholarId || response.userId,
+      name: response.publicName || response.name || '未知学者',
+      institution: response.organization || '未知机构',
       title: response.title || '教授',
       avatar: response.avatarUrl,
-      bio: response.bio,
+      bio: response.bio || '暂无简介',
       fields: response.researchFields || [],
       achievements: response.achievements || [],
       stats: {
@@ -362,7 +372,7 @@ const loadScholarDetail = async () => {
     // 加载合作网络
     try {
       const networkResponse = await scholarApi.getCollaborationNetwork(scholarId)
-      if (networkResponse.nodes) {
+      if (networkResponse && networkResponse.nodes) {
         // 将当前学者添加到节点列表的最前面
         networkData.value = {
           nodes: [
@@ -376,28 +386,51 @@ const loadScholarDetail = async () => {
           ],
           links: networkResponse.links || []
         }
+      } else {
+        // 使用模拟数据
+        networkData.value = {
+          nodes: [
+            {
+              id: scholar.value.id,
+              name: scholar.value.name,
+              organization: scholar.value.institution
+            }
+          ],
+          links: []
+        }
       }
     } catch (error) {
       console.warn('加载合作网络失败:', error)
       // 使用模拟数据
-      networkData.value = {
-        nodes: [
-          {
-            id: scholar.value.id,
-            name: scholar.value.name,
-            organization: scholar.value.institution
-          }
-        ],
-        links: []
+      if (scholar.value) {
+        networkData.value = {
+          nodes: [
+            {
+              id: scholar.value.id,
+              name: scholar.value.name,
+              organization: scholar.value.institution
+            }
+          ],
+          links: []
+        }
       }
     }
   } catch (error: any) {
+    console.error('加载学者详情失败:', error)
     ElMessage.error(error.message || '加载学者详情失败')
+    router.push('/scholars')
   }
 }
 
 onMounted(() => {
   loadScholarDetail()
+})
+
+// 监听路由参数变化
+watch(() => route.params.id, (newId) => {
+  if (newId) {
+    loadScholarDetail()
+  }
 })
 </script>
 

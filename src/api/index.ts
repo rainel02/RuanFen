@@ -23,10 +23,25 @@ export async function removeFromCollections(achievementId: string) {
   return request.post('/users/me/collections/delete', { achievementId })
 }
 
+export async function createAchievement(data: any) {
+  return request.post('/achievements', data)
+}
+
+export async function updateAchievement(id: string, data: any) {
+  return request.put(`/achievements/${id}`, data)
+}
+
+export async function deleteAchievement(id: string) {
+  return request.delete(`/achievements/${id}`)
+}
+
 export default {
   searchAchievements,
   getAchievement,
   getMyCollections,
   addToCollections,
-  removeFromCollections
+  removeFromCollections,
+  createAchievement,
+  updateAchievement,
+  deleteAchievement
 }

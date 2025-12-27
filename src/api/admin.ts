@@ -4,46 +4,44 @@ import request from './request'
 
 /**
  * 获取待审核的学者认证列表
+ * 后端实际路径：GET /certifications/pending
  */
-export const getCertifications = (params?: {
-  status?: string
-}) => {
-  return request.get('/admin/certifications', { params })
+export const getPendingCertifications = (status?: string) => {
+  return request.get('/certifications/pending', status ? { status } : {})
 }
 
 /**
  * 批准学者认证
  */
 export const approveCertification = (appId: string) => {
-  return request.post(`/admin/certifications/${appId}/approve`)
+  return request.post(`/certifications/${appId}/approve`, {})
 }
 
 /**
  * 驳回学者认证
+ * 后端接口使用 @RequestParam，需要作为查询参数传递
  */
-export const rejectCertification = (appId: string, data: {
-  reason: string
-}) => {
-  return request.post(`/admin/certifications/${appId}/reject`, data)
+export const rejectCertification = (appId: string, reason: string) => {
+  return request.post(`/certifications/${appId}/reject?reason=${encodeURIComponent(reason)}`, {})
 }
 
 /**
  * 获取待处理的申诉列表
  */
-export const getAppeals = (params?: {
-  status?: string
-}) => {
-  return request.get('/admin/appeals', { params })
+export const getPendingAppeals = (status?: string) => {
+  // 根据接口文档，应该是 /admin/appeals，但后端实际可能是其他路径
+  // 先尝试 /admin/appeals，如果不行再调整
+  return request.get('/admin/appeals', status ? { status } : {})
 }
 
 /**
  * 处理申诉（批准或驳回）
  */
-export const processAppeal = (caseId: string, data: {
-  action: 'approve' | 'reject'
-  reason?: string
-}) => {
-  return request.post(`/admin/appeals/${caseId}/process`, data)
+export const processAppeal = (caseId: string, action: 'approve' | 'reject', reason?: string) => {
+  return request.post(`/admin/appeals/${caseId}/process`, {
+    action,
+    reason
+  })
 }
 
 /**
@@ -57,42 +55,12 @@ export const getPendingAchievements = () => {
  * 批准学者提交的成果
  */
 export const approveAchievement = (achId: string) => {
-  return request.post(`/admin/achievements/${achId}/approve`)
+  return request.post(`/admin/achievements/${achId}/approve`, {})
 }
 
 /**
  * 驳回学者提交的成果
  */
-export const rejectAchievement = (achId: string, data: {
-  reason: string
-}) => {
-  return request.post(`/admin/achievements/${achId}/reject`, data)
+export const rejectAchievement = (achId: string, reason: string) => {
+  return request.post(`/admin/achievements/${achId}/reject`, { reason })
 }
-
-/**
- * 查看所有定时任务
- */
-export const getTasks = () => {
-  return request.get('/admin/tasks')
-}
-
-/**
- * 配置定时任务
- */
-export const updateTask = (taskId: string, data: {
-  cron?: string
-  status?: 'enabled' | 'disabled'
-  params?: object
-}) => {
-  return request.put(`/admin/tasks/${taskId}`, data)
-}
-
-/**
- * 手动触发一次任务
- */
-export const runTask = (taskId: string) => {
-  return request.post(`/admin/tasks/${taskId}/run`)
-}
-
-
-

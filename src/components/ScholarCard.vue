@@ -77,16 +77,40 @@ const props = defineProps<{
   scholar: any
 }>()
 
-const emit = defineEmits(['start-chat'])
+const emit = defineEmits(['start-chat', 'follow-changed'])
 const router = useRouter()
 
 const goToDetail = () => {
   router.push(`/scholar/${props.scholar.id}`)
 }
 
-const toggleFollow = () => {
-  // Toggle logic would go here
-  props.scholar.isFollowed = !props.scholar.isFollowed
+import { ElMessage } from 'element-plus'
+import { followUser, unfollowUser } from '../api/social'
+import { useAuthStore } from '../stores/auth'
+
+const authStore = useAuthStore()
+
+const toggleFollow = async () => {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  
+  try {
+    if (props.scholar.isFollowed) {
+      await unfollowUser(props.scholar.id)
+      props.scholar.isFollowed = false
+      ElMessage.success('已取消关注')
+    } else {
+      await followUser(props.scholar.id)
+      props.scholar.isFollowed = true
+      ElMessage.success('关注成功')
+    }
+    // 通知父组件关注状态已改变
+    emit('follow-changed')
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败')
+  }
 }
 
 const formatNumber = (num: number) => {

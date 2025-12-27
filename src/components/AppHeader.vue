@@ -31,6 +31,14 @@
           <router-link v-if="showForum" to="/forum" class="nav-item" :class="{ active: route.path.startsWith('/forum') }">论坛</router-link>
           <router-link to="/chat" class="nav-item" :class="{ active: route.path === '/chat' }">消息</router-link>
           <router-link to="/analytics" class="nav-item" :class="{ active: route.path === '/analytics' }">分析</router-link>
+          <router-link 
+            v-if="isLoggedIn && (user?.role === 'ADMIN' || user?.role === 'admin')" 
+            to="/admin" 
+            class="nav-item" 
+            :class="{ active: route.path.startsWith('/admin') }"
+          >
+            控制台
+          </router-link>
           
           <div class="user-menu" @click="handleUserMenuClick">
             <template v-if="shouldShowAvatar && isLoggedIn">

@@ -52,5 +52,14 @@ export const submitAppeal = (data: {
   return request.post('/users/me/appeal', data)
 }
 
+/**
+ * 获取所有用户（仅管理员）
+ */
+export const getAllUsers = () => {
+  return request.get('/users')
+}
+
+
+
 
 

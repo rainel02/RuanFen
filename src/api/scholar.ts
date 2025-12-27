@@ -4,14 +4,15 @@ import request from './request'
 
 /**
  * 检索学者门户
+ * 根据接口文档：GET /scholars，支持可选参数 name, organization, field
  */
 export const searchScholars = (params?: {
   name?: string
   organization?: string
   field?: string
 }) => {
-  // Backend expects /api/scholars/search per controller mapping
-  return request.get('/scholars/search', params)
+  // 根据接口文档，使用 GET /scholars，支持可选参数
+  return request.get('/scholars', params)
 }
 
 /**
@@ -27,6 +28,8 @@ export const getScholarDetail = (id: string) => {
 export const getCollaborationNetwork = (id: string) => {
   return request.get(`/scholars/${id}/collaboration-network`)
 }
+
+
 
 
 

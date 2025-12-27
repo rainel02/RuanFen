@@ -16,25 +16,45 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await authApi.login({ account, password })
       console.log('登录响应:', response)
 
-      if (response && response.token && response.user) {
-        token.value = response.token
-        user.value = response.user as User
-        localStorage.setItem('token', response.token)
-        localStorage.setItem('user', JSON.stringify(response.user))
-        return { success: true }
-      }
-
-      if (response && (response as any).data && (response as any).data.token) {
-        const t = (response as any).data.token as string
-        token.value = t
-        localStorage.setItem('token', t)
-        return { success: true }
-      }
-
+      // 后端返回格式：{ token, userId, username, email, role }
       if (response && (response as any).token) {
-        const t = (response as any).token as string
-        token.value = t
-        localStorage.setItem('token', t)
+        const loginData = response as any
+        token.value = loginData.token
+        localStorage.setItem('token', loginData.token)
+        
+        // 构建user对象
+        const userData: User = {
+          id: loginData.userId || loginData.id || '',
+          username: loginData.username || '',
+          email: loginData.email || '',
+          name: loginData.username || '',
+          title: '',
+          institution: '',
+          researchFields: [],
+          hIndex: 0,
+          citations: 0,
+          papers: 0,
+          role: (loginData.role || 'USER').toLowerCase() as 'user' | 'admin' | 'administrator'
+        }
+        
+        user.value = userData
+        localStorage.setItem('user', JSON.stringify(userData))
+        
+        // 登录后获取完整用户信息
+        try {
+          const fullUserData = await userApi.getCurrentUser()
+          if (fullUserData) {
+            user.value = { ...userData, ...fullUserData } as User
+            // 确保role正确设置（后端返回的是 "ADMIN" 或 "USER" 大写）
+            if ((fullUserData as any).role) {
+              user.value.role = ((fullUserData as any).role as string).toLowerCase() as 'user' | 'admin' | 'administrator'
+            }
+            localStorage.setItem('user', JSON.stringify(user.value))
+          }
+        } catch (err) {
+          console.warn('获取完整用户信息失败，使用登录响应数据:', err)
+        }
+        
         return { success: true }
       }
 
@@ -70,8 +90,13 @@ export const useAuthStore = defineStore('auth', () => {
       try {
         // 获取当前用户信息
         const userData = await userApi.getCurrentUser()
-        user.value = userData as User
-        localStorage.setItem('user', JSON.stringify(userData))
+        // 确保 role 字段正确设置（后端返回的是 "ADMIN" 或 "USER" 大写）
+        const role = (userData as any).role
+        user.value = {
+          ...userData,
+          role: role ? (role.toLowerCase() as 'user' | 'admin' | 'administrator') : 'user'
+        } as User
+        localStorage.setItem('user', JSON.stringify(user.value))
       } catch (error) {
         // token可能已过期，清除
         logout()
@@ -82,8 +107,13 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshUserInfo = async () => {
     try {
       const userData = await userApi.getCurrentUser()
-      user.value = userData as User
-      localStorage.setItem('user', JSON.stringify(userData))
+      // 确保 role 字段正确设置（后端返回的是 "ADMIN" 或 "USER" 大写）
+      const role = (userData as any).role
+      user.value = {
+        ...userData,
+        role: role ? (role.toLowerCase() as 'user' | 'admin' | 'administrator') : 'user'
+      } as User
+      localStorage.setItem('user', JSON.stringify(user.value))
     } catch (error) {
       console.error('获取用户信息失败', error)
     }

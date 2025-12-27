@@ -124,6 +124,19 @@
                       </el-radio-group>
                     </el-form-item>
 
+                    <el-form-item 
+                      v-if="registerForm.role === 'admin'" 
+                      label="邀请码" 
+                      prop="inviteCode"
+                    >
+                      <el-input 
+                        v-model="registerForm.inviteCode" 
+                        placeholder="请输入管理员邀请码" 
+                        type="password"
+                        show-password
+                      />
+                    </el-form-item>
+
                     <el-form-item>
                       <el-button
                         type="primary"
@@ -142,73 +155,327 @@
         </div>
 
         <div v-if="isLoggedIn" class="profile-content">
-          <el-row :gutter="24">
-            <el-col :md="8" :sm="24" :xs="24">
-              <el-card class="profile-card">
-                <div class="profile-header">
-                  <el-avatar :src="user?.avatar || defaultAvatar" :size="80">
-                    {{ user?.name?.charAt(0) }}
-                  </el-avatar>
-                  <h3>{{ user?.name }}</h3>
-                  <p class="user-title">{{ user?.title }}</p>
-                  <p class="user-institution">{{ user?.institution }}</p>
+          <!-- Profile Header Card -->
+          <div class="profile-header-card glass-panel">
+            <div class="header-bg"></div>
+            <div class="header-content">
+              <div class="avatar-section">
+                <el-avatar :src="user?.avatar || defaultAvatar" :size="140" class="main-avatar">
+                  {{ user?.name?.charAt(0) }}
+                </el-avatar>
+              </div>
+              <div class="info-section">
+                <div class="name-row">
+                  <h1>{{ user?.name }}</h1>
+                  <el-tag v-if="verificationStatus === 'verified'" type="success" effect="dark" round size="small" class="verified-tag">
+                    <el-icon><Select /></el-icon> 认证学者
+                  </el-tag>
+                  <el-tag v-else-if="verificationStatus === 'pending'" type="warning" effect="dark" round size="small" class="pending-tag">
+                    审核中
+                  </el-tag>
                 </div>
-                <p class="email"><el-icon><Message /></el-icon> {{ user.email }}</p>
-                <p class="bio">{{ user.bio || '这个人很懒，什么都没有写...' }}</p>
-              </el-card>
+                <p class="title">{{ user?.title || '用户' }}</p>
+                <p class="institution">
+                  <el-icon><School /></el-icon> 
+                  {{ user?.institution || '未设置机构' }}
+                </p>
+                <div class="bio-preview">{{ user?.bio || '这个人很懒，什么都没有写...' }}</div>
+                
+                <div class="action-buttons">
+                  <el-button 
+                    class="gothic-btn"
+                    @click="showEditDialog = true"
+                  >
+                    <el-icon><Edit /></el-icon> 编辑资料
+                  </el-button>
+                  <el-button 
+                    v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'"
+                    class="gothic-btn"
+                    @click="showVerificationDialog = true"
+                  >
+                    <el-icon><DocumentChecked /></el-icon> 申请认证
+                  </el-button>
+                  <el-button 
+                    class="gothic-btn danger-btn"
+                    @click="handleLogout"
+                  >
+                    <el-icon><SwitchButton /></el-icon> 退出登录
+                  </el-button>
+                </div>
+              </div>
+              
+              <div class="stats-section">
+                <div class="stat-box clickable" @click="showFollowingDialog = true">
+                  <div class="value">{{ followingCount }}</div>
+                  <div class="label">关注</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box clickable" @click="showFollowersDialog = true">
+                  <div class="value">{{ followersCount }}</div>
+                  <div class="label">粉丝</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box">
+                  <div class="value">0</div>
+                  <div class="label">获赞</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-              <div class="actions-section">
-                <el-button type="primary" plain round @click="showEditDialog = true">编辑资料</el-button>
-                <el-button 
-                  v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'"
-                  type="success" 
-                  plain 
-                  round 
-                  @click="showVerificationDialog = true"
-                >
-                  申请认证
-                </el-button>
-                <el-tag v-else-if="verificationStatus === 'pending'" type="warning" class="status-tag">认证审核中</el-tag>
-                <el-tag v-else-if="verificationStatus === 'verified'" type="success" class="status-tag">已认证学者</el-tag>
-                <el-button type="danger" plain round @click="handleLogout">退出登录</el-button>
+          <!-- Main Content -->
+          <el-row :gutter="24" class="main-body">
+            <!-- Left Column -->
+            <el-col :lg="8" :md="24" :sm="24" :xs="24">
+              <div class="sidebar-stack">
+                <!-- About Card -->
+                <div class="glass-panel sidebar-card">
+                  <h3><el-icon><UserFilled /></el-icon> 个人信息</h3>
+                  <div class="info-group">
+                    <label><el-icon><Message /></el-icon> 邮箱</label>
+                    <div class="contact-row">{{ user?.email }}</div>
+                  </div>
+                  <div class="info-group" v-if="user?.bio">
+                    <label><el-icon><Document /></el-icon> 个人简介</label>
+                    <div class="bio-text">{{ user?.bio }}</div>
+                  </div>
+                </div>
               </div>
             </el-col>
-          </el-row>
 
-          <el-row :gutter="24">
-            <el-col :span="16">
+            <!-- Right Column -->
+            <el-col :lg="16" :md="24" :sm="24" :xs="24">
               <div class="glass-panel content-card">
-                <el-tabs v-model="activeTab">
+                <!-- 管理员视图 -->
+                <el-tabs v-if="isAdmin" v-model="activeTab" class="custom-tabs">
+                  <el-tab-pane label="待审核认证" name="certifications">
+                    <template #label>
+                      <span><el-icon><DocumentChecked /></el-icon> 待审核认证</span>
+                    </template>
+                    <div class="admin-content">
+                      <div v-if="pendingCertifications.length === 0" class="empty-state">
+                        <el-empty description="暂无待审核的认证申请" />
+                      </div>
+                      <div v-else class="certifications-list">
+                        <div 
+                          v-for="cert in pendingCertifications" 
+                          :key="cert.id"
+                          class="certification-item glass-panel"
+                        >
+                          <div class="cert-info">
+                            <h4>{{ cert.realName || '未知姓名' }}</h4>
+                            <p class="cert-meta">
+                              <span><el-icon><School /></el-icon> {{ cert.organization || '未知机构' }}</span>
+                              <span><el-icon><Message /></el-icon> {{ cert.orgEmail || '未知邮箱' }}</span>
+                              <span><el-icon><UserFilled /></el-icon> {{ cert.title || '未知职称' }}</span>
+                            </p>
+                            <p v-if="cert.submittedAt" class="cert-time">提交时间：{{ formatDate(cert.submittedAt) }}</p>
+                          </div>
+                          <div class="cert-actions">
+                            <el-button 
+                              class="gothic-btn-small"
+                              type="success"
+                              @click="approveCertification(cert.id)"
+                            >
+                              <el-icon><Check /></el-icon> 批准
+                            </el-button>
+                            <el-button 
+                              class="gothic-btn-small"
+                              type="danger"
+                              @click="rejectCertification(cert.id)"
+                            >
+                              <el-icon><Close /></el-icon> 驳回
+                            </el-button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </el-tab-pane>
+                  <el-tab-pane label="待处理申诉" name="appeals">
+                    <template #label>
+                      <span><el-icon><Warning /></el-icon> 待处理申诉</span>
+                    </template>
+                    <div class="admin-content">
+                      <div v-if="pendingAppeals.length === 0" class="empty-state">
+                        <el-empty description="暂无待处理的申诉" />
+                      </div>
+                      <div v-else class="appeals-list">
+                        <div 
+                          v-for="appeal in pendingAppeals" 
+                          :key="appeal.id"
+                          class="appeal-item glass-panel"
+                        >
+                          <div class="appeal-info">
+                            <h4>申诉类型：{{ appeal.appealType === 'identity_stolen' ? '身份冒用' : '成果冒领' }}</h4>
+                            <p class="appeal-reason">{{ appeal.reason }}</p>
+                            <p class="appeal-time">提交时间：{{ formatDate(appeal.createdAt) }}</p>
+                          </div>
+                          <div class="appeal-actions">
+                            <el-button 
+                              class="gothic-btn-small"
+                              type="success"
+                              @click="processAppeal(appeal.id, 'approve')"
+                            >
+                              <el-icon><Check /></el-icon> 批准
+                            </el-button>
+                            <el-button 
+                              class="gothic-btn-small"
+                              type="danger"
+                              @click="processAppeal(appeal.id, 'reject')"
+                            >
+                              <el-icon><Close /></el-icon> 驳回
+                            </el-button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </el-tab-pane>
+                  <el-tab-pane label="待审核成果" name="achievements">
+                    <template #label>
+                      <span><el-icon><Document /></el-icon> 待审核成果</span>
+                    </template>
+                    <div class="admin-content">
+                      <div v-if="pendingAchievements.length === 0" class="empty-state">
+                        <el-empty description="暂无待审核的成果" />
+                      </div>
+                      <div v-else class="achievements-list">
+                        <div 
+                          v-for="achievement in pendingAchievements" 
+                          :key="achievement.id"
+                          class="achievement-item glass-panel"
+                        >
+                          <div class="achievement-info">
+                            <h4>{{ achievement.title || '未命名成果' }}</h4>
+                            <p class="achievement-meta">
+                              {{ achievement.authors?.join(', ') || '未知作者' }} · 
+                              {{ achievement.journal || '未知期刊' }} · 
+                              {{ achievement.year || '未知年份' }}
+                            </p>
+                          </div>
+                          <div class="achievement-actions">
+                            <el-button 
+                              class="gothic-btn-small"
+                              type="success"
+                              @click="approveAchievement(achievement.id)"
+                            >
+                              <el-icon><Check /></el-icon> 批准
+                            </el-button>
+                            <el-button 
+                              class="gothic-btn-small"
+                              type="danger"
+                              @click="rejectAchievement(achievement.id)"
+                            >
+                              <el-icon><Close /></el-icon> 驳回
+                            </el-button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </el-tab-pane>
+                </el-tabs>
+                
+                <!-- 普通用户视图 -->
+                <el-tabs v-else v-model="activeTab" class="custom-tabs">
                   <el-tab-pane label="我的收藏" name="favorites">
-                    <el-empty description="暂无收藏内容" />
+                    <template #label>
+                      <span><el-icon><Star /></el-icon> 我的收藏</span>
+                    </template>
+                    <div class="collections-content">
+                      <div v-if="collections.length === 0" class="empty-state">
+                        <el-empty description="暂无收藏内容" />
+                      </div>
+                      <div v-else class="collections-list">
+                        <div 
+                          v-for="item in collections" 
+                          :key="item.id"
+                          class="collection-item glass-panel"
+                        >
+                          <div class="item-info">
+                            <h4>{{ item.title || '未命名成果' }}</h4>
+                            <p class="item-meta">{{ item.authors?.join(', ') || '未知作者' }} · {{ item.year || '未知年份' }}</p>
+                          </div>
+                          <el-button 
+                            class="gothic-btn-small"
+                            @click="removeFromCollection(item.id)"
+                          >
+                            <el-icon><Delete /></el-icon> 取消收藏
+                          </el-button>
+                        </div>
+                      </div>
+                    </div>
+                  </el-tab-pane>
+                  <el-tab-pane label="我的成果" name="achievements">
+                    <template #label>
+                      <span><el-icon><Document /></el-icon> 我的成果</span>
+                    </template>
+                    <div class="achievements-content">
+                      <div class="achievements-header">
+                        <el-button 
+                          class="gothic-btn"
+                          @click="showAchievementDialog = true; editingAchievement = null"
+                        >
+                          <el-icon><Plus /></el-icon> 新增成果
+                        </el-button>
+                      </div>
+                      <div v-if="myAchievements.length === 0" class="empty-state">
+                        <el-empty description="暂无成果，点击上方按钮添加" />
+                      </div>
+                      <div v-else class="achievements-list">
+                        <div 
+                          v-for="achievement in myAchievements" 
+                          :key="achievement.id"
+                          class="achievement-item glass-panel"
+                        >
+                          <div class="achievement-info">
+                            <div class="achievement-header-row">
+                              <h4>{{ achievement.title || '未命名成果' }}</h4>
+                              <el-tag 
+                                :type="getStatusType(achievement.status)"
+                                effect="dark"
+                                size="small"
+                                class="status-tag"
+                              >
+                                {{ getStatusText(achievement.status) }}
+                              </el-tag>
+                            </div>
+                            <p class="achievement-meta">
+                              {{ achievement.authors?.join(', ') || '未知作者' }} · 
+                              {{ achievement.journal || '未知期刊' }} · 
+                              {{ achievement.year || '未知年份' }}
+                            </p>
+                            <p v-if="achievement.doi" class="achievement-doi">DOI: {{ achievement.doi }}</p>
+                          </div>
+                          <div class="achievement-actions">
+                            <el-button 
+                              class="gothic-btn-small"
+                              @click="editAchievement(achievement)"
+                            >
+                              <el-icon><Edit /></el-icon> 编辑
+                            </el-button>
+                            <el-button 
+                              class="gothic-btn-small danger-btn"
+                              @click="deleteAchievement(achievement.id)"
+                            >
+                              <el-icon><Delete /></el-icon> 删除
+                            </el-button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </el-tab-pane>
                   <el-tab-pane label="浏览历史" name="history">
+                    <template #label>
+                      <span><el-icon><Clock /></el-icon> 浏览历史</span>
+                    </template>
                     <el-empty description="暂无浏览记录" />
                   </el-tab-pane>
                   <el-tab-pane label="我的帖子" name="posts">
+                    <template #label>
+                      <span><el-icon><ChatLineRound /></el-icon> 我的帖子</span>
+                    </template>
                     <el-empty description="暂无发帖记录" />
                   </el-tab-pane>
                 </el-tabs>
-              </div>
-            </el-col>
-            
-            <el-col :span="8">
-              <div class="glass-panel sidebar-card">
-                <h3>账户统计</h3>
-                <div class="stats-grid">
-                  <div class="stat-item">
-                    <div class="value">0</div>
-                    <div class="label">关注</div>
-                  </div>
-                  <div class="stat-item">
-                    <div class="value">0</div>
-                    <div class="label">粉丝</div>
-                  </div>
-                  <div class="stat-item">
-                    <div class="value">0</div>
-                    <div class="label">获赞</div>
-                  </div>
-                </div>
               </div>
             </el-col>
           </el-row>
@@ -244,6 +511,60 @@
         <span class="dialog-footer">
           <el-button @click="showEditDialog = false">取消</el-button>
           <el-button type="primary" @click="saveProfile">保存</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- Achievement Dialog -->
+    <el-dialog 
+      v-model="showAchievementDialog" 
+      :title="editingAchievement ? '编辑成果' : '新增成果'" 
+      width="600px"
+      class="gothic-dialog"
+    >
+      <el-form 
+        ref="achievementFormRef"
+        :model="achievementForm" 
+        label-position="top"
+        class="gothic-form"
+      >
+        <el-form-item label="标题" required>
+          <el-input v-model="achievementForm.title" placeholder="请输入成果标题" />
+        </el-form-item>
+        <el-form-item label="作者">
+          <el-input 
+            v-model="achievementForm.authorsText" 
+            placeholder="请输入作者，多个作者用逗号分隔"
+          />
+        </el-form-item>
+        <el-form-item label="期刊/会议">
+          <el-input v-model="achievementForm.journal" placeholder="请输入期刊或会议名称" />
+        </el-form-item>
+        <el-form-item label="年份">
+          <el-date-picker
+            v-model="achievementForm.year"
+            type="year"
+            placeholder="选择年份"
+            format="YYYY"
+            value-format="YYYY"
+          />
+        </el-form-item>
+        <el-form-item label="DOI">
+          <el-input v-model="achievementForm.doi" placeholder="请输入DOI（可选）" />
+        </el-form-item>
+        <el-form-item label="摘要">
+          <el-input 
+            v-model="achievementForm.abstract" 
+            type="textarea" 
+            :rows="4"
+            placeholder="请输入摘要（可选）"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button class="gothic-btn" @click="showAchievementDialog = false">取消</el-button>
+          <el-button class="gothic-btn" type="primary" @click="saveAchievement">保存</el-button>
         </span>
       </template>
     </el-dialog>
@@ -290,24 +611,71 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- Following Dialog -->
+    <el-dialog v-model="showFollowingDialog" title="我的关注" width="500px">
+      <div v-if="followingList.length === 0" class="empty-state">
+        <el-empty description="暂无关注" />
+      </div>
+      <div v-else class="following-list">
+        <div 
+          v-for="item in followingList" 
+          :key="item.userId || item.id"
+          class="following-item"
+          @click="router.push(`/scholar/${item.userId || item.id}`)"
+        >
+          <el-avatar :size="40" :src="item.avatarUrl">
+            {{ item.name?.charAt(0) }}
+          </el-avatar>
+          <div class="item-info">
+            <div class="item-name">{{ item.name }}</div>
+            <div class="item-org">{{ item.organization || '未知机构' }}</div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- Followers Dialog -->
+    <el-dialog v-model="showFollowersDialog" title="我的粉丝" width="500px">
+      <div v-if="followersList.length === 0" class="empty-state">
+        <el-empty description="暂无粉丝" />
+      </div>
+      <div v-else class="followers-list">
+        <div 
+          v-for="item in followersList" 
+          :key="item.userId || item.id"
+          class="follower-item"
+          @click="router.push(`/scholar/${item.userId || item.id}`)"
+        >
+          <el-avatar :size="40" :src="item.avatarUrl">
+            {{ item.name?.charAt(0) }}
+          </el-avatar>
+          <div class="item-info">
+            <div class="item-name">{{ item.name }}</div>
+            <div class="item-org">{{ item.organization || '未知机构' }}</div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 
-import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted, watch } from 'vue'
 import type { FormRules, FormInstance } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
- 
-  Message
+  Message, UserFilled, School, Document, Edit, DocumentChecked, SwitchButton,
+  Select, Star, Clock, ChatLineRound, Plus, Delete, Check, Close, Warning
 } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import { useAuthStore } from '../stores/auth'
 import { useSettingsStore } from '../stores/settings'
 import * as authApi from '../api/auth'
 import * as userApi from '../api/user'
+import * as achievementApi from '../api/index'
 
 // 导入登录背景图片
 import login1 from '@/assets/login1.png'
@@ -399,8 +767,12 @@ const authStore = useAuthStore()
 
 const isLoggedIn = computed(() => authStore.isLoggedIn)
 const user = computed(() => authStore.user || ({} as any))
+const isAdmin = computed(() => {
+  const role = user.value?.role
+  return role === 'ADMIN' || role === 'admin' || role === 'administrator'
+})
 const authTab = ref('login')
-const activeTab = ref('favorites')
+const activeTab = ref(isAdmin.value ? 'certifications' : 'favorites')
 const showEditDialog = ref(false)
 const loginLoading = ref(false)
 const registerLoading = ref(false)
@@ -418,7 +790,8 @@ const registerForm = reactive({
   email: '',
   password: '',
   confirmPassword: '',
-  role: 'user' as 'user' | 'admin' | 'administrator'
+  role: 'user' as 'user' | 'admin' | 'administrator',
+  inviteCode: ''
 })
 
 const editForm = reactive({
@@ -440,6 +813,35 @@ const codeSending = ref(false)
 const codeCountdown = ref(0)
 let codeTimer: any = null
 const sentCode = ref('')
+
+// 收藏和成果相关
+const collections = ref<any[]>([])
+const myAchievements = ref<any[]>([])
+const showAchievementDialog = ref(false)
+
+// 关注和粉丝相关
+const followingCount = ref(0)
+const followersCount = ref(0)
+const followingList = ref<any[]>([])
+const followersList = ref<any[]>([])
+const showFollowingDialog = ref(false)
+const showFollowersDialog = ref(false)
+
+// 管理员相关
+const pendingCertifications = ref<any[]>([])
+const pendingAppeals = ref<any[]>([])
+const pendingAchievements = ref<any[]>([])
+
+const editingAchievement = ref<any>(null)
+const achievementFormRef = ref<FormInstance>()
+const achievementForm = reactive({
+  title: '',
+  authorsText: '',
+  journal: '',
+  year: '',
+  doi: '',
+  abstract: ''
+})
 
 const loginRules = reactive<FormRules>({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -469,6 +871,20 @@ const registerRules = reactive<FormRules>({
   ],
   role: [
     { required: true, message: '请选择用户角色', trigger: 'change' }
+  ],
+  inviteCode: [
+    { 
+      validator: (rule: any, value: any, callback: any) => {
+        if (registerForm.role === 'admin' && (!value || value.trim() === '')) {
+          callback(new Error('请输入管理员邀请码'))
+        } else if (registerForm.role === 'admin' && value !== '123456') {
+          callback(new Error('邀请码错误'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ]
 })
 
@@ -502,7 +918,9 @@ const handleLogin = async () => {
     console.log('登录结果:', result)
     if (result.success) {
       ElMessage.success('登录成功')
+      // 刷新用户信息（包括role）
       await authStore.refreshUserInfo()
+      // 确保role正确设置后再加载其他数据
       await loadCertificationStatus()
       // 登录成功后跳转到首页
       router.push('/')
@@ -518,6 +936,18 @@ const handleLogin = async () => {
 }
 
 const handleRegister = async () => {
+  // 验证邀请码
+  if (registerForm.role === 'admin') {
+    if (!registerForm.inviteCode || registerForm.inviteCode.trim() === '') {
+      ElMessage.error('请输入管理员邀请码')
+      return
+    }
+    if (registerForm.inviteCode !== '123456') {
+      ElMessage.error('邀请码错误，请输入正确的管理员邀请码')
+      return
+    }
+  }
+  
   registerLoading.value = true
   try {
     const result = await authStore.register(
@@ -529,6 +959,13 @@ const handleRegister = async () => {
     if (result.success) {
       ElMessage.success('注册成功，请登录')
       authTab.value = 'login'
+      // 重置表单
+      registerForm.name = ''
+      registerForm.email = ''
+      registerForm.password = ''
+      registerForm.confirmPassword = ''
+      registerForm.role = 'user'
+      registerForm.inviteCode = ''
     } else {
       ElMessage.error(result.message || '注册失败')
     }
@@ -605,7 +1042,335 @@ const handleSubmitVerification = async () => {
 
 const saveProfile = async () => {
   console.log('saveProfile called', editForm)
-  showEditDialog.value = false
+  try {
+    await userApi.updateCurrentUser({
+      username: editForm.name,
+      preferences: {
+        bio: editForm.bio,
+        interests: editForm.interests
+      }
+    })
+    ElMessage.success('保存成功')
+    await authStore.refreshUserInfo()
+    showEditDialog.value = false
+  } catch (error: any) {
+    ElMessage.error(error.message || '保存失败')
+  }
+}
+
+// 加载收藏
+const loadCollections = async () => {
+  try {
+    const response = await achievementApi.getMyCollections()
+    collections.value = response || []
+  } catch (error) {
+    console.error('加载收藏失败', error)
+    collections.value = []
+  }
+}
+
+// 取消收藏
+const removeFromCollection = async (achievementId: string) => {
+  try {
+    await achievementApi.removeFromCollections(achievementId)
+    ElMessage.success('已取消收藏')
+    await loadCollections()
+  } catch (error: any) {
+    ElMessage.error(error.message || '取消收藏失败')
+  }
+}
+
+// 加载关注和粉丝列表
+import * as socialApi from '../api/social'
+
+const loadFollowingAndFollowers = async () => {
+  if (!user.value?.id) return
+  try {
+    // 加载关注列表
+    const followingResponse = await socialApi.getFollowing(user.value.id)
+    if (followingResponse) {
+      // 后端返回格式：{ following: [...], total: number }
+      const data = followingResponse.following || followingResponse.data?.following || []
+      followingList.value = data
+      followingCount.value = followingResponse.total || followingResponse.data?.total || data.length
+    }
+    
+    // 加载粉丝列表
+    const followersResponse = await socialApi.getFollowers(user.value.id)
+    if (followersResponse) {
+      // 后端返回格式：{ followers: [...], total: number }
+      const data = followersResponse.followers || followersResponse.data?.followers || []
+      followersList.value = data
+      followersCount.value = followersResponse.total || followersResponse.data?.total || data.length
+    }
+  } catch (error) {
+    console.error('加载关注和粉丝列表失败', error)
+    // 如果API调用失败，设置默认值
+    followingCount.value = 0
+    followersCount.value = 0
+  }
+}
+
+// 加载管理员数据
+import * as adminApi from '../api/admin'
+
+const loadAdminData = async () => {
+  if (!isAdmin.value) return
+  
+  try {
+    // 加载待审核认证
+    const certsResponse = await adminApi.getPendingCertifications()
+    pendingCertifications.value = Array.isArray(certsResponse) ? certsResponse : (certsResponse?.applications || [])
+    
+    // 加载待处理申诉
+    try {
+      const appealsResponse = await adminApi.getPendingAppeals()
+      pendingAppeals.value = Array.isArray(appealsResponse) ? appealsResponse : (appealsResponse?.appeals || [])
+    } catch (error) {
+      console.warn('加载申诉列表失败:', error)
+      pendingAppeals.value = []
+    }
+    
+    // 加载待审核成果
+    try {
+      const achievementsResponse = await adminApi.getPendingAchievements()
+      pendingAchievements.value = Array.isArray(achievementsResponse) ? achievementsResponse : (achievementsResponse?.pendingAchievements || [])
+    } catch (error) {
+      console.warn('加载待审核成果失败:', error)
+      pendingAchievements.value = []
+    }
+  } catch (error) {
+    console.error('加载管理员数据失败', error)
+  }
+}
+
+// 批准认证
+const approveCertification = async (certId: string) => {
+  try {
+    await ElMessageBox.confirm('确定要批准这个认证申请吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await adminApi.approveCertification(certId)
+    ElMessage.success('认证已批准')
+    await loadAdminData()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '操作失败')
+    }
+  }
+}
+
+// 驳回认证
+const rejectCertification = async (certId: string) => {
+  try {
+    const { value: reason } = await ElMessageBox.prompt('请输入驳回理由', '驳回认证', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputType: 'textarea',
+      inputPlaceholder: '请输入驳回理由'
+    })
+    if (reason) {
+      await adminApi.rejectCertification(certId, reason)
+      ElMessage.success('认证已驳回')
+      await loadAdminData()
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '操作失败')
+    }
+  }
+}
+
+// 处理申诉
+const processAppeal = async (caseId: string, action: 'approve' | 'reject') => {
+  try {
+    let reason = ''
+    if (action === 'reject') {
+      const { value } = await ElMessageBox.prompt('请输入驳回理由', '处理申诉', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        inputType: 'textarea',
+        inputPlaceholder: '请输入驳回理由'
+      })
+      if (!value) return
+      reason = value
+    }
+    
+    await adminApi.processAppeal(caseId, action, reason)
+    ElMessage.success(action === 'approve' ? '申诉已批准' : '申诉已驳回')
+    await loadAdminData()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '操作失败')
+    }
+  }
+}
+
+// 批准成果
+const approveAchievement = async (achId: string) => {
+  try {
+    await ElMessageBox.confirm('确定要批准这个成果吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    await adminApi.approveAchievement(achId)
+    ElMessage.success('成果已批准')
+    await loadAdminData()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '操作失败')
+    }
+  }
+}
+
+// 驳回成果
+const rejectAchievement = async (achId: string) => {
+  try {
+    const { value: reason } = await ElMessageBox.prompt('请输入驳回理由', '驳回成果', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputType: 'textarea',
+      inputPlaceholder: '请输入驳回理由'
+    })
+    if (reason) {
+      await adminApi.rejectAchievement(achId, reason)
+      ElMessage.success('成果已驳回')
+      await loadAdminData()
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '操作失败')
+    }
+  }
+}
+
+// 格式化日期
+const formatDate = (date: string | Date) => {
+  if (!date) return '未知'
+  const d = typeof date === 'string' ? new Date(date) : date
+  return d.toLocaleString('zh-CN')
+}
+
+// 加载我的成果
+const loadMyAchievements = async () => {
+  try {
+    const response = await achievementApi.searchAchievements({ owner: 'me' })
+    myAchievements.value = response?.results || response || []
+  } catch (error) {
+    console.error('加载成果失败', error)
+    myAchievements.value = []
+  }
+}
+
+// 编辑成果
+const editAchievement = (achievement: any) => {
+  editingAchievement.value = achievement
+  achievementForm.title = achievement.title || ''
+  achievementForm.authorsText = achievement.authors?.join(', ') || ''
+  achievementForm.journal = achievement.journal || ''
+  achievementForm.year = achievement.year?.toString() || ''
+  achievementForm.doi = achievement.doi || ''
+  achievementForm.abstract = achievement.abstract || ''
+  showAchievementDialog.value = true
+}
+
+// 保存成果
+const saveAchievement = async () => {
+  try {
+    const data = {
+      title: achievementForm.title,
+      authors: achievementForm.authorsText.split(',').map(a => a.trim()).filter(a => a),
+      journal: achievementForm.journal,
+      year: achievementForm.year ? parseInt(achievementForm.year) : undefined,
+      doi: achievementForm.doi,
+      abstract: achievementForm.abstract
+    }
+    
+    if (editingAchievement.value) {
+      // 更新成果
+      if (achievementApi.updateAchievement) {
+        await achievementApi.updateAchievement(editingAchievement.value.id, data)
+      }
+      ElMessage.success('更新成功')
+    } else {
+      // 新增成果
+      if (achievementApi.createAchievement) {
+        await achievementApi.createAchievement(data)
+      }
+      ElMessage.success('添加成功')
+    }
+    
+    showAchievementDialog.value = false
+    resetAchievementForm()
+    await loadMyAchievements()
+  } catch (error: any) {
+    ElMessage.error(error.message || '保存失败')
+  }
+}
+
+// 删除成果
+const deleteAchievement = async (id: string) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个成果吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
+    if (achievementApi.deleteAchievement) {
+      await achievementApi.deleteAchievement(id)
+    }
+    ElMessage.success('删除成功')
+    await loadMyAchievements()
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败')
+    }
+  }
+}
+
+// 重置成果表单
+const resetAchievementForm = () => {
+  editingAchievement.value = null
+  achievementForm.title = ''
+  achievementForm.authorsText = ''
+  achievementForm.journal = ''
+  achievementForm.year = ''
+  achievementForm.doi = ''
+  achievementForm.abstract = ''
+}
+
+// 获取状态类型
+const getStatusType = (status: string) => {
+  switch (status) {
+    case 'approved':
+    case 'published':
+      return 'success'
+    case 'pending':
+      return 'warning'
+    case 'rejected':
+      return 'danger'
+    default:
+      return 'info'
+  }
+}
+
+// 获取状态文本
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'approved':
+    case 'published':
+      return '已发布'
+    case 'pending':
+      return '审核中'
+    case 'rejected':
+      return '被拒绝'
+    default:
+      return '未知'
+  }
 }
 
 const loadCertificationStatus = async () => {
@@ -763,6 +1528,14 @@ onMounted(async () => {
   
   if (authStore.isLoggedIn) {
     await loadCertificationStatus()
+    if (isAdmin.value) {
+      await loadAdminData()
+      activeTab.value = 'certifications'
+    } else {
+      await loadCollections()
+      await loadMyAchievements()
+      await loadFollowingAndFollowers()
+    }
     await ensureVantaBirds()
     // 等待 DOM 渲染后再初始化 Vanta.js
     setTimeout(() => {
@@ -809,6 +1582,12 @@ onUnmounted(() => {
 .profile-page {
   min-height: 100vh;
   position: relative;
+  background-image: url('@/assets/frontBG.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  padding-bottom: 40px;
 }
 
 // Vanta.js Birds 背景样式
@@ -922,11 +1701,13 @@ onUnmounted(() => {
           left: -2px;
           right: -2px;
           bottom: -2px;
-          background: linear-gradient(45deg, 
-            rgba(212, 175, 55, 0.3) 0%, 
-            transparent 25%, 
-            transparent 75%, 
-            rgba(212, 175, 55, 0.3) 100%);
+          background: linear-gradient(
+            45deg,
+            rgba(212, 175, 55, 0.3) 0%,
+            transparent 25%,
+            transparent 75%,
+            rgba(212, 175, 55, 0.3) 100%
+          );
           border-radius: 16px;
           z-index: -1;
           opacity: 0.6;
@@ -1056,13 +1837,11 @@ onUnmounted(() => {
             }
           }
         }
-
       }
     }
   }
 
 }
-
 /* Auth Styles */
 .auth-container {
   display: flex;
@@ -1168,31 +1947,546 @@ onUnmounted(() => {
 }
 
 .profile-content {
-  .profile-card {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    border-radius: 16px;
-    overflow: hidden;
+  padding-top: 20px;
+  position: relative;
+  z-index: 1;
+}
 
-    .profile-header {
-      text-align: center;
-      margin-bottom: 24px;
+.profile-header-card {
+  margin-top: 30px;
+  margin-bottom: 30px;
+  position: relative;
+  overflow: hidden;
 
-      h3 {
-        margin: 12px 0 4px 0;
-        font-size: 22px;
-        font-weight: 700;
-        color: #2c3e50;
-      }
+  .header-bg {
+    height: 140px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.3) 0%, 
+      rgba(184, 134, 11, 0.4) 50%,
+      rgba(139, 69, 19, 0.3) 100%);
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 80% 70%, rgba(184, 134, 11, 0.2) 0%, transparent 50%);
+    }
+  }
 
-      .user-title, .user-institution {
-        margin: 4px 0;
-        color: #666;
-        font-size: 14px;
-        font-weight: 500;
+  .header-content {
+    padding: 0 40px 30px;
+    display: flex;
+    align-items: flex-end;
+    gap: 30px;
+    margin-top: -70px;
+    position: relative;
+    z-index: 1;
+
+    .avatar-section {
+      position: relative;
+      
+      .main-avatar {
+        border: 5px solid #D4AF37;
+        box-shadow: 
+          0 6px 20px rgba(0,0,0,0.3),
+          0 0 0 3px rgba(184, 134, 11, 0.4),
+          inset 0 2px 4px rgba(255, 255, 255, 0.4);
+        background: #fff;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          transform: scale(1.05);
+          box-shadow: 
+            0 8px 24px rgba(0,0,0,0.35),
+            0 0 0 4px rgba(212, 175, 55, 0.5);
+        }
       }
     }
+
+    .info-section {
+      flex: 1;
+      padding-bottom: 5px;
+
+      .name-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 8px;
+        
+        h1 { 
+          margin: 0; 
+          font-size: 32px; 
+          font-weight: 900;
+          color: #654321;
+          font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+          letter-spacing: 0.5px;
+        }
+
+        .verified-tag {
+          background: #D4AF37 !important;
+          border-color: #B8860B !important;
+          color: #654321 !important;
+          font-weight: 700;
+        }
+
+        .pending-tag {
+          background: #E6A23C !important;
+          border-color: #B8860B !important;
+          color: #654321 !important;
+          font-weight: 700;
+        }
+      }
+
+      .title { 
+        margin: 5px 0; 
+        font-size: 18px; 
+        color: #8B4513;
+        font-style: italic;
+        font-family: 'Georgia', 'Times New Roman', serif;
+      }
+      
+      .institution { 
+        margin: 0 0 12px 0; 
+        color: #B8860B; 
+        display: flex; 
+        align-items: center; 
+        gap: 6px;
+        font-weight: 600;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        
+        :deep(.el-icon) {
+          color: #D4AF37;
+        }
+      }
+
+      .bio-preview {
+        color: #654321;
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 15px;
+        max-height: 60px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+    }
+
+    .stats-section {
+      display: flex;
+      gap: 20px;
+      padding-bottom: 10px;
+      align-items: center;
+
+      .stat-box {
+        text-align: center;
+        min-width: 80px;
+        
+        &.clickable {
+          cursor: pointer;
+          transition: all 0.3s ease;
+          
+          &:hover {
+            transform: translateY(-2px);
+            
+            .value {
+              color: #D4AF37;
+            }
+          }
+        }
+        
+        .value { 
+          font-size: 28px; 
+          font-weight: 900; 
+          color: #654321;
+          font-family: 'Georgia', 'Times New Roman', serif;
+          text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+          transition: color 0.3s ease;
+        }
+        
+        .label { 
+          font-size: 12px; 
+          color: #8B4513; 
+          text-transform: uppercase; 
+          letter-spacing: 1px;
+          font-weight: 700;
+          margin-top: 4px;
+          font-family: 'Georgia', 'Times New Roman', serif;
+        }
+      }
+
+      .stat-divider {
+        width: 2px;
+        height: 40px;
+        background: linear-gradient(to bottom, 
+          transparent 0%, 
+          rgba(184, 134, 11, 0.5) 50%, 
+          transparent 100%);
+      }
+    }
+  }
+}
+
+.main-body {
+  .sidebar-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .sidebar-card {
+    padding: 24px;
+    
+    h3 { 
+      margin: 0 0 18px 0; 
+      font-size: 18px; 
+      font-weight: 900;
+      color: #654321;
+      font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-left: 4px solid #D4AF37;
+      padding-left: 12px;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+      
+      :deep(.el-icon) {
+        color: #D4AF37;
+        font-size: 20px;
+      }
+    }
+
+    .info-group {
+      margin-bottom: 24px;
+      &:last-child { margin-bottom: 0; }
+
+      label { 
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #8B4513; 
+        font-size: 13px; 
+        font-weight: 700;
+        margin-bottom: 10px;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        
+        :deep(.el-icon) {
+          color: #D4AF37;
+        }
+      }
+
+      .contact-row {
+        color: #654321;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .bio-text {
+        color: #654321;
+        line-height: 1.8;
+        font-size: 14px;
+        font-family: 'Georgia', 'Times New Roman', serif;
+      }
+    }
+  }
+
+  .content-card {
+    padding: 24px;
+    min-height: 500px;
+
+    :deep(.el-tabs__header) {
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(184, 134, 11, 0.3);
+    }
+
+    :deep(.el-tabs__item) {
+      font-weight: 700;
+      color: #8B4513;
+      font-family: 'Georgia', 'Times New Roman', serif;
+      
+      &.is-active {
+        color: #654321;
+      }
+    }
+
+    :deep(.el-tabs__active-bar) {
+      background-color: #D4AF37;
+      height: 3px;
+    }
+
+    // 收藏和成果内容样式
+    .collections-content,
+    .achievements-content {
+      .achievements-header {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .empty-state {
+        padding: 40px 0;
+      }
+
+      .collections-list,
+      .achievements-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+
+        .collection-item,
+        .achievement-item {
+          padding: 20px;
+          border: 2px solid rgba(184, 134, 11, 0.4);
+          border-radius: 12px;
+          background: rgba(249, 247, 236, 0.85);
+          backdrop-filter: blur(16px);
+          box-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          transition: all 0.3s ease;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+
+          &::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, 
+              rgba(212, 175, 55, 0.2) 0%, 
+              transparent 25%, 
+              transparent 75%, 
+              rgba(212, 175, 55, 0.2) 100%);
+            border-radius: 12px;
+            z-index: -1;
+            opacity: 0.6;
+          }
+
+          &:hover {
+            transform: translateY(-3px);
+            box-shadow: 
+              0 8px 24px rgba(0, 0, 0, 0.15),
+              0 0 0 2px rgba(212, 175, 55, 0.3);
+          }
+
+          .item-info,
+          .achievement-info {
+            flex: 1;
+
+            h4 {
+              margin: 0 0 8px 0;
+              font-size: 18px;
+              font-weight: 900;
+              color: #654321;
+              font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+              text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+            }
+
+            .achievement-header-row {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              margin-bottom: 8px;
+
+              .status-tag {
+                font-weight: 700;
+                font-family: 'Georgia', 'Times New Roman', serif;
+              }
+            }
+
+            .item-meta,
+            .achievement-meta {
+              margin: 4px 0;
+              color: #8B4513;
+              font-size: 14px;
+              font-weight: 600;
+              font-family: 'Georgia', 'Times New Roman', serif;
+            }
+
+            .achievement-doi {
+              margin: 8px 0 0 0;
+              color: #B8860B;
+              font-size: 13px;
+              font-style: italic;
+              font-family: 'Georgia', 'Times New Roman', serif;
+            }
+          }
+
+          .achievement-actions {
+            display: flex;
+            gap: 8px;
+          }
+        }
+      }
+    }
+  }
+}
+
+.gothic-btn-small {
+  background: #8B4513 !important;
+  border: 2px solid #654321 !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif !important;
+  letter-spacing: 0.5px !important;
+  border-radius: 16px !important;
+  padding: 6px 16px !important;
+  font-size: 13px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 
+    0 2px 6px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+
+  &:hover {
+    background: #654321 !important;
+    border-color: #8B4513 !important;
+    transform: translateY(-2px);
+    box-shadow: 
+      0 4px 10px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  }
+
+  &.danger-btn {
+    background: rgba(184, 134, 11, 0.2) !important;
+    border-color: #B8860B !important;
+    color: #654321 !important;
+    
+    &:hover {
+      background: rgba(184, 134, 11, 0.3) !important;
+    }
+  }
+
+  :deep(.el-icon) {
+    margin-right: 4px;
+  }
+}
+
+.gothic-dialog {
+  :deep(.el-dialog) {
+    background: rgba(249, 247, 236, 0.95) !important;
+    border: 3px solid rgba(184, 134, 11, 0.5) !important;
+    border-radius: 16px !important;
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  }
+
+  :deep(.el-dialog__header) {
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.2) 0%, 
+      rgba(184, 134, 11, 0.3) 100%);
+    border-bottom: 2px solid rgba(184, 134, 11, 0.4);
+    padding: 20px 24px;
+    
+    .el-dialog__title {
+      color: #654321;
+      font-weight: 900;
+      font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+      font-size: 20px;
+    }
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 24px;
+  }
+}
+
+.gothic-form {
+  :deep(.el-form-item__label) {
+    color: #8B4513;
+    font-weight: 700;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  :deep(.el-input__wrapper) {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(184, 134, 11, 0.4);
+    border-radius: 8px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: rgba(184, 134, 11, 0.6);
+    }
+
+    &.is-focus {
+      border-color: #D4AF37;
+      box-shadow: 
+        inset 0 2px 4px rgba(0, 0, 0, 0.15), 
+        0 2px 8px rgba(212, 175, 55, 0.3);
+    }
+  }
+
+  :deep(.el-textarea__inner) {
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 2px solid rgba(184, 134, 11, 0.4);
+    border-radius: 8px;
+    color: #654321;
+    font-family: 'Georgia', 'Times New Roman', serif;
+
+    &:focus {
+      border-color: #D4AF37;
+    }
+  }
+}
+
+.gothic-btn {
+  background: #8B4513 !important;
+  border: 2px solid #654321 !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif !important;
+  letter-spacing: 1px !important;
+  border-radius: 20px !important;
+  padding: 10px 20px !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+
+  &:hover {
+    background: #654321 !important;
+    border-color: #8B4513 !important;
+    transform: translateY(-2px);
+    box-shadow: 
+      0 6px 12px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+  }
+
+  &.danger-btn {
+    background: rgba(184, 134, 11, 0.2) !important;
+    border-color: #B8860B !important;
+    color: #654321 !important;
+    
+    &:hover {
+      background: rgba(184, 134, 11, 0.3) !important;
+    }
+  }
+
+  :deep(.el-icon) {
+    margin-right: 4px;
   }
 }
 
@@ -1249,68 +2543,6 @@ onUnmounted(() => {
     }
   
 
-  .content-card {
-    background-image: url('@/assets/accept.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2),
-                0 2px 8px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
-    overflow: hidden;
-    position: relative;
-
-    // 添加半透明遮罩层，使文字更清晰
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.75));
-      z-index: 0;
-    }
-
-    :deep(.el-card__body) {
-      position: relative;
-      z-index: 1;
-    }
-
-    :deep(.el-tabs) {
-      position: relative;
-      z-index: 1;
-
-      .el-tabs__header {
-        margin-bottom: 20px;
-      }
-
-      .el-tabs__item {
-        color: #34495e;
-        font-weight: 600;
-        font-size: 16px;
-        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.6);
-
-        &.is-active {
-          color: #1890ff;
-          font-weight: 700;
-        }
-
-        &:hover {
-          color: #1890ff;
-        }
-      }
-
-      .el-tabs__active-bar {
-        display: none;
-      }
-
-      .el-tabs__nav-wrap::after {
-        background-color: rgba(24, 144, 255, 0.2);
-      }
-    }
 
     .info-content {
       position: relative;
@@ -1525,7 +2757,7 @@ onUnmounted(() => {
           font-weight: 500;
         }
       }
-    }
+    
 
 
 .content-card {
@@ -1560,6 +2792,44 @@ onUnmounted(() => {
     .info-section {
       .name-row { justify-content: center; }
       .email { justify-content: center; }
+    }
+  }
+}
+// 关注和粉丝列表样式
+.following-list,
+.followers-list {
+  max-height: 400px;
+  overflow-y: auto;
+  
+  .following-item,
+  .follower-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      background: rgba(212, 175, 55, 0.1);
+      transform: translateX(4px);
+    }
+    
+    .item-info {
+      flex: 1;
+      
+      .item-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #654321;
+        margin-bottom: 4px;
+      }
+      
+      .item-org {
+        font-size: 13px;
+        color: #8B4513;
+      }
     }
   }
 }

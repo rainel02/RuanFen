@@ -12,7 +12,8 @@ function buildUrl(path: string, params: Record<string, any> = {}) {
 
   Object.keys(params || {}).forEach(k => {
     const v = params[k]
-    if (v === undefined || v === null) return
+    // 过滤掉 undefined、null 和空字符串
+    if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) return
     if (Array.isArray(v)) {
       v.forEach(item => search.append(k, String(item)))
     } else {
