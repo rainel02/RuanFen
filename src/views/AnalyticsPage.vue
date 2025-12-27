@@ -176,24 +176,13 @@ const tableRowClassName = ({ rowIndex }: { rowIndex: number }) => {
 const fetchHotTopics = async () => {
   try {
     const res = await getHotTopics(hotTopicRange.value)
+    console.log('getHotTopics 返回数据:', res)
     // API returns { topics: [...] }
-    let data = (res as any).topics || (res as any).data || res
-    
-    // Validate and filter data to prevent NaN values
-    if (Array.isArray(data)) {
-      data = data
-        .filter((item: any) => {
-          const value = item.value !== undefined ? item.value : item.cnt
-          return item.name && typeof value === 'number' && !isNaN(value) && value > 0
-        })
-        .map((item: any) => ({
-          name: item.name || item.keyword,
-          value: item.value !== undefined ? item.value : item.cnt
-        }))
-        .sort((a: any, b: any) => b.value - a.value)
-        .slice(0, 30) // Limit to top 30 topics
-    } else {
-      data = []
+    let rawData = (res as any).topics || (res as any).data || res
+    // 兼容后端返回 [{topic, weight}]，转换为 [{name, value}]，并做归一化
+    let data: { name: string, value: number }[] = [];
+    if (Array.isArray(rawData) && rawData.length > 0) {
+      data = rawData.map((item: any) => ({ name: item.topic, value: item.weight }));
     }
 
     wordCloudOption.value = {
