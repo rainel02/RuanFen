@@ -22,8 +22,8 @@
               <!-- <el-button :icon="Share">分享</el-button> -->
               <!-- <el-button :icon="Download" v-if="paper.url">下载PDF</el-button> -->
               <el-button
-                v-if="paper.url"
-                @click.prevent="openExternal(paper.url)"
+                v-if="paper.landingPageUrl"
+                @click.prevent="openExternal(paper.landingPageUrl)"
               >
                 查看原文
               </el-button>
@@ -39,15 +39,15 @@
 
                 <div class="paper-meta">
                   <div class="publication-info">
-                    <span class="meta-label">刊物：</span>
-                    <span>{{ paper.publication }}</span>
-                    <span class="meta-label" style="margin-left: 20px;">机构：</span>
+                    <!-- <span class="meta-label">刊物：</span> -->
+                    <!-- <span>{{ paper.publication }}</span> -->
+                    <span class="meta-label">机构：</span>
                     <span>{{ paper.institution }}</span>
                   </div>
 
                   <div class="publication-info">
                     <span class="meta-label">发表日期：</span>
-                    <span>{{ formatDate(paper.publication_date) }}</span>
+                    <span>{{ formatDate(paper.publicationDate) }}</span>
                   </div>
 
                   <div class="doi" v-if="paper.doi">
@@ -56,33 +56,22 @@
                   </div>
                 </div>
 
-                <div class="paper-fields">
-                  <el-tag
-                    v-for="field in paper.fields"
-                    :key="field"
-                    size="large"
-                    effect="plain"
-                  >
-                    {{ field }}
-                  </el-tag>
-                </div>
-
                 <div class="paper-abstract">
                   <h3>摘要</h3>
-                  <p>{{ paper.abstract }}</p>
+                  <p>{{ paper.abstractText }}</p>
                 </div>
 
                 <div class="paper-keywords">
                   <h3>关键词</h3>
                   <div class="keywords-list">
                     <el-tag
-                      v-for="keyword in paper.keyword"
-                      :key="keyword"
-                      effect="plain"
-                      size="small"
-                    >
-                      {{ keyword }}
-                    </el-tag>
+                    v-for="field in paper.concepts"
+                    :key="field"
+                    size="large"
+                    effect="plain"
+                  >
+                    {{ field }}
+                  </el-tag>
                   </div>
                 </div>
               </el-card>
@@ -104,12 +93,12 @@
                   <div class="stat-item">
                     <el-icon><Star /></el-icon>
                     <span class="stat-label">收藏数</span>
-                    <span class="stat-value">{{ paper.favoriteCount }}</span>
+                    <span class="stat-value">{{ paper.favouriteCount }}</span>
                   </div>
                   <div class="stat-item">
                     <el-icon><Document /></el-icon>
                     <span class="stat-label">引用数</span>
-                    <span class="stat-value">{{ paper.citationCount }}</span>
+                    <span class="stat-value">{{ paper.citedByCount }}</span>
                   </div>
                   <div class="stat-item">
                     <el-icon><View /></el-icon>
@@ -232,13 +221,13 @@ const toggleFavorite = async () => {
     const res = await api.addToCollections(id).catch(() => null)
     if (res && (res.status === 201 || res.ok)) {
       paper.value.isfavorited = true
-      paper.value.favoriteCount = (paper.value.favoriteCount || 0) + 1
+      paper.value.favouriteCount = (paper.value.favouriteCount || 0) + 1
     }
   } else {
     const res = await api.removeFromCollections(id).catch(() => null)
     if (res && (res.status === 204 || res.ok)) {
       paper.value.isfavorited = false
-      paper.value.favoriteCount = Math.max(0, (paper.value.favoriteCount || 1) - 1)
+      paper.value.favouriteCount = Math.max(0, (paper.value.favouriteCount || 1) - 1)
     }
   }
 }
@@ -248,7 +237,7 @@ const loadPaper = async (paperId: string) => {
   try {
     const data = await api.getAchievement(paperId)
     paper.value = data
-    relatedPapers.value = data.relatedPapers || []
+    relatedPapers.value = data.relatedWorks || []
     // optional: scroll to top when navigating to another paper
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (e) {

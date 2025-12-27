@@ -238,13 +238,18 @@ const papersStoreTotal = computed(() => (papersStore.total ?? filteredPapers.val
 // })
 
 
-const handleSizeChange = (size: number) => {
+const handleSizeChange = async (size: number) => {
+  // prevent watcher from causing a duplicate fetch
+  papersStore.skipNextFetchOnPageChange = true
   papersStore.pageSize = size
   papersStore.currentPage = 1
+  await papersStore.fetchPapers()
 }
 
-const handleCurrentChange = (page: number) => {
+const handleCurrentChange = async (page: number) => {
+  papersStore.skipNextFetchOnPageChange = true
   papersStore.currentPage = page
+  await papersStore.fetchPapers()
 }
 
 // local search & advanced

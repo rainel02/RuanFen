@@ -60,9 +60,9 @@
           <transition-group name="list">
             <div
               v-for="post in posts"
-              :key="post.id"
+              :key="post.postId"
               class="post-card glass-panel"
-              @click="goToPost(post.id)"
+              @click="goToPost(post.postId)"
             >
               <div class="card-body">
                 <div class="post-main">
@@ -70,12 +70,12 @@
                     <el-tag size="small" effect="light" class="board-tag">{{ post.boardName }}</el-tag>
                     <h3 class="post-title">{{ post.title }}</h3>
                   </div>
-                  <p class="post-summary">{{ getSummary(post.content) }}</p>
+                  <p class="post-summary">{{ getSummary(post.contentPreview || post.content) }}</p>
                 </div>
                 <div class="post-meta">
                   <div class="author">
-                    <el-avatar :size="24" :src="post.authorAvatar || defaultAvatar" />
-                    <span class="name">{{ post.authorName }}</span>
+                    <el-avatar :size="24" :src="post.author?.avatar || defaultAvatar" />
+                    <span class="name">{{ post.author?.username || post.authorName }}</span>
                     <span class="dot">·</span>
                     <span class="time">{{ formatDate(post.createdAt) }}</span>
                   </div>
@@ -171,10 +171,25 @@ const searchQuery = ref('')
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
 const boards = ref([
-  { id: 'academic', name: '学术交流', icon: 'DataAnalysis', count: 12 },
-  { id: 'tech', name: '技术分享', icon: 'Monitor', count: 8 },
-  { id: 'life', name: '校园生活', icon: 'Compass', count: 5 },
-  { id: 'career', name: '求职招聘', icon: 'Share', count: 3 },
+  { id: 'Medicine', name: 'Medicine', icon: 'FirstAidKit', count: 0 },
+  { id: 'Biology', name: 'Biology', icon: 'Microphone', count: 0 },
+  { id: 'Chemistry', name: 'Chemistry', icon: 'Pouring', count: 0 },
+  { id: 'Computer science', name: 'Computer science', icon: 'Monitor', count: 0 },
+  { id: 'Business', name: 'Business', icon: 'Suitcase', count: 0 },
+  { id: 'Sociology', name: 'Sociology', icon: 'User', count: 0 },
+  { id: 'Political science', name: 'Political science', icon: 'Flag', count: 0 },
+  { id: 'Geology', name: 'Geology', icon: 'Location', count: 0 },
+  { id: 'Philosophy', name: 'Philosophy', icon: 'Reading', count: 0 },
+  { id: 'History', name: 'History', icon: 'Timer', count: 0 },
+  { id: 'Materials science', name: 'Materials science', icon: 'Box', count: 0 },
+  { id: 'Psychology', name: 'Psychology', icon: 'Headset', count: 0 },
+  { id: 'Physics', name: 'Physics', icon: 'Lightning', count: 0 },
+  { id: 'Environmental science', name: 'Environmental science', icon: 'Sunny', count: 0 },
+  { id: 'Mathematics', name: 'Mathematics', icon: 'TrendCharts', count: 0 },
+  { id: 'Engineering', name: 'Engineering', icon: 'Setting', count: 0 },
+  { id: 'Geography', name: 'Geography', icon: 'MapLocation', count: 0 },
+  { id: 'Economics', name: 'Economics', icon: 'Money', count: 0 },
+  { id: 'Art', name: 'Art', icon: 'Brush', count: 0 },
 ])
 
 const allPosts = ref<any[]>([])
@@ -243,7 +258,7 @@ const handleCreatePost = async () => {
 }
 
 const goToPost = (id: string) => {
-  router.push(`/forum/${id}`)
+  router.push(`/forum/post/${id}`)
 }
 
 const formatDate = (dateStr: string) => {
