@@ -100,10 +100,6 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '申诉处理' }
   },
   {
-    path: '/admin/tasks',
-    name: 'AdminTasks',
-    component: () => import('../views/admin/AdminTasksPage.vue'),
-    meta: { title: '系统任务' }
   }
 ]
 

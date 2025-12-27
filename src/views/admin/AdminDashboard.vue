@@ -50,9 +50,6 @@
               <el-button type="success" @click="$router.push('/admin/appeals')" style="margin-left: 12px;">
                 申诉处理
               </el-button>
-              <el-button @click="$router.push('/admin/tasks')" style="margin-left: 12px;">
-                系统任务
-              </el-button>
             </el-card>
           </el-col>
         </el-row>
