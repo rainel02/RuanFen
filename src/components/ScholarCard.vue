@@ -58,7 +58,7 @@
     </div>
 
     <div class="card-footer">
-      <el-button class="action-btn" text @click.stop="$emit('start-chat', scholar.id, scholar.name, scholar.avatar)">
+      <el-button class="action-btn" text @click.stop="handleStartChat">
         <el-icon><ChatLineRound /></el-icon> 私信
       </el-button>
       <div class="divider"></div>
@@ -71,7 +71,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { School, ChatLineRound, Right } from '@element-plus/icons-vue'
+import { School, Right, ChatLineRound } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { followUser, unfollowUser } from '../api/social'
 import { useAuthStore } from '../stores/auth'
@@ -80,12 +80,21 @@ const props = defineProps<{
   scholar: any
 }>()
 
-const emit = defineEmits(['start-chat', 'follow-changed'])
+const emit = defineEmits(['follow-changed'])
 const router = useRouter()
 const authStore = useAuthStore()
 
 const goToDetail = () => {
-  router.push(`/scholar/${props.scholar.id}`)
+  router.push(`/scholars/${props.scholar.id}`)
+}
+
+const handleStartChat = () => {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('请先登录才能发送私信')
+    router.push('/profile')
+    return
+  }
+  router.push(`/chat?userId=${props.scholar.id}&name=${encodeURIComponent(props.scholar.name || '')}&avatar=${encodeURIComponent(props.scholar.avatar || '')}`)
 }
 
 const toggleFollow = async () => {

@@ -39,7 +39,7 @@
                     {{ scholar.isFollowed ? '已关注' : '关注' }}
                   </el-button>
                   <el-button class="gothic-btn" @click="handleStartChat">
-                    <el-icon><ChatDotRound /></el-icon> 私信
+                    <el-icon><Message /></el-icon> 私信
                   </el-button>
                   <el-button class="gothic-btn" circle>
                     <el-icon><Share /></el-icon>
@@ -179,7 +179,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { 
-  Plus, Message, Check, Share, Select, School, ChatDotRound,
+  Plus, Message, Check, Share, Select, School,
   UserFilled, Collection, Connection, Document, Bell
 } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
@@ -189,6 +189,8 @@ import { TitleComponent, TooltipComponent, LegendComponent } from 'echarts/compo
 import VChart from 'vue-echarts'
 import AppHeader from '@/components/AppHeader.vue'
 import * as scholarApi from '../api/scholar'
+import { followUser, unfollowUser } from '../api/social'
+import { useAuthStore } from '../stores/auth'
 import defaultAvatar from '@/assets/profile.png'
 
 use([
@@ -201,6 +203,7 @@ use([
 
 const route = useRoute()
 const router = useRouter()
+const authStore = useAuthStore()
 const scholar = ref<any>(null)
 const activeTab = ref('papers')
 const papersSortBy = ref('date')
@@ -238,9 +241,9 @@ const networkOption = computed(() => {
       type: 'graph',
       layout: 'force',
       data: networkData.value.nodes.map((node: any, index: number) => ({
-        id: node.id || node.scholarId,
-        name: node.name,
-        value: node.collaborationCount || 1,
+        id: node.id || node.scholarId || node.userId,
+        name: node.name || node.publicName,
+        value: node.value || 1,
         symbolSize: index === 0 ? 50 : 30,
         itemStyle: {
           color: index === 0 ? '#D4AF37' : '#8B4513',
@@ -252,12 +255,12 @@ const networkOption = computed(() => {
           fontSize: 12,
           fontWeight: 'bold'
         },
-        category: index === 0 ? 0 : 1
+        category: node.category !== undefined ? node.category : (index === 0 ? 0 : 1)
       })),
       links: networkData.value.links.map((link: any) => ({
         source: link.source,
         target: link.target,
-        value: link.collaborationCount || 1,
+        value: link.value || 1,
         lineStyle: {
           color: '#B8860B',
           width: 2,
@@ -297,21 +300,40 @@ const networkOption = computed(() => {
   }
 })
 
-const toggleFollow = () => {
-  if (scholar.value) {
+const toggleFollow = async () => {
+  if (!scholar.value) return
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('请先登录才能关注学者')
+    router.push('/profile')
+    return
+  }
+  
+  try {
+    if (scholar.value.isFollowed) {
+      await unfollowUser(scholar.value.id)
+      ElMessage.success('已取消关注')
+    } else {
+      await followUser(scholar.value.id)
+      ElMessage.success('已关注')
+    }
     scholar.value.isFollowed = !scholar.value.isFollowed
-    ElMessage.success(scholar.value.isFollowed ? '已关注' : '已取消关注')
+  } catch (error: any) {
+    ElMessage.error(error.message || '操作失败')
   }
 }
 
 const handleStartChat = () => {
-  if (scholar.value) {
-    router.push(`/chat?userId=${scholar.value.id}`)
+  if (!scholar.value) return
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('请先登录才能发送私信')
+    router.push('/profile')
+    return
   }
+  router.push(`/chat?userId=${scholar.value.id}&name=${encodeURIComponent(scholar.value.name || '')}&avatar=${encodeURIComponent(scholar.value.avatar || '')}`)
 }
 
 const handleNodeClick = (params: any) => {
-  if (params.dataType === 'node' && params.data.id) {
+  if (params.dataType === 'node' && params.data && params.data.id) {
     router.push(`/scholars/${params.data.id}`)
   }
 }
@@ -324,45 +346,91 @@ const formatNumber = (num: number) => {
 
 const loadScholarDetail = async () => {
   const scholarId = route.params.id as string
+  if (!scholarId) {
+    ElMessage.error('学者ID不存在')
+    return
+  }
+  
   try {
-    const response = await scholarApi.getScholarDetail(scholarId)
+    // request.ts 已经处理了 ApiResponse 格式，直接返回 data 或原始数据
+    const response: any = await scholarApi.getScholarDetail(scholarId)
+    
+    // 如果返回的是 ApiResponse 格式，提取 data；否则直接使用
+    const scholarData = (response && typeof response === 'object' && 'data' in response) 
+      ? response.data 
+      : response
+    
+    if (!scholarData) {
+      ElMessage.error('学者信息不存在')
+      return
+    }
+    
+    console.log('学者详情数据:', scholarData)
+    
     scholar.value = {
-      id: response.scholarId,
-      name: response.name,
-      institution: response.organization,
-      title: response.title || '教授',
-      avatar: response.avatarUrl,
-      bio: response.bio,
-      fields: response.researchFields || [],
-      achievements: response.achievements || [],
+      id: scholarData.scholarId || scholarData.userId || scholarId,
+      name: scholarData.publicName || scholarData.name || '未知学者',
+      institution: scholarData.organization || '未知机构',
+      title: scholarData.title || '教授',
+      avatar: scholarData.avatarUrl,
+      bio: scholarData.bio || '暂无简介',
+      fields: scholarData.researchFields || [],
+      achievements: scholarData.achievements || [],
       stats: {
-        hIndex: response.hIndex || Math.floor(Math.random() * 50) + 10,
-        citations: response.citations || Math.floor(Math.random() * 5000) + 100,
-        papers: response.achievements?.length || 0
+        hIndex: scholarData.hIndex || 0,
+        citations: scholarData.citations || 0,
+        papers: scholarData.achievements?.length || 0
       },
       isFollowed: false,
-      isVerified: response.isVerified || false,
-      isOnline: Math.random() > 0.5
+      isVerified: scholarData.isVerified || false,
+      isOnline: false
     }
     
     // 获取论文列表（从achievements中提取）
-    if (response.achievements) {
-      scholarPapers.value = response.achievements.map((ach: any) => ({
+    if (scholarData.achievements && Array.isArray(scholarData.achievements)) {
+      scholarPapers.value = scholarData.achievements.map((ach: any) => ({
         id: ach.id || ach.achievementId,
-        title: ach.title,
+        title: ach.title || '未命名成果',
         authors: ach.authors || [],
         journal: ach.journal || '',
-        year: ach.year || new Date(ach.publishDate).getFullYear(),
+        year: ach.year || (ach.publishDate ? new Date(ach.publishDate).getFullYear() : new Date().getFullYear()),
         publishDate: ach.publishDate || ach.year,
         citations: ach.citations || 0,
         abstract: ach.abstract || ''
       }))
+    } else {
+      scholarPapers.value = []
     }
 
     // 加载合作网络
     try {
-      const networkResponse = await scholarApi.getCollaborationNetwork(scholarId)
-      if (networkResponse.nodes) {
+      // 后端返回 ApiResponse<List<ScholarDTO>>，request.ts 已处理，这里直接使用
+      const networkResponse: any = await scholarApi.getCollaborationNetwork(scholarId)
+      
+      // 如果返回的是 ApiResponse 格式，提取 data；否则直接使用
+      const collaborators = (networkResponse && typeof networkResponse === 'object' && 'data' in networkResponse)
+        ? networkResponse.data
+        : (Array.isArray(networkResponse) ? networkResponse : [])
+      
+      console.log('合作网络数据:', collaborators)
+      
+      if (Array.isArray(collaborators) && collaborators.length > 0) {
+        // 将合作者转换为网络图节点
+        const collaboratorNodes = collaborators.map((collab: any) => ({
+          id: collab.scholarId || collab.userId,
+          name: collab.publicName || collab.name,
+          organization: collab.organization,
+          value: 1,
+          category: 1
+        }))
+        
+        // 创建链接：当前学者与每个合作者之间的链接
+        const links = collaboratorNodes.map((node: any) => ({
+          source: scholar.value.id,
+          target: node.id,
+          value: 1
+        }))
+        
         // 将当前学者添加到节点列表的最前面
         networkData.value = {
           nodes: [
@@ -370,29 +438,47 @@ const loadScholarDetail = async () => {
               id: scholar.value.id,
               name: scholar.value.name,
               organization: scholar.value.institution,
-              collaborationCount: networkResponse.nodes.length
+              value: 2,
+              category: 0
             },
-            ...networkResponse.nodes
+            ...collaboratorNodes
           ],
-          links: networkResponse.links || []
+          links: links
+        }
+      } else {
+        // 没有合作者，只显示当前学者
+        networkData.value = {
+          nodes: [
+            {
+              id: scholar.value.id,
+              name: scholar.value.name,
+              organization: scholar.value.institution,
+              value: 1,
+              category: 0
+            }
+          ],
+          links: []
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn('加载合作网络失败:', error)
-      // 使用模拟数据
+      // 使用空数据
       networkData.value = {
         nodes: [
           {
             id: scholar.value.id,
             name: scholar.value.name,
-            organization: scholar.value.institution
+            organization: scholar.value.institution,
+            value: 1,
+            category: 0
           }
         ],
         links: []
       }
     }
   } catch (error: any) {
-    ElMessage.error(error.message || '加载学者详情失败')
+    console.error('加载学者详情失败:', error)
+    ElMessage.error(error.message || error.response?.data?.message || '加载学者详情失败')
   }
 }
 

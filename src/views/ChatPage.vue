@@ -89,6 +89,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
 import { getConversations, getMessages, sendMessage } from '../api/social'
 import { ElMessage } from 'element-plus'
@@ -226,6 +227,28 @@ const formatTime = (timeStr: string) => {
 
 onMounted(() => {
   fetchConversations()
+  
+  // 检查 URL 参数，如果有 userId，自动选择或创建对话
+  const route = useRoute()
+  const userId = route.query.userId as string
+  const name = route.query.name as string
+  const avatar = route.query.avatar as string
+  
+  if (userId) {
+    // 查找是否已有对话
+    const existingConv = conversations.value.find(c => c.withUser.userId === userId)
+    if (existingConv) {
+      selectConversation(existingConv)
+    } else {
+      // 创建新对话
+      currentConversationId.value = userId
+      currentConversationName.value = decodeURIComponent(name || '')
+      currentConversationAvatar.value = decodeURIComponent(avatar || '')
+      // 清空消息列表，等待用户发送第一条消息
+      messages.value = []
+    }
+  }
+  
   pollInterval = setInterval(() => {
     if (currentConversationId.value) {
       fetchMessages()
