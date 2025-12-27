@@ -171,8 +171,9 @@
                 <div class="name-row">
                   <h1>{{ user?.name }}</h1>
                   <el-tag v-if="verificationStatus === 'certified' || verificationStatus === 'verified'" type="success" effect="dark" round size="small" class="verified-tag">
-                    <el-icon><Select /></el-icon> 认证学者
+                    <el-icon><Select /></el-icon>
                   </el-tag>
+                  <span v-if="verificationStatus === 'certified' || verificationStatus === 'verified'" class="verified-text">认证学者</span>
                   <el-tag v-else-if="verificationStatus === 'pending'" type="warning" effect="dark" round size="small" class="pending-tag">
                     审核中
                   </el-tag>
@@ -2570,5 +2571,31 @@ onUnmounted(() => {
       }
     }
   }
+}
+/* 认证学者标签：只框住勾号，文字在外 */
+.verified-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 17px;
+  margin-right: -8px;
+  box-sizing: border-box;
+}
+.verified-tag .el-icon {
+  font-size: 18px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.verified-text {
+  font-size: 15px;
+  color: #21ba45;
+  font-weight: 600;
+  vertical-align: middle;
 }
 </style>
