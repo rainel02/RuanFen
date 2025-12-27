@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { Paper, SearchFilters } from '../types/paper'
 import api from '../api'
 
@@ -20,16 +20,15 @@ export const usePapersStore = defineStore('papers', () => {
 
   const filteredPapers = computed(() => papers.value)
 
-  const paginatedPapers = computed(() => {
-    const start = (currentPage.value - 1) * pageSize.value
-    const end = start + pageSize.value
-    return filteredPapers.value.slice(start, end)
-  })
+  // 后端已做分页，`papers` 存储当前页数据，前端不应再次按页面切片
+  const paginatedPapers = computed(() => filteredPapers.value)
 
   const totalPages = computed(() => Math.ceil((total.value || filteredPapers.value.length) / pageSize.value))
 
   const searchPapers = async (query: string) => {
     searchQuery.value = query
+    // ensure explicit fetch happens once even though a watcher also listens to page changes
+    skipNextFetchOnPageChange.value = true
     currentPage.value = 1
     await fetchPapers()
   }
@@ -44,6 +43,9 @@ export const usePapersStore = defineStore('papers', () => {
     if ((filters as any).institution !== undefined) institution.value = (filters as any).institution
     if ((filters as any).startDate !== undefined) startDate.value = (filters as any).startDate
     if ((filters as any).endDate !== undefined) endDate.value = (filters as any).endDate
+    // when resetting filters we set page to 1 and perform an explicit fetch;
+    // set a skip flag so the pagination watcher doesn't trigger a duplicate fetch
+    skipNextFetchOnPageChange.value = true
     currentPage.value = 1
     await fetchPapers()
   }
@@ -52,27 +54,47 @@ export const usePapersStore = defineStore('papers', () => {
     loading.value = true
     try {
       const params: Record<string, any> = {}
+      
+      // Backend requires at least one search condition
+      // Always provide q parameter (empty string searches all)
+      params.q = searchQuery.value || ''
+      
       // optional filters
-      if (searchQuery.value) params.q = searchQuery.value
       if (author.value) params.author = author.value
       if (institution.value) params.institution = institution.value
       if (selectedFields.value.length) params.field = selectedFields.value[0]
       if (startDate.value) params.startDate = startDate.value
       if (endDate.value) params.endDate = endDate.value
-      // pagination: API expects 0-based page, UI uses 1-based currentPage
+      
+      // pagination: backend uses 0-based page numbers
       params.page = Math.max(0, currentPage.value - 1)
       params.size = pageSize.value
 
       const data = await api.searchAchievements(params)
-      // api returns { results, total }
-      papers.value = data.results || []
-      total.value = data.total ?? papers.value.length
+      // api 返回已由请求封装器 unwrap 为 `data` 对象
+      // 例如后端原始响应为 { code, message, data: { content, totalElements } }
+      // 此处 `data` 已等同于后端的 `data` 字段
+      papers.value = data.content || []
+      console.log(data)
+      total.value = data.totalElements ?? papers.value.length
     } catch (e) {
       console.error('fetchPapers error', e)
     } finally {
       loading.value = false
     }
   }
+
+  // When user changes page or page size via UI, trigger fetch automatically.
+  // Use a skip flag to avoid duplicate fetch when callers already perform an explicit fetch
+  const skipNextFetchOnPageChange = ref(false)
+  watch([currentPage, pageSize], async () => {
+    console.log('Page or pageSize changed:', currentPage.value, pageSize.value)
+    if (skipNextFetchOnPageChange.value) {
+      skipNextFetchOnPageChange.value = false
+      return
+    }
+    await fetchPapers()
+  })
 
   const toggleFavorite = async (paperId: string) => {
     const paper = papers.value.find(p => p.id === paperId)
@@ -81,7 +103,7 @@ export const usePapersStore = defineStore('papers', () => {
       
       paper.isfavorited = !paper.isfavorited
       console.log('Toggled favorite for paper', paperId, 'to', paper.isfavorited)
-      paper.favoriteCount += paper.isfavorited ? 1 : -1
+      paper.favouriteCount += paper.isfavorited ? 1 : -1
       
       try {
         // call collection API
@@ -94,7 +116,7 @@ export const usePapersStore = defineStore('papers', () => {
         console.error('Failed to toggle favorite, rolling back', e)
         // rollback
         paper.isfavorited = originalState
-        paper.favoriteCount += paper.isfavorited ? 1 : -1
+        paper.favouriteCount += paper.isfavorited ? 1 : -1
         throw e // re-throw to let UI handle notification
       }
     }
@@ -118,6 +140,8 @@ export const usePapersStore = defineStore('papers', () => {
     searchPapers,
     setFilters,
     toggleFavorite,
-    fetchPapers
+    fetchPapers,
+    // expose skip flag so components can avoid duplicate fetches when they call fetchPapers manually
+    skipNextFetchOnPageChange
   }
 })

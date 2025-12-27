@@ -15,7 +15,11 @@ export const getCurrentUser = () => {
 export const updateCurrentUser = (data: {
   username?: string
   email?: string
-  preferences?: object
+  preferences?: {
+    bio?: string
+    interests?: string[]
+    [key: string]: any
+  }
 }) => {
   return request.put('/users/me', data)
 }

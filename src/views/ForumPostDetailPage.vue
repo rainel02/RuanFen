@@ -16,15 +16,16 @@
               </div>
               <div class="post-meta">
                 <div class="author-info">
-                  <el-avatar :size="40" :src="post.authorAvatar || defaultAvatar" />
+                  <el-avatar :size="40" :src="getAuthorAvatar(post.author)" />
                   <div class="meta-text">
-                    <span class="author-name">{{ post.authorName }}</span>
+                    <span class="author-name">{{ getAuthorName(post.author) }}</span>
                     <span class="time">发布于 {{ formatDate(post.createdAt) }}</span>
                   </div>
                 </div>
                 <div class="post-stats">
                   <span><el-icon><View /></el-icon> {{ post.viewCount || 0 }}</span>
                   <span><el-icon><ChatDotRound /></el-icon> {{ replies.length }}</span>
+                  <span><el-icon><Pointer /></el-icon> {{ likeCount }}</span>
                 </div>
               </div>
             </div>
@@ -33,8 +34,33 @@
           <div class="post-body markdown-body" v-html="renderedContent"></div>
           
           <div class="post-actions">
-            <el-button type="primary" plain round :icon="Star">收藏</el-button>
-            <el-button type="success" plain round :icon="Share">分享</el-button>
+            <el-button 
+              :type="isLiked ? 'danger' : 'info'" 
+              :plain="!isLiked" 
+              round 
+              :icon="Pointer" 
+              @click="toggleLike"
+            >
+              {{ isLiked ? '已点赞' : '点赞' }} {{ likeCount }}
+            </el-button>
+            <el-button 
+              :type="isFavorited ? 'warning' : 'info'" 
+              :plain="!isFavorited" 
+              round 
+              :icon="isFavorited ? StarFilled : Star" 
+              @click="toggleFavorite"
+            >
+              {{ isFavorited ? '已收藏' : '收藏' }} {{ favoriteCount }}
+            </el-button>
+            <el-button 
+              type="success" 
+              plain 
+              round 
+              :icon="Share" 
+              @click="handleShare"
+            >
+              分享 {{ shareCount }}
+            </el-button>
           </div>
         </el-card>
 
@@ -51,11 +77,11 @@
             <el-empty v-if="replies.length === 0" description="暂无回复，快来抢沙发吧" />
             <div v-for="(reply, index) in replies" :key="reply.id" class="reply-item">
               <div class="reply-avatar">
-                <el-avatar :size="36" :src="reply.authorAvatar || defaultAvatar" />
+                <el-avatar :size="36" :src="getAuthorAvatar(reply.author)" />
               </div>
               <div class="reply-main">
                 <div class="reply-info">
-                  <span class="name">{{ reply.authorName }}</span>
+                  <span class="name">{{ getAuthorName(reply.author) }}</span>
                   <span class="floor">#{{ index + 1 }}</span>
                 </div>
                 <div class="reply-content" v-html="renderMarkdown(reply.content)"></div>
@@ -112,7 +138,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppHeader from '../components/AppHeader.vue'
-import { ArrowLeft, View, ChatDotRound, Star, Share, ChatLineRound, Pointer, EditPen } from '@element-plus/icons-vue'
+import { ArrowLeft, View, ChatDotRound, Star, StarFilled, Share, ChatLineRound, Pointer, EditPen, Trophy } from '@element-plus/icons-vue'
 import { getPostDetail, replyPost } from '../api/social'
 import { ElMessage } from 'element-plus'
 import { marked } from 'marked'
@@ -130,6 +156,34 @@ const replies = ref<any[]>([])
 const replyContent = ref('')
 const sortOrder = ref('latest')
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+
+// Mock Social States
+const isLiked = ref(false)
+const likeCount = ref(0)
+const isFavorited = ref(false)
+const favoriteCount = ref(0)
+const shareCount = ref(0)
+
+const retroColors = ['D4AF37', '8B4513', 'A0522D', 'CD853F', '556B2F', 'B8860B', '800000', '5D4037'];
+const getRetroAvatar = (name: string) => {
+  if (!name) return defaultAvatar;
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const color = retroColors[hash % retroColors.length];
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${color}&color=fff&size=128&bold=true&font-size=0.5`;
+}
+
+const getAuthorAvatar = (author: any) => {
+  if (!author) return defaultAvatar
+  if (author.avatarUrl) return author.avatarUrl
+  if (author.avatar) return author.avatar
+  const name = author.username || author.name || 'User'
+  return getRetroAvatar(name)
+}
+
+const getAuthorName = (author: any) => {
+  if (!author) return 'Unknown'
+  return author.username || author.name || 'User'
+}
 
 // Configure marked with highlight.js
 marked.setOptions({
@@ -156,9 +210,17 @@ const fetchPostDetail = async () => {
   loading.value = true
   try {
     const res = await getPostDetail(id)
+    // API returns { post: {...}, replies: [...] }
     const data = (res as any).data || res
-    post.value = data
+    post.value = data.post || data
     replies.value = data.replies || [] 
+    
+    // Initialize mock data
+    likeCount.value = Math.floor(Math.random() * 100)
+    favoriteCount.value = Math.floor(Math.random() * 50)
+    shareCount.value = Math.floor(Math.random() * 20)
+    isLiked.value = false
+    isFavorited.value = false
   } catch (error) {
     console.error(error)
     ElMessage.error('获取帖子详情失败')
@@ -167,12 +229,39 @@ const fetchPostDetail = async () => {
   }
 }
 
+const toggleLike = () => {
+  isLiked.value = !isLiked.value
+  if (isLiked.value) {
+    likeCount.value++
+    ElMessage.success('点赞成功')
+  } else {
+    likeCount.value--
+  }
+}
+
+const toggleFavorite = () => {
+  isFavorited.value = !isFavorited.value
+  if (isFavorited.value) {
+    favoriteCount.value++
+    ElMessage.success('收藏成功')
+  } else {
+    favoriteCount.value--
+  }
+}
+
+const handleShare = () => {
+  shareCount.value++
+  ElMessage.success('分享链接已复制到剪贴板')
+  // Mock copy to clipboard
+  navigator.clipboard.writeText(window.location.href)
+}
+
 const handleReply = async () => {
   if (!replyContent.value.trim()) return
   
   submitting.value = true
   try {
-    await replyPost(post.value.id, replyContent.value)
+    await replyPost(post.value.postId, replyContent.value)
     ElMessage.success('回复成功')
     replyContent.value = ''
     fetchPostDetail() // Refresh

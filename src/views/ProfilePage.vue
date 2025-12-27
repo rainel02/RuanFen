@@ -259,23 +259,17 @@
         <el-form-item label="真实姓名" prop="realName">
           <el-input v-model="verificationForm.realName" placeholder="请输入真实姓名" />
         </el-form-item>
-        
-        <el-form-item label="教育邮箱" prop="email">
-          <el-input v-model="verificationForm.email" placeholder="请输入edu邮箱">
-            <template #append>
-              <el-button 
-                @click="handleSendCode" 
-                :disabled="codeSending || codeCountdown > 0"
-              >
-                {{ codeCountdown > 0 ? `${codeCountdown}s` : '发送验证码' }}
-              </el-button>
-            </template>
-          </el-input>
+        <el-form-item label="所属机构" prop="organization">
+          <el-input v-model="verificationForm.organization" placeholder="请输入所属机构" />
+        </el-form-item>
+        <el-form-item label="机构邮箱（可选）" prop="email">
+          <el-input v-model="verificationForm.email" placeholder="请输入机构邮箱（可选）" />
+        </el-form-item>
+        <el-form-item label="职称/学位（可选）" prop="title">
+          <el-input v-model="verificationForm.title" placeholder="如：教授、博士（可选）" />
         </el-form-item>
 
-        <el-form-item label="验证码" prop="code" :rules="[{ required: true, message: '请输入验证码', trigger: 'blur' }]">
-          <el-input v-model="verificationForm.code" placeholder="请输入验证码" />
-        </el-form-item>
+        
       </el-form>
       <template #footer>
         <span class="dialog-footer">
@@ -334,6 +328,40 @@ let touchEndX = 0
 let isDragging = ref(false)
 let dragStartX = 0
 let dragOffset = ref(0)
+
+let vantaEffect: any = null
+let vantaPromise: Promise<void> | null = null
+
+// 动态加载外部脚本
+const loadScript = (src: string) => {
+  return new Promise<void>((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      resolve()
+      return
+    }
+    const script = document.createElement('script')
+    script.src = src
+    script.async = true
+    script.onload = () => resolve()
+    script.onerror = () => reject(new Error(`Failed to load script ${src}`))
+    document.head.appendChild(script)
+  })
+}
+
+const ensureVantaBirds = async () => {
+  if (typeof window === 'undefined') return
+  if (!vantaPromise) {
+    vantaPromise = (async () => {
+      if (!(window as any).THREE) {
+        await loadScript('https://cdn.jsdelivr.net/npm/three@0.121.1/build/three.min.js')
+      }
+      if (!(window as any).VANTA || !(window as any).VANTA.BIRDS) {
+        await loadScript('https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.birds.min.js')
+      }
+    })()
+  }
+  await vantaPromise
+}
 
 // 获取显示的索引（用于指示器）
 const getDisplayIndex = () => {
@@ -394,18 +422,16 @@ const editForm = reactive({
 })
 
 const verificationForm = ref({
-  email: '',
   realName: '',
-  code: ''
+  organization: '',
+  email: '',
+  title: ''
 })
 const verificationFormRef = ref<FormInstance>()
 const verificationStatus = ref('unverified')
 const showVerificationDialog = ref(false)
 const submittingVerification = ref(false)
-const codeSending = ref(false)
-const codeCountdown = ref(0)
-let codeTimer: any = null
-const sentCode = ref('')
+// 已取消验证码流程，无需倒计时或发送状态
 
 const loginRules = reactive<FormRules>({
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
@@ -443,19 +469,14 @@ const verificationRules = {
   realName: [
     { required: true, message: '请输入真实姓名', trigger: 'blur' }
   ],
+  organization: [
+    { required: true, message: '请输入所属机构', trigger: 'blur' }
+  ],
   email: [
-    { required: true, message: '请输入edu邮箱', trigger: 'blur' },
-    {
-      validator: (_rule: any, value: string, callback: Function) => {
-        if (!value) return callback(new Error('请输入edu邮箱'))
-        if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.edu(\.[A-Za-z]{2,})?$/.test(value)) {
-          callback(new Error('请输入有效的edu邮箱'))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'blur'
-    }
+    // 邮箱可选，不做强校验
+  ],
+  title: [
+    // 职称/学位可选
   ]
 }
 
@@ -515,28 +536,11 @@ const handleLogout = () => {
 // 认证相关方法
 const handleSendCode = async () => {
   const email = verificationForm.value.email
-  if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.edu(\.[A-Za-z]{2,})?$/.test(email)) {
-    ElMessage.error('请输入有效的edu邮箱')
+  if (!email) {
+    ElMessage.warning('请输入邮箱（可非 edu），无需验证码')
     return
   }
-  codeSending.value = true
-  try {
-    await authApi.forgotPassword({ email })
-    ElMessage.success('验证码已发送到邮箱')
-    codeCountdown.value = 60
-    codeTimer && clearInterval(codeTimer)
-    codeTimer = setInterval(() => {
-      codeCountdown.value--
-      if (codeCountdown.value <= 0) {
-        clearInterval(codeTimer)
-        codeCountdown.value = 0
-      }
-    }, 1000)
-  } catch (error: any) {
-    ElMessage.error(error.message || '发送验证码失败')
-  } finally {
-    codeSending.value = false
-  }
+  ElMessage.success('学者认证无需验证码，直接提交即可')
 }
 
 const handleSubmitVerification = async () => {
@@ -551,9 +555,9 @@ const handleSubmitVerification = async () => {
     try {
       await userApi.submitCertification({
         realName: verificationForm.value.realName,
-        organization: '', // 需要从表单获取
-        orgEmail: verificationForm.value.email,
-        title: '', // 需要从表单获取
+        organization: verificationForm.value.organization,
+        orgEmail: verificationForm.value.email || undefined,
+        title: verificationForm.value.title || undefined,
         proofMaterials: []
       })
       verificationStatus.value = 'pending'
@@ -571,7 +575,59 @@ const handleSubmitVerification = async () => {
 
 const saveProfile = async () => {
   console.log('saveProfile called', editForm)
-  showEditDialog.value = false
+  try {
+    const payload: any = {
+      preferences: {
+        bio: editForm.bio || '',
+        interests: editForm.interests || []
+      }
+    }
+    
+    // username 必须 3-50 字符，只有符合条件时才发送
+    if (editForm.name && editForm.name.trim().length >= 3 && editForm.name.trim().length <= 50) {
+      payload.username = editForm.name.trim()
+    }
+    
+    console.log('Sending update payload:', JSON.stringify(payload, null, 2))
+    console.log('Calling userApi.updateCurrentUser...')
+    
+    // 调用 API 更新用户资料
+    const result = await userApi.updateCurrentUser(payload)
+    
+    console.log('API call successful, result:', result)
+    
+    // 更新本地 authStore 中的用户信息
+    if (authStore.user && result) {
+      if (payload.username) {
+        authStore.user.username = payload.username
+        authStore.user.name = payload.username
+      }
+      
+      // 解析并更新 preferences
+      if (result.preferences) {
+        try {
+          const prefs = typeof result.preferences === 'string' 
+            ? JSON.parse(result.preferences) 
+            : result.preferences
+          authStore.user.bio = prefs.bio || ''
+          authStore.user.interests = prefs.interests || []
+        } catch (e) {
+          console.error('Failed to parse preferences:', e)
+        }
+      }
+    }
+    
+    console.log('Closing dialog...')
+    showEditDialog.value = false
+    
+    console.log('Showing success message...')
+    ElMessage.success('保存成功')
+    console.log('Save complete!')
+  } catch (error: any) {
+    console.error('保存失败:', error)
+    console.error('Error details:', error.response)
+    ElMessage.error(error.message || '保存失败')
+  }
 }
 
 const loadCertificationStatus = async () => {
@@ -593,12 +649,10 @@ const loadCertificationStatus = async () => {
 const resetVerificationForm = () => {
   verificationForm.value = {
     realName: '',
+    organization: '',
     email: '',
-    code: ''
+    title: ''
   }
-  sentCode.value = ''
-  codeCountdown.value = 0
-  codeTimer && clearInterval(codeTimer)
 }
 
 // 轮播方法
@@ -723,18 +777,17 @@ const handleMouseUp = () => {
   startAutoPlay()
 }
 
-let vantaEffect: any = null
-
 onMounted(async () => {
   await authStore.initAuth()
   settingsStore.loadSettings()
   
   if (authStore.isLoggedIn) {
     await loadCertificationStatus()
+    await ensureVantaBirds()
     // 等待 DOM 渲染后再初始化 Vanta.js
     setTimeout(() => {
-      if (typeof window !== 'undefined' && window.VANTA) {
-        vantaEffect = window.VANTA.BIRDS({
+      if (typeof window !== 'undefined' && (window as any).VANTA) {
+        vantaEffect = (window as any).VANTA.BIRDS({
           el: '#vanta-birds-bg',
           mouseControls: true,
           touchControls: true,

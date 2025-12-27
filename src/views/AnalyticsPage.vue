@@ -30,9 +30,9 @@
               <div class="card-header">
                 <span class="card-title">学科热点词云</span>
                 <el-radio-group v-model="hotTopicRange" size="small" @change="fetchHotTopics">
-                  <el-radio-button label="1y">近1年</el-radio-button>
-                  <el-radio-button label="3m">近3月</el-radio-button>
-                  <el-radio-button label="all">全部</el-radio-button>
+                  <el-radio-button value="1y">近1年</el-radio-button>
+                  <el-radio-button value="3m">近3月</el-radio-button>
+                  <el-radio-button value="all">全部</el-radio-button>
                 </el-radio-group>
               </div>
             </template>
@@ -50,10 +50,27 @@
             <template #header>
               <div class="card-header">
                 <span class="card-title">影响力排行榜</span>
-                <el-select v-model="rankingDomain" size="small" style="width: 100px" @change="fetchRanking">
+                <el-select v-model="rankingDomain" size="small" style="width: 160px" @change="fetchRanking">
                   <el-option label="全部" value="all" />
-                  <el-option label="计算机" value="cs" />
-                  <el-option label="物理" value="physics" />
+                  <el-option label="Medicine" value="Medicine" />
+                  <el-option label="Biology" value="Biology" />
+                  <el-option label="Chemistry" value="Chemistry" />
+                  <el-option label="Computer science" value="Computer science" />
+                  <el-option label="Business" value="Business" />
+                  <el-option label="Sociology" value="Sociology" />
+                  <el-option label="Political science" value="Political science" />
+                  <el-option label="Geology" value="Geology" />
+                  <el-option label="Philosophy" value="Philosophy" />
+                  <el-option label="History" value="History" />
+                  <el-option label="Materials science" value="Materials science" />
+                  <el-option label="Psychology" value="Psychology" />
+                  <el-option label="Physics" value="Physics" />
+                  <el-option label="Environmental science" value="Environmental science" />
+                  <el-option label="Mathematics" value="Mathematics" />
+                  <el-option label="Engineering" value="Engineering" />
+                  <el-option label="Geography" value="Geography" />
+                  <el-option label="Economics" value="Economics" />
+                  <el-option label="Art" value="Art" />
                 </el-select>
               </div>
             </template>
@@ -92,8 +109,8 @@
               <div class="card-header">
                 <span class="card-title">影响力趋势 (我的)</span>
                 <el-radio-group v-model="trendMetric" size="small" @change="fetchTrend">
-                  <el-radio-button label="citations">引用量</el-radio-button>
-                  <el-radio-button label="h-index">H指数</el-radio-button>
+                  <el-radio-button value="citations">引用量</el-radio-button>
+                  <el-radio-button value="h-index">H指数</el-radio-button>
                 </el-radio-group>
               </div>
             </template>
@@ -117,12 +134,13 @@ import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from
 import VChart from 'vue-echarts'
 import 'echarts-wordcloud'
 import { getHotTopics, getInfluenceRanking, getInfluenceTrend } from '../api/analysis'
-import * as echarts from 'echarts/core'
+import { useAuthStore } from '../stores/auth'
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent])
 
+const authStore = useAuthStore()
 const hotTopicRange = ref<'1y' | '3m' | 'all'>('all')
-const rankingDomain = ref<'cs' | 'physics' | 'all'>('all')
+const rankingDomain = ref<string>('all')
 const trendMetric = ref<'citations' | 'h-index'>('citations')
 
 const wordCloudOption = ref<any>({})
@@ -131,13 +149,13 @@ const rankingData = ref<any[]>([])
 
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-// Mock summary data
-const summaryData = [
-  { label: '总引用量', value: '1,234', icon: 'DataLine', color: '#409EFF' },
-  { label: 'H指数', value: '15', icon: 'StarFilled', color: '#E6A23C' },
-  { label: '发表论文', value: '42', icon: 'Trophy', color: '#67C23A' },
-  { label: '关注者', value: '89', icon: 'UserFilled', color: '#F56C6C' },
-]
+// Summary data
+const summaryData = ref([
+  { label: '总引用量', value: '0', icon: 'DataLine', color: '#409EFF' },
+  { label: 'H指数', value: '0', icon: 'StarFilled', color: '#E6A23C' },
+  { label: '发表论文', value: '0', icon: 'Trophy', color: '#67C23A' },
+  { label: 'i10指数', value: '0', icon: 'UserFilled', color: '#F56C6C' },
+])
 
 const getRankIcon = (rank: number) => {
   // You can replace these with actual image URLs or SVGs
@@ -157,8 +175,9 @@ const tableRowClassName = ({ rowIndex }: { rowIndex: number }) => {
 const fetchHotTopics = async () => {
   try {
     const res = await getHotTopics(hotTopicRange.value)
-    const data = (res as any).data || res
-    
+    // API returns { topics: [...] }
+    const data = (res as any).topics || (res as any).data || res
+
     wordCloudOption.value = {
       tooltip: {},
       series: [{
@@ -219,45 +238,49 @@ const fetchHotTopics = async () => {
 const fetchRanking = async () => {
   try {
     const res = await getInfluenceRanking(rankingDomain.value)
-    rankingData.value = (res as any).data || res
+    // API returns { ranking: [{ rank, scholar: {...}, influenceScore }] }
+    const data = (res as any).ranking || (res as any).data || []
+    
+    rankingData.value = data.map((item: any) => ({
+      rank: item.rank,
+      name: item.scholar?.displayName || 'Unknown',
+      score: item.influenceScore,
+      institution: (item.scholar?.primaryTags || []).join(', ') || 'Unknown', // Use tags as institution/field placeholder
+      avatar: item.scholar?.avatarUrl // Assuming avatarUrl might be there, or undefined
+    }))
   } catch (error) {
     console.error(error)
-    // Mock
-    rankingData.value = [
-      { rank: 1, name: 'Alice Smith', score: 98.5, institution: 'MIT' },
-      { rank: 2, name: 'Bob Johnson', score: 95.2, institution: 'Stanford' },
-      { rank: 3, name: 'Charlie Brown', score: 92.1, institution: 'Harvard' },
-      { rank: 4, name: 'David Lee', score: 89.8, institution: 'Tsinghua' },
-      { rank: 5, name: 'Eva Green', score: 88.4, institution: 'Oxford' }
-    ]
+    rankingData.value = []
   }
 }
 
 const fetchTrend = async () => {
+  // Use current user ID or a default one if not logged in
+  const userId = authStore.user?.userId || '1' 
+  
   try {
-    const res = await getInfluenceTrend('me', '5y', trendMetric.value)
+    const res = await getInfluenceTrend(userId)
+    // API returns { worksCount, citedByCnt, hIndex, i10Index, authorName }
     const data = (res as any).data || res
-    
+
+    // Update summary cards
+    summaryData.value[0].value = (data.citedByCnt || 0).toLocaleString()
+    summaryData.value[1].value = (data.hIndex || 0).toString()
+    summaryData.value[2].value = (data.worksCount || 0).toLocaleString()
+    summaryData.value[3].value = (data.i10Index || 0).toString()
+
+    // Since the API no longer returns trend data (time series), we'll use mock data for the chart
+    // or we could hide the chart. For now, let's keep the mock chart but maybe update the title.
     trendOption.value = {
       tooltip: {
         trigger: 'axis',
-        axisPointer: {
-          type: 'cross',
-          label: {
-            backgroundColor: '#6a7985'
-          }
-        }
+        axisPointer: { type: 'cross' }
       },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        containLabel: true
-      },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
       xAxis: {
         type: 'category',
         boundaryGap: false,
-        data: data.years || ['2020', '2021', '2022', '2023', '2024'],
+        data: ['2020', '2021', '2022', '2023', '2024'],
         axisLine: { lineStyle: { color: '#909399' } }
       },
       yAxis: {
@@ -265,16 +288,10 @@ const fetchTrend = async () => {
         splitLine: { lineStyle: { type: 'dashed', color: '#E4E7ED' } }
       },
       series: [{
-        name: trendMetric.value === 'citations' ? '引用量' : 'H指数',
+        name: '模拟趋势',
         type: 'line',
         smooth: true,
-        lineStyle: {
-          width: 3,
-          color: '#D4AF37',
-          shadowColor: 'rgba(184, 134, 11, 0.3)',
-          shadowBlur: 10,
-          shadowOffsetY: 8
-        },
+        lineStyle: { width: 3, color: '#D4AF37' },
         areaStyle: {
           opacity: 0.8,
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -282,10 +299,7 @@ const fetchTrend = async () => {
             { offset: 1, color: 'rgba(212, 175, 55, 0.01)' }
           ])
         },
-        emphasis: {
-          focus: 'series'
-        },
-        data: data.values || [150, 230, 224, 218, 135]
+        data: [10, 20, 15, 30, data.citedByCnt || 40] // Use current citation count as last point
       }]
     }
   } catch (error) {
@@ -318,7 +332,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  
+
   h2 {
     margin: 0;
     @extend .text-retro-dark;
@@ -335,11 +349,11 @@ onMounted(() => {
   margin-bottom: 25px;
 }
 
-/* Summary Card styles are imported from retro-theme.scss via class name match, 
-   but we need to ensure they apply if scoped. 
-   Since we imported the scss, the mixins/classes are available. 
-   However, .summary-card in retro-theme is a class, not a mixin. 
-   We need to extend it or just let the global class apply if it was global. 
+/* Summary Card styles are imported from retro-theme.scss via class name match,
+   but we need to ensure they apply if scoped.
+   Since we imported the scss, the mixins/classes are available.
+   However, .summary-card in retro-theme is a class, not a mixin.
+   We need to extend it or just let the global class apply if it was global.
    But it's scoped here. So we extend. */
 .summary-card {
   @extend .summary-card;
@@ -348,7 +362,7 @@ onMounted(() => {
 .chart-card {
   @extend .glass-panel;
   padding: 0; /* Reset padding if needed, glass-panel has its own */
-  
+
   .card-header {
     display: flex;
     justify-content: space-between;
@@ -382,13 +396,13 @@ onMounted(() => {
   .scholar-detail {
     display: flex;
     flex-direction: column;
-    
+
     .name {
       font-weight: 600;
       @extend .text-retro-dark;
       @extend .font-serif;
     }
-    
+
     .institution {
       font-size: 12px;
       color: #8B4513;
@@ -400,13 +414,13 @@ onMounted(() => {
   display: flex;
   justify-content: center;
   align-items: center;
-  
+
   .rank-icon {
     width: 24px;
     height: 24px;
     filter: sepia(1) hue-rotate(10deg);
   }
-  
+
   .rank-text {
     font-weight: bold;
     color: #654321;
@@ -426,13 +440,13 @@ onMounted(() => {
   --el-table-header-bg-color: rgba(212, 175, 55, 0.1);
   --el-table-row-hover-bg-color: rgba(212, 175, 55, 0.15);
   --el-table-border-color: rgba(184, 134, 11, 0.2);
-  
+
   th.el-table__cell {
     color: #654321;
     font-family: 'Georgia', serif;
     font-weight: bold;
   }
-  
+
   td.el-table__cell {
     color: #5d4037;
   }

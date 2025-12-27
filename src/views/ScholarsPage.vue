@@ -26,6 +26,14 @@
             <p><el-icon><Connection /></el-icon> 发现并连接顶尖学者</p>
           </div>
           <div class="filters-bar">
+            <el-input
+              v-model="searchName"
+              placeholder="姓名关键词"
+              clearable
+              class="filter-select"
+            >
+              <template #prefix><el-icon><UserFilled /></el-icon></template>
+            </el-input>
             <el-select
               v-model="selectedInstitution"
               placeholder="选择机构"
@@ -76,8 +84,8 @@
               :key="scholar.id"
               class="scholar-item-wrapper"
             >
-              <ScholarCard 
-                :scholar="scholar" 
+              <ScholarCard
+                :scholar="scholar"
                 @start-chat="handleStartChat"
               />
             </div>
@@ -89,7 +97,7 @@
         </div>
       </div>
     </div>
-    
+
     <ChatWindow v-if="showChatWindow" @close="showChatWindow = false" />
   </div>
 </template>
@@ -98,7 +106,7 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { UserFilled, School, Collection, Sort, Connection, DataLine, StarFilled, Trophy, TrendCharts } from '@element-plus/icons-vue'
+import { UserFilled, School, Collection, Sort, Connection } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ScholarCard from '@/components/ScholarCard.vue'
 import ChatWindow from '@/components/ChatWindow.vue'
@@ -108,6 +116,7 @@ import * as scholarApi from '../api/scholar'
 const scholars = ref<any[]>([])
 
 const chatStore = useChatStore()
+const searchName = ref('')
 const selectedInstitution = ref('')
 const selectedField = ref('')
 const sortBy = ref('hIndex')
@@ -116,33 +125,33 @@ const showChatWindow = ref(false)
 
 // Summary data - 巴洛克风格颜色
 const summaryData = computed(() => [
-  { 
-    label: '总学者数', 
-    value: filteredScholars.value.length.toString(), 
-    icon: 'UserFilled', 
-    color: '#D4AF37' 
+  {
+    label: '总学者数',
+    value: filteredScholars.value.length.toString(),
+    icon: 'UserFilled',
+    color: '#D4AF37'
   },
-  { 
-    label: '平均H指数', 
-    value: filteredScholars.value.length > 0 
+  {
+    label: '平均H指数',
+    value: filteredScholars.value.length > 0
       ? Math.round(filteredScholars.value.reduce((sum: number, s: any) => sum + (s.stats?.hIndex || 0), 0) / filteredScholars.value.length).toString()
-      : '0', 
-    icon: 'StarFilled', 
-    color: '#B8860B' 
+      : '0',
+    icon: 'StarFilled',
+    color: '#B8860B'
   },
-  { 
-    label: '总引用量', 
+  {
+    label: '总引用量',
     value: filteredScholars.value.length > 0
       ? (filteredScholars.value.reduce((sum: number, s: any) => sum + (s.stats?.citations || 0), 0) / 1000).toFixed(1) + 'k'
-      : '0', 
-    icon: 'TrendCharts', 
-    color: '#8B4513' 
+      : '0',
+    icon: 'TrendCharts',
+    color: '#8B4513'
   },
-  { 
-    label: '研究领域', 
-    value: fields.value.length.toString(), 
-    icon: 'Collection', 
-    color: '#654321' 
+  {
+    label: '研究领域',
+    value: fields.value.length.toString(),
+    icon: 'Collection',
+    color: '#654321'
   },
 ])
 
@@ -182,9 +191,10 @@ const loadScholars = async () => {
   loading.value = true
   try {
     const params: any = {}
+    params.name = searchName.value || ''
     if (selectedInstitution.value) params.organization = selectedInstitution.value
     if (selectedField.value) params.field = selectedField.value
-    
+
     const response = await scholarApi.searchScholars(params)
     if (response.results) {
       scholars.value = response.results.map((item: any) => ({
@@ -257,11 +267,11 @@ onMounted(() => {
   overflow: hidden;
   background: rgba(249, 247, 236, 0.85) !important;
   backdrop-filter: blur(16px);
-  box-shadow: 
+  box-shadow:
     0 4px 20px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
     inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -269,19 +279,19 @@ onMounted(() => {
     left: -3px;
     right: -3px;
     bottom: -3px;
-    background: linear-gradient(45deg, 
-      rgba(212, 175, 55, 0.3) 0%, 
-      transparent 25%, 
-      transparent 75%, 
+    background: linear-gradient(45deg,
+      rgba(212, 175, 55, 0.3) 0%,
+      transparent 25%,
+      transparent 75%,
       rgba(212, 175, 55, 0.3) 100%);
     border-radius: 12px;
     z-index: -1;
     opacity: 0.6;
   }
-  
+
   &:hover {
     transform: translateY(-5px);
-    box-shadow: 
+    box-shadow:
       0 12px 32px rgba(0, 0, 0, 0.22),
       0 0 0 2px rgba(212, 175, 55, 0.4),
       inset 0 2px 6px rgba(255, 255, 255, 0.6);
@@ -318,7 +328,7 @@ onMounted(() => {
     transform: rotate(-15deg);
     transition: all 0.3s ease;
   }
-  
+
   &:hover .summary-icon {
     opacity: 0.4;
     transform: rotate(-15deg) scale(1.1);
@@ -331,14 +341,14 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
   border: 3px solid rgba(184, 134, 11, 0.5);
-  box-shadow: 
+  box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.18),
     0 0 0 1px rgba(212, 175, 55, 0.2) inset,
     inset 0 2px 4px rgba(255, 255, 255, 0.5),
     inset 0 -2px 4px rgba(0, 0, 0, 0.1);
   position: relative;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  
+
   &::before {
     content: '';
     position: absolute;
@@ -346,19 +356,19 @@ onMounted(() => {
     left: -3px;
     right: -3px;
     bottom: -3px;
-    background: linear-gradient(135deg, 
-      rgba(212, 175, 55, 0.4) 0%, 
-      transparent 25%, 
-      transparent 75%, 
+    background: linear-gradient(135deg,
+      rgba(212, 175, 55, 0.4) 0%,
+      transparent 25%,
+      transparent 75%,
       rgba(212, 175, 55, 0.4) 100%);
     border-radius: 16px;
     z-index: -1;
     opacity: 0.6;
   }
-  
+
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 
+    box-shadow:
       0 12px 32px rgba(0, 0, 0, 0.22),
       0 0 0 2px rgba(212, 175, 55, 0.4),
       inset 0 2px 6px rgba(255, 255, 255, 0.6);
@@ -388,7 +398,7 @@ onMounted(() => {
       font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
       letter-spacing: 0.5px;
-      
+
       .title-icon {
         font-size: 36px;
         color: #D4AF37;
@@ -404,7 +414,7 @@ onMounted(() => {
       align-items: center;
       gap: 6px;
       font-weight: 600;
-      
+
       :deep(.el-icon) {
         color: #D4AF37;
         font-size: 18px;
@@ -425,24 +435,24 @@ onMounted(() => {
         background-color: rgba(255, 255, 255, 0.7);
         border: 1px solid rgba(212, 175, 55, 0.4);
         transition: all 0.3s ease;
-        
+
         &:hover {
           border-color: #D4AF37;
           box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.5) inset;
         }
-        
+
         &.is-focus {
           border-color: #B8860B;
           box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.6) inset;
         }
       }
-      
+
       :deep(.el-input__inner) {
         color: #654321;
         font-weight: 600;
         font-family: 'Georgia', 'Times New Roman', serif;
       }
-      
+
       :deep(.el-input__prefix) {
         .el-icon {
           color: #D4AF37;
@@ -458,7 +468,7 @@ onMounted(() => {
   gap: 30px;
   position: relative;
   z-index: 5;
-  
+
   @media (min-width: 1400px) {
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   }

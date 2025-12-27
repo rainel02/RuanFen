@@ -52,27 +52,22 @@ import { ref, onMounted } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 import { getFollowing, getFollowers, unfollowUser } from '../api/social'
 import { ElMessage } from 'element-plus'
+import { useAuthStore } from '../stores/auth'
 
+const authStore = useAuthStore()
 const activeTab = ref('following')
 const loading = ref(false)
 const followingList = ref<any[]>([])
 const followersList = ref<any[]>([])
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-// Assuming we need current user ID, but API might infer from token or we need to get it.
-// The API definition says /social/following/{userId}.
-// I'll assume 'me' works or I need to get my ID.
-// For now, I'll use 'me' if the backend supports it, or I need to fetch user profile first.
-// Let's assume 'me' is supported or I'll hardcode a placeholder if I can't get it.
-// Actually, usually /users/me gives the ID.
-// I'll try 'me' first.
-
-const currentUserId = 'me' 
-
 const fetchFollowing = async () => {
+  const userId = authStore.user?.userId
+  if (!userId) return
+
   loading.value = true
   try {
-    const res = await getFollowing(currentUserId)
+    const res = await getFollowing(userId)
     // API returns { following: [...], total: ... }
     followingList.value = (res as any).following || (res as any).data || res
   } catch (error) {
@@ -88,9 +83,12 @@ const fetchFollowing = async () => {
 }
 
 const fetchFollowers = async () => {
+  const userId = authStore.user?.userId
+  if (!userId) return
+
   loading.value = true
   try {
-    const res = await getFollowers(currentUserId)
+    const res = await getFollowers(userId)
     // API returns { followers: [...], total: ... }
     followersList.value = (res as any).followers || (res as any).data || res
   } catch (error) {
