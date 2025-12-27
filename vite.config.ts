@@ -19,6 +19,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // 代理真实后端 API（/api），不拦截 Apifox Mock 服务
+      // Apifox Mock 服务使用完整 URL（http://127.0.0.1:4523/...），不会被代理拦截
       '/api': {
         target: 'http://10.193.59.61:8080',
         changeOrigin: true

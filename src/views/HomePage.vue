@@ -131,7 +131,7 @@
           <div class="content-header">
             <div class="results-info">
               <span class="results-count">
-                找到 {{ papersStoreTotal }} 篇相关论文
+                找到 {{ papersStoreTotalDisplay }} 篇相关论文
               </span>
               <span v-if="searchQuery" class="search-query">
                 "{{ searchQuery }}"
@@ -225,6 +225,11 @@ const pageSize = computed({
 })
 const totalPages = computed(() => papersStore.totalPages)
 const papersStoreTotal = computed(() => (papersStore.total ?? filteredPapers.value.length))
+// Display string for results count: show "10000+" when backend caps total at 10000
+const papersStoreTotalDisplay = computed(() => {
+  const t = papersStoreTotal.value
+  return t === 10000 ? '10000+' : t
+})
 
 // 显示论文导读功能
 // const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)

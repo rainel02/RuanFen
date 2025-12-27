@@ -30,8 +30,8 @@ export const updateCurrentUser = (data: {
 export const submitCertification = (data: {
   realName: string
   organization: string
-  orgEmail: string
-  title: string
+  orgEmail?: string
+  title?: string
   proofMaterials?: string[]
 }) => {
   return request.post('/users/me/certification', data)
