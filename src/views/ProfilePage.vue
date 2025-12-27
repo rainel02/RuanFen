@@ -4,7 +4,7 @@
 
     <!-- Vanta.js Birds 背景（已登录用户） -->
     <div v-if="isLoggedIn" id="vanta-birds-bg" class="vanta-background"></div>
-
+    <!-- ...existing code... -->
     <!-- 登录背景轮播 -->
     <div v-if="!isLoggedIn" class="login-carousel-container" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd" @mousedown="handleMouseDown" @mousemove="handleMouseMove" @mouseup="handleMouseUp" @mouseleave="handleMouseUp">
       <div 
@@ -290,9 +290,38 @@
                     <template #label>
                       <span><el-icon><ChatLineRound /></el-icon> 我的帖子</span>
                     </template>
-                    <div class="empty-state">
-                      <el-empty description="暂无帖子" />
-                    </div>
+                    <template v-if="myPosts && myPosts.length === 0">
+                      <div class="empty-state">
+                        <el-empty description="暂无帖子" />
+                      </div>
+                    </template>
+                    <template v-else-if="myPosts && myPosts.length > 0">
+                      <div class="my-posts-list">
+                        <div
+                          v-for="post in myPosts"
+                          :key="post.postId || post.id"
+                          class="my-post-card"
+                          @click="router.push(`/forum/post/${post.postId || post.id}`)"
+                        >
+                          <div class="my-post-title">
+                            <el-icon style="color:#b8893a"><ChatLineRound /></el-icon>
+                            {{ post.title || '未命名帖子' }}
+                          </div>
+                          <div class="my-post-meta">
+                            <span>{{ post.boardName || post.boardId || '未知板块' }}</span>
+                            <span v-if="post.createdAt">{{ post.createdAt.split('T')[0] }}</span>
+                          </div>
+                          <div class="my-post-divider"></div>
+                          <div class="my-post-summary">
+                            {{ post.contentPreview || post.content?.replace(/[#*`]/g, '').slice(0, 80) || '无内容摘要' }}<span v-if="(post.content?.length || 0) > 80">...</span>
+                          </div>
+                          <div class="my-post-actions">
+                            <span class="my-post-author">作者：{{ post.author?.username || post.authorName || user?.name || '我' }}</span>
+                            <el-button size="small" type="primary" plain @click.stop="router.push(`/forum/post/${post.postId || post.id}`)">查看详情</el-button>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
                   </el-tab-pane>
                 </el-tabs>
               </div>
@@ -483,6 +512,26 @@ import * as userApi from '../api/user'
 import * as achievementApi from '../api/index'
 import * as socialApi from '../api/social'
 import defaultAvatar from '@/assets/profile.png'
+
+// 我的帖子相关
+const myPosts = ref<any[]>([])
+const loadMyPosts = async () => {
+  myPosts.value = []
+  try {
+    const res = await socialApi.getPosts()
+    // 兼容多种返回格式
+    let posts = (res as any).posts || (res as any).data || res
+    if (!Array.isArray(posts)) posts = []
+    const userId = authStore.user?.id || authStore.user?.userId
+    myPosts.value = posts.filter((p: any) => {
+      // 兼容 author 字段结构
+      const authorId = p.author?.id || p.author?.userId || p.authorId || p.userId
+      return userId && authorId && String(authorId) === String(userId)
+    })
+  } catch (e) {
+    myPosts.value = []
+  }
+}
 
 // 导入登录背景图片
 import login1 from '@/assets/login1.png'
@@ -1115,6 +1164,7 @@ onMounted(async () => {
     await loadCertificationStatus()
     await loadCollections()
     await loadFollowingAndFollowers()
+    await loadMyPosts()
     await ensureVantaBirds()
     // 等待 DOM 渲染后再初始化 Vanta.js
     setTimeout(() => {
@@ -1160,6 +1210,69 @@ onUnmounted(() => {
 .profile-page {
   min-height: 100vh;
   position: relative;
+}
+
+.my-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 8px;
+}
+.my-post-card {
+  background: var(--pf-card-bg, #fffef8);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px 0 rgba(180, 137, 58, 0.08), 0 1.5px 6px 0 rgba(44, 38, 24, 0.04);
+  padding: 20px 24px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.2s;
+  border: 1px solid #f3e7c6;
+  position: relative;
+  cursor: pointer;
+}
+.my-post-card:hover {
+  box-shadow: 0 6px 24px 0 rgba(180, 137, 58, 0.18), 0 2px 8px 0 rgba(44, 38, 24, 0.08);
+  transform: translateY(-2px) scale(1.01);
+  border-color: #e2c88f;
+}
+.my-post-title {
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: #2e2a25;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.my-post-meta {
+  font-size: 0.98rem;
+  color: #b8893a;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.my-post-summary {
+  color: #7a6f63;
+  font-size: 0.98rem;
+  margin-bottom: 8px;
+  line-height: 1.6;
+  min-height: 1.5em;
+}
+.my-post-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+}
+.my-post-author {
+  font-size: 0.92rem;
+  color: #b8893a;
+  margin-right: 8px;
+}
+.my-post-divider {
+  border-top: 1px dashed #e2c88f;
+  margin: 10px 0 8px 0;
 }
 
 // Vanta.js Birds 背景样式
