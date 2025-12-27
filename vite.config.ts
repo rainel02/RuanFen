@@ -22,7 +22,7 @@ export default defineConfig({
       // 代理真实后端 API（/api），不拦截 Apifox Mock 服务
       // Apifox Mock 服务使用完整 URL（http://127.0.0.1:4523/...），不会被代理拦截
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'http://127.0.0.1:8080', // 10.193.59.61
         changeOrigin: true
       }
     }

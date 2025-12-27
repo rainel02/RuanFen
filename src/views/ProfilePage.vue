@@ -278,14 +278,6 @@
                       </div>
                     </div>
                   </el-tab-pane>
-                  <el-tab-pane label="浏览历史" name="history">
-                    <template #label>
-                      <span><el-icon><Clock /></el-icon> 浏览历史</span>
-                    </template>
-                    <div class="empty-state">
-                      <el-empty description="暂无浏览历史" />
-                    </div>
-                  </el-tab-pane>
                   <el-tab-pane label="我的帖子" name="posts">
                     <template #label>
                       <span><el-icon><ChatLineRound /></el-icon> 我的帖子</span>
