@@ -169,14 +169,25 @@
               </div>
               <div class="info-section">
                 <div class="name-row">
-                  <h1>{{ user?.name }}</h1>
-                  <el-tag v-if="verificationStatus === 'certified' || verificationStatus === 'verified'" type="success" effect="dark" round size="small" class="verified-tag">
-                    <el-icon><Select /></el-icon>
-                  </el-tag>
-                  <span v-if="verificationStatus === 'certified' || verificationStatus === 'verified'" class="verified-text">认证学者</span>
-                  <el-tag v-else-if="verificationStatus === 'pending'" type="warning" effect="dark" round size="small" class="pending-tag">
-                    审核中
-                  </el-tag>
+                  <h1 style="display: inline-flex; align-items: center; gap: 8px;">
+                    {{ user?.name }}
+                    <template v-if="verificationStatus === 'approved'">
+                      <el-tag
+                        type="success"
+                        effect="dark"
+                        round
+                        size="small"
+                        class="verified-tag"
+                        style="display: inline-flex; align-items: center; gap: 4px; font-size: 15px; margin-left: 4px; vertical-align: middle;"
+                      >
+                        <el-icon><Select /></el-icon>
+                        认证学者
+                      </el-tag>
+                    </template>
+                    <template v-else-if="verificationStatus === 'pending'">
+                      <el-tag type="warning" effect="dark" round size="small" class="pending-tag" style="margin-left: 4px;">审核中</el-tag>
+                    </template>
+                  </h1>
                 </div>
                 <p class="title">{{ user?.title || '用户' }}</p>
                 <p class="institution">
@@ -192,13 +203,14 @@
                   >
                     <el-icon><Edit /></el-icon> 编辑资料
                   </el-button>
-                  <el-button 
-                    v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'"
-                    class="gothic-btn"
-                    @click="showVerificationDialog = true"
-                  >
-                    <el-icon><DocumentChecked /></el-icon> 申请认证
-                  </el-button>
+                  <template v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'">
+                    <el-button 
+                      class="gothic-btn"
+                      @click="showVerificationDialog = true"
+                    >
+                      <el-icon><DocumentChecked /></el-icon> 申请认证
+                    </el-button>
+                  </template>
                   <el-button 
                     class="gothic-btn danger-btn"
                     @click="handleLogout"
@@ -936,11 +948,11 @@ const loadCertificationStatus = async () => {
   if (!authStore.isLoggedIn) return
   try {
     const response = await userApi.getCertificationStatus()
-    if (response.status) {
-      const status = String(response.status)
-      verificationStatus.value = status === 'certified' ? 'verified' : 
-                                  status === 'pending' ? 'pending' :
-                                  status === 'rejected' ? 'rejected' : 'unverified'
+    // 兼容后端返回的 status 字段，直接赋值
+    if (response && response.status) {
+      verificationStatus.value = String(response.status)
+    } else {
+      verificationStatus.value = 'unverified'
     }
   } catch (error) {
     // 如果接口返回404或其他错误，说明未申请认证
@@ -1161,6 +1173,8 @@ onMounted(async () => {
   settingsStore.loadSettings()
   
   if (authStore.isLoggedIn) {
+    // 强制刷新认证状态
+    verificationStatus.value = 'unverified'
     await loadCertificationStatus()
     await loadCollections()
     await loadFollowingAndFollowers()
