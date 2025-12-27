@@ -10,16 +10,24 @@ export async function getAchievement(id: string) {
   return request.get(`/achievements/${id}`)
 }
 
-export async function getMyCollections() {
+// 兼容 axios/自定义 fetch 两种 request 实现
+export async function getMyCollections(options: Record<string, any> = {}) {
   const url = '/users/me/collections'
-  console.log('[DEBUG] getMyCollections - sending GET to:', url)
-  console.log('[DEBUG] Current token:', localStorage.getItem('token') ? 'EXISTS' : 'MISSING')
-  return request.get(url).catch((error) => {
+  // axios: request.get(url, { params })
+  // fetch: request.get(url, params)
+  // 这里判断 request.get 的第二个参数是否是 { params } 还是直接 params
+  // 目前 fetch 版 request.get 只接受 params
+  // 这里做兼容处理
+  const isFetch = typeof window !== 'undefined' && typeof fetch === 'function'
+  const paramsArg = isFetch ? options : { params: options }
+  try {
+    return await request.get(url, paramsArg)
+  } catch (error) {
     console.warn('[WARN] getMyCollections API error:', error)
     console.warn('[WARN] Error response status:', error.response?.status)
     console.warn('[WARN] Error response data:', error.response?.data)
     return { results: [] }
-  })
+  }
 }
 
 export async function addToCollections(achievementId: string) {

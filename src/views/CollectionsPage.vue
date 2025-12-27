@@ -39,25 +39,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import AppHeader from '@/components/AppHeader.vue'
 import PaperCard from '@/components/PaperCard.vue'
 import api from '@/api'
 import { normalizePaper } from '@/utils/normalizePaper'
 
 const items = ref<any[]>([])
+const total = ref(0)
 const loading = ref(true)
 const currentPage = ref(1)
 const pageSize = ref(12)
 
-const paginatedItems = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return items.value.slice(start, start + pageSize.value)
-})
+// Backend paginated; items already current page
+const paginatedItems = computed(() => items.value)
 
-const totalPages = computed(() => Math.ceil(items.value.length / pageSize.value))
+const totalPages = computed(() => Math.ceil((total.value || items.value.length) / pageSize.value))
 
-const papersStoreTotal = computed(() => items.value.length)
+const papersStoreTotal = computed(() => total.value || items.value.length)
 
 const handleSizeChange = (size: number) => {
   pageSize.value = size
@@ -71,32 +70,37 @@ const handleCurrentChange = (page: number) => {
 const load = async () => {
   loading.value = true
   try {
-    console.log('[DEBUG] Fetching collections from API...')
-    const data = await api.getMyCollections()
-    console.log('[DEBUG] Raw API response:', data)
-    
-    // Handle various response formats from backend
-    let collections = []
-    if (Array.isArray(data)) {
-      collections = data
-    } else if (data && data.results) {
-      collections = data.results
-    } else if (data && data.data) {
-      collections = Array.isArray(data.data) ? data.data : (data.data.results || [])
-    } else if (data && data.content) {
-      collections = data.content
+    const params = {
+      page: Math.max(0, currentPage.value - 1),
+      size: pageSize.value
     }
-    
-    const normalized = collections.map((item: any) => {
-      const paper = normalizePaper(item)
-      // Items from "我的收藏" should be marked collected even if backend omits flag
-      paper.isfavorited = true
-      return paper
-    })
-
-    console.log('[DEBUG] Parsed collections:', normalized)
+    const data = await api.getMyCollections(params)
+    console.log('[DEBUG] getMyCollections raw response:', data)
+    // 兼容后端返回格式
+    let content = []
+    let totalElements = 0
+    if (Array.isArray(data)) {
+      content = data
+      totalElements = data.length
+    } else if (data && Array.isArray(data.content)) {
+      content = data.content
+      totalElements = data.totalElements ?? data.content.length
+    } else if (data && Array.isArray(data.results)) {
+      content = data.results
+      totalElements = data.totalElements ?? data.results.length
+    } else if (data && Array.isArray(data.data)) {
+      content = data.data
+      totalElements = data.totalElements ?? data.data.length
+    }
+    const normalized = Array.isArray(content) ? content.map((it: any) => {
+      // 兼容 achievementDTO 包裹结构
+      const paperRaw = it.achievementDTO || it
+      const p = normalizePaper(paperRaw)
+      p.isfavorited = true
+      return p
+    }) : []
     items.value = normalized
-    currentPage.value = 1
+    total.value = totalElements
   } catch (e) {
     console.error('[ERROR] Failed to load collections from backend:', e)
     // Fallback: show mock data while backend is being fixed
@@ -144,6 +148,11 @@ const remove = async (id: string) => {
 }
 
 onMounted(() => {
+  load()
+})
+
+// re-fetch when user paginates
+watch([currentPage, pageSize], () => {
   load()
 })
 </script>

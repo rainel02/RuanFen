@@ -79,6 +79,20 @@ export const usePapersStore = defineStore('papers', () => {
       papers.value = Array.isArray(content) ? content.map(normalizePaper) : []
       console.log(data)
       total.value = data.totalElements ?? papers.value.length
+
+      // Cross-mark favorites: fetch user's collections and mark intersecting papers
+      try {
+        const favData = await api.getMyCollections({ page: 0, size: 1000 })
+        const favContent = favData.content || []
+        const favIds = new Set(
+          (Array.isArray(favContent) ? favContent : []).map((it: any) => normalizePaper(it).id)
+        )
+        papers.value.forEach((p) => {
+          if (favIds.has(p.id)) p.isfavorited = true
+        })
+      } catch (e) {
+        console.warn('Failed to cross-mark favorites from collections', e)
+      }
     } catch (e) {
       console.error('fetchPapers error', e)
     } finally {
