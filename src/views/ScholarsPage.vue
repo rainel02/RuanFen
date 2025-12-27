@@ -91,7 +91,6 @@
             >
               <ScholarCard
                 :scholar="scholar"
-                @start-chat="handleStartChat"
                 @follow-changed="loadScholars"
               />
             </div>
@@ -104,7 +103,6 @@
       </div>
     </div>
 
-    <ChatWindow v-if="showChatWindow" @close="showChatWindow = false" />
   </div>
 </template>
 
@@ -115,19 +113,15 @@ import { ElMessage } from 'element-plus'
 import { UserFilled, School, Collection, Sort, Connection } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import ScholarCard from '@/components/ScholarCard.vue'
-import ChatWindow from '@/components/ChatWindow.vue'
-import { useChatStore } from '../stores/chat'
 import * as scholarApi from '../api/scholar'
 
 const scholars = ref<any[]>([])
 
-const chatStore = useChatStore()
 const searchName = ref('')
 const selectedInstitution = ref('')
 const selectedField = ref('')
 const sortBy = ref('hIndex')
 const loading = ref(false)
-const showChatWindow = ref(false)
 
 // Summary data - 巴洛克风格颜色
 const summaryData = computed(() => [
@@ -222,12 +216,6 @@ const loadScholars = async () => {
 const handleSearch = () => {
   loadScholars()
 }
-
-const handleStartChat = (participantId: string, participantName: string, participantAvatar?: string) => {
-  chatStore.startConversation(participantId, participantName, participantAvatar)
-  showChatWindow.value = true
-}
-
 
 onMounted(() => {
   loadScholars()

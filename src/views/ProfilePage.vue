@@ -381,13 +381,20 @@
           v-for="item in followingList" 
           :key="item.userId || item.id"
           class="follow-item glass-panel"
-          @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false;"
         >
-          <el-avatar :src="item.avatarUrl || defaultAvatar" :size="40">{{ item.name?.charAt(0) || '?' }}</el-avatar>
-          <div class="item-info">
-            <h4>{{ item.name }}</h4>
-            <p>{{ item.organization }}</p>
+          <div class="follow-item-content" @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false;">
+            <el-avatar :src="item.avatarUrl || defaultAvatar" :size="40">{{ item.name?.charAt(0) || '?' }}</el-avatar>
+            <div class="item-info">
+              <h4>{{ item.name }}</h4>
+              <p>{{ item.organization }}</p>
+            </div>
           </div>
+          <el-button 
+            class="gothic-btn-small unfollow-btn"
+            @click.stop="handleUnfollow(item.userId || item.id)"
+          >
+            <el-icon><Close /></el-icon> 取消关注
+          </el-button>
         </div>
       </div>
     </el-dialog>
@@ -430,17 +437,27 @@ const loadFollowStats = async () => {
     console.log('getFollowers 返回:', followersRes)
     console.log('getFollowing 返回:', followingRes)
     // 兼容返回 { total, following: [...] } 或 { total, followers: [...] }
-    if (followersRes && Array.isArray(followersRes.followers)) {
-      followersCount.value = followersRes.followers.length
-    } else if (Array.isArray(followersRes)) {
-      followersCount.value = followersRes.length
+    const followersResAny = followersRes as any
+    const followingResAny = followingRes as any
+    const followersData: any = followersResAny?.data || followersResAny
+    const followingData: any = followingResAny?.data || followingResAny
+    
+    if (followersData && Array.isArray(followersData.followers)) {
+      followersCount.value = followersData.followers.length
+    } else if (followersData && Array.isArray(followersData.results)) {
+      followersCount.value = followersData.results.length
+    } else if (Array.isArray(followersData)) {
+      followersCount.value = followersData.length
     } else {
       followersCount.value = 0
     }
-    if (followingRes && Array.isArray(followingRes.following)) {
-      followingCount.value = followingRes.following.length
-    } else if (Array.isArray(followingRes)) {
-      followingCount.value = followingRes.length
+    
+    if (followingData && Array.isArray(followingData.following)) {
+      followingCount.value = followingData.following.length
+    } else if (followingData && Array.isArray(followingData.results)) {
+      followingCount.value = followingData.results.length
+    } else if (Array.isArray(followingData)) {
+      followingCount.value = followingData.length
     } else {
       followingCount.value = 0
     }
@@ -1047,12 +1064,12 @@ const loadFollowingAndFollowers = async () => {
   try {
     const followingResponse: any = await socialApi.getFollowing(authStore.user.id)
     const followingData = followingResponse?.data || followingResponse
-    followingList.value = followingData.following || followingData.results || []
+    followingList.value = followingData.following || followingData.results || (Array.isArray(followingData) ? followingData : [])
     followingCount.value = followingData.total || followingList.value.length
 
     const followersResponse: any = await socialApi.getFollowers(authStore.user.id)
     const followersData = followersResponse?.data || followersResponse
-    followersList.value = followersData.followers || followersData.results || []
+    followersList.value = followersData.followers || followersData.results || (Array.isArray(followersData) ? followersData : [])
     followersCount.value = followersData.total || followersList.value.length
   } catch (error) {
     console.error('加载关注和粉丝数据失败', error)
@@ -1060,6 +1077,20 @@ const loadFollowingAndFollowers = async () => {
     followersCount.value = 0
     followingList.value = []
     followersList.value = []
+  }
+}
+
+// 取消关注
+const handleUnfollow = async (userId: string) => {
+  try {
+    await socialApi.unfollowUser(userId)
+    ElMessage.success('已取消关注')
+    // 从列表中移除
+    followingList.value = followingList.value.filter(item => (item.userId || item.id) !== userId)
+    // 更新关注数
+    followingCount.value = Math.max(0, followingCount.value - 1)
+  } catch (error: any) {
+    ElMessage.error(error.message || '取消关注失败')
   }
 }
 
@@ -2156,12 +2187,24 @@ onUnmounted(() => {
 .follow-item {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 18px;
   padding: 18px 20px;
   margin-bottom: 12px;
-  cursor: pointer;
   transition: all 0.3s ease;
   border-radius: 14px;
+
+  .follow-item-content {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex: 1;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
 
   &:hover {
     background: rgba(249, 247, 236, 0.8);
@@ -2195,6 +2238,20 @@ onUnmounted(() => {
       font-family: 'Georgia', serif;
       font-style: italic;
       font-weight: 500;
+    }
+  }
+
+  .unfollow-btn {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #8b0000 0%, #654321 100%) !important;
+    border-color: #654321 !important;
+    color: #f9f7ec !important;
+    font-size: 12px;
+    padding: 6px 12px !important;
+
+    &:hover {
+      background: linear-gradient(135deg, #654321 0%, #4a2c1a 100%) !important;
+      border-color: #4a2c1a !important;
     }
   }
 }
