@@ -5,7 +5,8 @@ import * as authApi from '../api/auth'
 import * as userApi from '../api/user'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
+  const storedUser = localStorage.getItem('user')
+  const user = ref<User | null>(storedUser ? JSON.parse(storedUser) : null)
   const token = ref<string | null>(localStorage.getItem('token'))
 
   const isLoggedIn = computed(() => !!user.value && !!token.value)
