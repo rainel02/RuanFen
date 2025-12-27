@@ -518,7 +518,7 @@ const loadMyPosts = async () => {
     // 兼容多种返回格式
     let posts = (res as any).posts || (res as any).data || res
     if (!Array.isArray(posts)) posts = []
-    const userId = authStore.user?.id || authStore.user?.userId
+    const userId = authStore.user?.id || (authStore.user as any)?.userId
     myPosts.value = posts.filter((p: any) => {
       // 兼容 author 字段结构
       const authorId = p.author?.id || p.author?.userId || p.authorId || p.userId
@@ -2522,6 +2522,89 @@ onUnmounted(() => {
           background: rgba(255, 255, 255, 0.9) !important;
         }
       }
+
+      .empty-state {
+        padding: 40px 0;
+      }
+
+      .following-list,
+      .followers-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 8px;
+
+        &::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: rgba(184, 134, 11, 0.1);
+          border-radius: 4px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: rgba(184, 134, 11, 0.4);
+          border-radius: 4px;
+
+          &:hover {
+            background: rgba(184, 134, 11, 0.6);
+          }
+        }
+      }
+
+      .follow-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.6) !important;
+        border: 2px solid rgba(184, 134, 11, 0.3) !important;
+        border-radius: 10px !important;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border-color: rgba(212, 175, 55, 0.5) !important;
+          transform: translateX(3px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .follow-item-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          cursor: pointer;
+
+          .item-info {
+            h4 {
+              margin: 0;
+              font-family: 'Georgia', 'Times New Roman', serif !important;
+              font-weight: 700 !important;
+              color: #654321 !important;
+              font-size: 15px;
+            }
+
+            p {
+              margin: 4px 0 0 0;
+              font-family: 'Georgia', 'Times New Roman', serif !important;
+              color: #8B4513 !important;
+              font-size: 13px;
+              font-style: italic;
+            }
+          }
+        }
+
+        .unfollow-btn {
+          font-family: 'Georgia', 'Times New Roman', serif !important;
+          font-weight: 600 !important;
+          padding: 6px 12px !important;
+          font-size: 12px !important;
+        }
+      }
     }
 
     .el-dialog__footer {
@@ -2572,30 +2655,293 @@ onUnmounted(() => {
     }
   }
 }
-/* 认证学者标签：只框住勾号，文字在外 */
-.verified-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  font-size: 17px;
-  margin-right: -8px;
-  box-sizing: border-box;
+
+// 全局样式，确保对话框样式正确应用（Element Plus使用Teleport）
+</style>
+
+<style lang="scss">
+// 全局样式：中世纪复古风格弹窗
+// 由于Element Plus的对话框通过Teleport渲染，需要使用全局样式
+.gothic-dialog.el-dialog {
+  background: rgba(249, 247, 236, 0.95) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px !important;
+  border: 3px solid rgba(184, 134, 11, 0.5) !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.4) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+  }
+
+  .el-dialog__header {
+    padding: 24px 32px 16px !important;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.2) 0%, 
+      rgba(184, 134, 11, 0.15) 100%);
+    border-bottom: 2px solid rgba(184, 134, 11, 0.3);
+    
+    .el-dialog__title {
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      font-size: 24px !important;
+      font-weight: 900 !important;
+      color: #654321 !important;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) !important;
+      letter-spacing: 0.5px;
+    }
+
+    .el-dialog__headerbtn {
+      .el-dialog__close {
+        color: #8B4513 !important;
+        font-size: 20px;
+        
+        &:hover {
+          color: #654321 !important;
+        }
+      }
+    }
+  }
+
+  .el-dialog__body {
+    padding: 24px 32px !important;
+    
+    .el-form-item__label {
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      font-weight: 700 !important;
+      color: #654321 !important;
+      font-size: 15px !important;
+      margin-bottom: 8px;
+    }
+
+    .el-input__wrapper {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border: 2px solid rgba(184, 134, 11, 0.4) !important;
+      border-radius: 8px !important;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: rgba(212, 175, 55, 0.6) !important;
+      }
+
+      &.is-focus {
+        border-color: #D4AF37 !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(212, 175, 55, 0.3) !important;
+      }
+    }
+
+    .el-input__inner {
+      font-family: 'Georgia', serif !important;
+      color: #654321 !important;
+      font-weight: 600;
+
+      &::placeholder {
+        color: rgba(101, 67, 33, 0.5) !important;
+      }
+    }
+
+    .el-textarea__inner {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border: 2px solid rgba(184, 134, 11, 0.4) !important;
+      border-radius: 8px !important;
+      font-family: 'Georgia', serif !important;
+      color: #654321 !important;
+      font-weight: 600;
+
+      &:focus {
+        border-color: #D4AF37 !important;
+      }
+    }
+
+    .el-select {
+      .el-input__wrapper {
+        background: rgba(255, 255, 255, 0.9) !important;
+      }
+    }
+
+    .el-empty {
+      .el-empty__description {
+        color: #8B4513 !important;
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-weight: 600 !important;
+      }
+    }
+
+    .empty-state {
+      padding: 40px 0;
+    }
+
+    .following-list,
+    .followers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 8px;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: rgba(184, 134, 11, 0.1);
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: rgba(184, 134, 11, 0.4);
+        border-radius: 4px;
+
+        &:hover {
+          background: rgba(184, 134, 11, 0.6);
+        }
+      }
+    }
+
+    .follow-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.6) !important;
+      border: 2px solid rgba(184, 134, 11, 0.3) !important;
+      border-radius: 10px !important;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.8) !important;
+        border-color: rgba(212, 175, 55, 0.5) !important;
+        transform: translateX(3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .follow-item-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        cursor: pointer;
+
+        .item-info {
+          h4 {
+            margin: 0;
+            font-family: 'Georgia', 'Times New Roman', serif !important;
+            font-weight: 700 !important;
+            color: #654321 !important;
+            font-size: 15px;
+          }
+
+          p {
+            margin: 4px 0 0 0;
+            font-family: 'Georgia', 'Times New Roman', serif !important;
+            color: #8B4513 !important;
+            font-size: 13px;
+            font-style: italic;
+          }
+        }
+      }
+
+      .unfollow-btn {
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-weight: 600 !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+      }
+    }
+  }
+
+  .el-dialog__footer {
+    padding: 20px 32px 24px !important;
+    border-top: 2px solid rgba(184, 134, 11, 0.3);
+    background: linear-gradient(135deg, 
+      rgba(249, 247, 236, 0.5) 0%, 
+      rgba(255, 255, 255, 0.3) 100%);
+
+    .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .el-button {
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      font-weight: 700 !important;
+      border-radius: 8px !important;
+      padding: 10px 20px !important;
+      transition: all 0.3s ease;
+
+      &.el-button--default {
+        background: linear-gradient(135deg, #8B4513 0%, #654321 100%) !important;
+        border-color: #654321 !important;
+        color: #f9f7ec !important;
+
+        &:hover {
+          background: linear-gradient(135deg, #654321 0%, #4a2c1a 100%) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+      }
+
+      &.el-button--primary {
+        background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+        border-color: #B8860B !important;
+        color: #654321 !important;
+        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3) !important;
+
+        &:hover {
+          background: linear-gradient(135deg, #B8860B 0%, #9a7209 100%) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4) !important;
+        }
+      }
+    }
+  }
 }
-.verified-tag .el-icon {
-  font-size: 18px;
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.verified-text {
-  font-size: 15px;
-  color: #21ba45;
-  font-weight: 600;
-  vertical-align: middle;
+
+// 下拉选择框样式
+.el-select-dropdown {
+  background: rgba(249, 247, 236, 0.98) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid rgba(184, 134, 11, 0.5) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+
+  .el-select-dropdown__item {
+    font-family: 'Georgia', 'Times New Roman', serif !important;
+    color: #654321 !important;
+    font-weight: 600 !important;
+    
+    &:hover {
+      background: rgba(212, 175, 55, 0.3) !important;
+      color: #8B4513 !important;
+    }
+
+    &.selected {
+      background: rgba(212, 175, 55, 0.4) !important;
+      color: #654321 !important;
+      font-weight: 700 !important;
+    }
+  }
 }
 </style>

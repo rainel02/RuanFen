@@ -5,8 +5,33 @@
     <div class="page-content">
       <div class="container">
         <div v-if="paper" class="paper-detail">
-          <!-- <div class="paper-header">
-          </div> -->
+          <div class="paper-header">
+            <el-breadcrumb separator="/">
+              <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+              <el-breadcrumb-item>论文详情</el-breadcrumb-item>
+            </el-breadcrumb>
+
+            <div class="paper-actions">
+              <el-button
+                :type="paper.isfavorited ? 'primary' : 'default'"
+                :icon="Star"
+                @click="toggleFavorite"
+              >
+                {{ paper.isfavorited ? '已收藏' : '收藏' }}
+              </el-button>
+              <!-- <el-button :icon="Share">分享</el-button> -->
+              <!-- <el-button :icon="Download" v-if="paper.url">下载PDF</el-button> -->
+              <el-button
+                v-if="paper.landingPageUrl"
+                @click.prevent="openExternal(paper.landingPageUrl)"
+              >
+                查看原文
+              </el-button>
+              <el-button type="primary" icon="MagicStick" class="poster-btn" style="margin-left:16px;" @click="openPoster">
+                智能生成论文海报
+              </el-button>
+            </div>
+          </div>
 
           <el-row :gutter="24">
             <el-col :lg="18" :md="24" :sm="24" :xs="24">
@@ -163,6 +188,27 @@
         <div v-else class="loading-state">
           <el-skeleton :rows="10" animated />
         </div>
+        <!-- 生成海报弹窗 -->
+        <el-dialog
+          v-model="showPosterDialog"
+          title="生成论文海报"
+          width="480px"
+          class="poster-dialog"
+          :close-on-click-modal="false"
+          :close-on-press-escape="true"
+        >
+          <div class="poster-dialog-content">
+            <div class="poster-preview">
+              <el-skeleton v-if="posterLoading" :rows="8" animated style="width:100%;height:100%" />
+              <img v-else-if="posterImg" :src="posterImg" alt="AI海报" style="max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 2px 8px #eee;" />
+              <el-empty v-else description="海报预览占位" />
+            </div>
+            <div class="poster-dialog-actions">
+              <el-button @click="showPosterDialog = false">取消</el-button>
+              <el-button type="primary" @click="downloadPoster">下载</el-button>
+            </div>
+          </div>
+        </el-dialog>
       </div>
     </div>
   </div>
@@ -177,14 +223,126 @@ import { useRoute } from 'vue-router'
 import { Star, Document, View } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import api from '@/api'
-// import { usePapersStore } from '../stores/papers'
+// 百炼模型API Key（sk）
+const BAILIAN_API_KEY = 'sk-80aa295708f444a8b03d7bd4680ee555'
+// 生成海报图片（通过 Vite /dashscope dev-proxy 转发到通义万相）
+async function generatePosterImage(prompt: string): Promise<string | null> {
+  // 前端直接发送 provider 所需的请求体，Vite proxy 会把请求重写到真实路径并注入 Authorization
+  const body = {
+    model: 'wan2.6-t2i',
+    input: {
+      messages: [
+        { role: 'user', content: [{ text: prompt }] }
+      ]
+    },
+    parameters: {
+      prompt_extend: true,
+      watermark: false,
+      n: 1,
+      negative_prompt: '',
+      size: '1280*1280'
+    }
+  }
+
+  // 开发时通过 Vite dev server 代理 `/dashscope` 转发到通义万相（Vite 在启动时注入 Authorization）
+  const res = await fetch('/dashscope', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+
+  if (!res.ok) {
+    let txt = ''
+    try { txt = await res.text() } catch (e) { txt = String(e) }
+    console.error('generatePosterImage: 非 2xx 响应', res.status, res.statusText, txt)
+    ElMessage.error(`AI 生成接口错误: ${res.status} ${res.statusText}`)
+    return null
+  }
+
+  const data = await res.json()
+  console.log('dashscope 返回:', data)
+  if (
+    data.output &&
+    data.output.choices &&
+    data.output.choices[0] &&
+    data.output.choices[0].message &&
+    data.output.choices[0].message.content &&
+    data.output.choices[0].message.content[0] &&
+    data.output.choices[0].message.content[0].image
+  ) {
+    return data.output.choices[0].message.content[0].image
+  }
+  if (data.output && data.output.images && data.output.images[0]) {
+    return data.output.images[0]
+  }
+  if (data.image) return data.image
+  return null
+}
+
+// 控制弹窗显示
+const showPosterDialog = ref(false)
+const posterImg = ref<string | null>(null)
+const posterLoading = ref(false)
+
+// 生成海报逻辑（弹窗打开时自动调用）
+const generatePoster = async () => {
+  console.log('generatePoster start')
+  if (!paper.value) {
+    console.log('generatePoster aborted: no paper')
+    return
+  }
+  posterLoading.value = true
+  posterImg.value = null
+  // 组装prompt
+  const prompt = `请根据以下论文信息生成一张学术风格的AI海报，内容需突出论文主题、作者和摘要，适合学术分享场景：\n论文题目：${paper.value.title}\n作者：${(paper.value.authorships||[]).map(a=>typeof a==='string'?a:a?.name).join('，')}\n摘要：${paper.value.abstractText}\n关键词：${(paper.value.concepts||[]).join('，')}`
+  try {
+    const img = await generatePosterImage(prompt)
+    if (img) {
+      posterImg.value = img
+    } else {
+      ElMessage.error('AI海报生成失败')
+    }
+  } catch (e) {
+    ElMessage.error('AI海报生成异常')
+  } finally {
+    posterLoading.value = false
+  }
+}
+
+// 下载海报逻辑
+const downloadPoster = () => {
+  console.log('downloadPoster invoked, posterImg:', posterImg.value)
+  if (!posterImg.value) {
+    console.log('no poster to download')
+    return
+  }
+  const a = document.createElement('a')
+  a.href = posterImg.value
+  a.download = (paper.value?.title || 'poster') + '.png'
+  a.click()
+  showPosterDialog.value = false
+}
+
+// 监听弹窗打开时自动生成海报
+watch(showPosterDialog, (val) => {
+  console.log('showPosterDialog changed:', val)
+  if (val) {
+    console.log('trigger generatePoster from watch')
+    generatePoster()
+      .then(() => console.log('generatePoster finished'))
+      .catch(e => console.error('generatePoster error', e))
+  }
+})
+
+// 打开弹窗的入口，便于调试
+function openPoster() {
+  console.log('openPoster clicked')
+  showPosterDialog.value = true
+}
 
 const route = useRoute()
-
 const paper = ref<Paper | null>(null)
 const relatedPapers = ref<Paper[]>([])
-
-
 
 const authorKey = (author: any, idx: number) => {
   if (!author) return String(idx)
@@ -355,7 +513,61 @@ watch(() => route.params.id, (newId, oldId) => {
 </script>
 
 <style scoped lang="scss">
+// 复制自 src/styles/mixins.scss - 避免在 SFC 中使用 @use 导致顺序错误
 @mixin mobile { @media (max-width: 767px) { @content; } }
+
+@mixin tablet { @media (min-width: 768px) and (max-width: 1199px) { @content; } }
+
+@mixin desktop { @media (min-width: 1200px) { @content; } }
+// 生成海报弹窗样式
+.poster-dialog {
+  .el-dialog__header {
+    background: rgba(255, 252, 245, 0.8);
+    border-bottom: 1px solid var(--pf-border);
+    font-family: var(--font-sans);
+    font-size: 18px;
+    color: var(--pf-ink);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 20px 24px 12px 24px;
+  }
+  .el-dialog__body {
+    background: var(--card-bg);
+    padding: 32px 24px 16px 24px;
+  }
+  .el-dialog__footer {
+    background: transparent;
+    border-top: none;
+    padding: 0 24px 24px 24px;
+  }
+}
+
+.poster-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.poster-preview {
+  width: 320px;
+  height: 480px;
+  background: linear-gradient(135deg, #f7efe2 60%, #fdf9f2 100%);
+  border: 1.5px dashed var(--pf-accent);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 24px rgba(46, 42, 37, 0.06);
+}
+
+.poster-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  gap: 16px;
+}
+ 
 
 .paper-detail-page {
   // Theme Variables - Parchment / Beige / Gold
@@ -447,8 +659,8 @@ watch(() => route.params.id, (newId, oldId) => {
     box-shadow: 0 4px 12px rgba(184, 137, 58, 0.2);
 
     &:hover {
-      background: darken(#b8893a, 5%);
-      border-color: darken(#b8893a, 5%);
+      background: adjust(#b8893a, -5%);
+      border-color: adjust(#b8893a, -5%);
       transform: translateY(-1px);
     }
   }
