@@ -192,20 +192,23 @@
         <el-dialog
           v-model="showPosterDialog"
           title="生成论文海报"
-          width="480px"
+            width="560px"
           class="poster-dialog"
           :close-on-click-modal="false"
           :close-on-press-escape="true"
         >
           <div class="poster-dialog-content">
             <div class="poster-preview">
-              <el-skeleton v-if="posterLoading" :rows="8" animated style="width:100%;height:100%" />
-              <img v-else-if="posterImg" :src="posterImg" alt="AI海报" style="max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 2px 8px #eee;" />
+              <div v-if="posterLoading" class="poster-loading">
+                <div class="spinner" role="status" aria-label="loading"></div>
+                <div class="loading-text">正在生成海报，请稍候…</div>
+              </div>
+              <img v-else-if="posterImg" :src="posterImg" alt="AI海报" class="poster-img" />
               <el-empty v-else description="海报预览占位" />
             </div>
             <div class="poster-dialog-actions">
               <el-button @click="showPosterDialog = false">取消</el-button>
-              <el-button type="primary" @click="downloadPoster">下载</el-button>
+              <el-button type="primary" :disabled="posterLoading || !posterImg" @click="downloadPoster">下载</el-button>
             </div>
           </div>
         </el-dialog>
@@ -293,8 +296,13 @@ const generatePoster = async () => {
   }
   posterLoading.value = true
   posterImg.value = null
-  // 组装prompt
-  const prompt = `请根据以下论文信息生成一张学术风格的AI海报，内容需突出论文主题、作者和摘要，适合学术分享场景：\n论文题目：${paper.value.title}\n作者：${(paper.value.authorships||[]).map(a=>typeof a==='string'?a:a?.name).join('，')}\n摘要：${paper.value.abstractText}\n关键词：${(paper.value.concepts||[]).join('，')}`
+  // 组装prompt（以图像为主，图多于文字，文字极简）
+  const prompt = `请根据以下论文信息生成一张学术风格但以视觉为主的 AI 海报，要求图像元素丰富、文字极简：
+- 以一张主视觉插图（示意图/概念图/主题艺术化图）为焦点，视觉占比大；
+- 辅助加入 1-2 个简单的可视化元素（图标、简易图表或示意图），用于突出关键结论；
+- 文字尽量少：仅保留论文标题、作者和 1-2 行摘要/关键点作为文本层，字体清晰、层次分明；
+- 色调学术、干净，留白合理，适合线上分享与打印（高分辨率），整体风格严谨但有视觉吸引力；
+请使用下面的论文信息创作海报：\n论文题目：${paper.value.title}\n作者：${(paper.value.authorships||[]).map(a=>typeof a==='string'?a:a?.name).join('，')}\n摘要：${paper.value.abstractText}\n关键词：${(paper.value.concepts||[]).join('，')}`
   try {
     const img = await generatePosterImage(prompt)
     if (img) {
@@ -309,18 +317,48 @@ const generatePoster = async () => {
   }
 }
 
-// 下载海报逻辑
-const downloadPoster = () => {
+// 下载海报逻辑（支持 data URL 和跨域 URL -> fetch blob）
+const downloadPoster = async () => {
   console.log('downloadPoster invoked, posterImg:', posterImg.value)
   if (!posterImg.value) {
     console.log('no poster to download')
+    ElMessage.warning('当前没有可下载的海报')
     return
   }
-  const a = document.createElement('a')
-  a.href = posterImg.value
-  a.download = (paper.value?.title || 'poster') + '.png'
-  a.click()
-  showPosterDialog.value = false
+
+  const filename = `${(paper.value?.title || 'poster').replace(/[^a-z0-9\u4e00-\u9fa5_-]/gi, '_')}.png`
+
+  try {
+    // data URL 直接下载
+    if (posterImg.value.startsWith('data:')) {
+      const a = document.createElement('a')
+      a.href = posterImg.value
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      ElMessage.success('海报已下载')
+      return
+    }
+
+    // 否则尝试 fetch 为 blob（解决跨域或需要授权的场景）
+    const resp = await fetch(posterImg.value, { method: 'GET', credentials: 'omit' })
+    if (!resp.ok) throw new Error(`下载请求失败 ${resp.status}`)
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    // 释放对象 URL
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+    ElMessage.success('海报已下载')
+  } catch (e) {
+    console.error('downloadPoster error', e)
+    ElMessage.error('海报下载失败')
+  }
 }
 
 // 监听弹窗打开时自动生成海报
@@ -550,8 +588,9 @@ watch(() => route.params.id, (newId, oldId) => {
 }
 
 .poster-preview {
-  width: 320px;
-  height: 480px;
+  /* 保持正方形预览以匹配生成的海报尺寸（通义万相默认我们请求为 1280x1280） */
+  width: 360px;
+  height: 360px;
   background: linear-gradient(135deg, #f7efe2 60%, #fdf9f2 100%);
   border: 1.5px dashed var(--pf-accent);
   border-radius: 16px;
@@ -559,6 +598,42 @@ watch(() => route.params.id, (newId, oldId) => {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 24px rgba(46, 42, 37, 0.06);
+}
+
+.poster-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid rgba(0,0,0,0.08);
+  border-top-color: var(--pf-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--pf-muted);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: #fff;
 }
 
 .poster-dialog-actions {
