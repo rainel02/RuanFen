@@ -175,8 +175,14 @@ const tableRowClassName = ({ rowIndex }: { rowIndex: number }) => {
 const fetchHotTopics = async () => {
   try {
     const res = await getHotTopics(hotTopicRange.value)
+    console.log('getHotTopics 返回数据:', res)
     // API returns { topics: [...] }
-    const data = (res as any).topics || (res as any).data || res
+    let rawData = (res as any).topics || (res as any).data || res
+    // 兼容后端返回 [{topic, weight}]，转换为 [{name, value}]，并做归一化
+    let data: { name: string, value: number }[] = [];
+    if (Array.isArray(rawData) && rawData.length > 0) {
+      data = rawData.map((item: any) => ({ name: item.topic, value: item.weight }));
+    }
 
     wordCloudOption.value = {
       tooltip: {},

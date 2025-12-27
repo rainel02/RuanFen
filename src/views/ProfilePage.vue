@@ -416,6 +416,39 @@
 </template>
 
 <script setup lang="ts">
+import { getFollowers, getFollowing } from '../api/social'
+const followersCount = ref(0)
+const followingCount = ref(0)
+
+const loadFollowStats = async () => {
+  if (!authStore.user || !authStore.user.id) return
+  try {
+    const [followersRes, followingRes] = await Promise.all([
+      getFollowers(authStore.user.id),
+      getFollowing(authStore.user.id)
+    ])
+    console.log('getFollowers 返回:', followersRes)
+    console.log('getFollowing 返回:', followingRes)
+    // 兼容返回 { total, following: [...] } 或 { total, followers: [...] }
+    if (followersRes && Array.isArray(followersRes.followers)) {
+      followersCount.value = followersRes.followers.length
+    } else if (Array.isArray(followersRes)) {
+      followersCount.value = followersRes.length
+    } else {
+      followersCount.value = 0
+    }
+    if (followingRes && Array.isArray(followingRes.following)) {
+      followingCount.value = followingRes.following.length
+    } else if (Array.isArray(followingRes)) {
+      followingCount.value = followingRes.length
+    } else {
+      followingCount.value = 0
+    }
+  } catch (e) {
+    followersCount.value = 0
+    followingCount.value = 0
+  }
+}
 
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import type { FormRules, FormInstance } from 'element-plus'
