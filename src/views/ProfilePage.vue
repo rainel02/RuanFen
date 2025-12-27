@@ -191,8 +191,8 @@
                 </div>
                 <p class="title">{{ user?.title || '用户' }}</p>
                 <p class="institution">
-                  <el-icon><School /></el-icon> 
-                  {{ user?.institution || '未设置机构' }}
+                  <el-icon><School /></el-icon>
+                  {{ user?.organization || user?.institution || '未设置机构' }}
                 </p>
                 <div class="bio-preview">{{ user?.bio || '这个人很懒，什么都没有写...' }}</div>
                 
