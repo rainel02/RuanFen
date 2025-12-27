@@ -1012,13 +1012,15 @@ const loadFollowingAndFollowers = async () => {
     return
   }
   try {
-    const followingResponse = await socialApi.getFollowing(authStore.user.id)
-    followingList.value = followingResponse.following || followingResponse.data?.following || []
-    followingCount.value = followingResponse.total || followingResponse.data?.total || followingList.value.length
+    const followingResponse: any = await socialApi.getFollowing(authStore.user.id)
+    const followingData = followingResponse?.data || followingResponse
+    followingList.value = followingData.following || followingData.results || []
+    followingCount.value = followingData.total || followingList.value.length
 
-    const followersResponse = await socialApi.getFollowers(authStore.user.id)
-    followersList.value = followersResponse.followers || followersResponse.data?.followers || []
-    followersCount.value = followersResponse.total || followersResponse.data?.total || followersList.value.length
+    const followersResponse: any = await socialApi.getFollowers(authStore.user.id)
+    const followersData = followersResponse?.data || followersResponse
+    followersList.value = followersData.followers || followersData.results || []
+    followersCount.value = followersData.total || followersList.value.length
   } catch (error) {
     console.error('加载关注和粉丝数据失败', error)
     followingCount.value = 0
