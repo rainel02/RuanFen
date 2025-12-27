@@ -12,7 +12,7 @@
             <div class="post-header">
               <div class="post-title-row">
                 <h1>{{ post.title }}</h1>
-                <el-tag size="small" effect="dark">{{ post.boardName }}</el-tag>
+                  <el-tag size="small" effect="dark">{{ translateBoardName(post.boardId || post.boardName) }}</el-tag>
               </div>
               <div class="post-meta">
                 <div class="author-info">
@@ -185,6 +185,34 @@ const getAuthorName = (author: any) => {
   return author.username || author.name || 'User'
 }
 
+// Board name translation (reuse same mapping as ForumPage for consistency)
+const boardNameMap: Record<string, string> = {
+  Medicine: '医学',
+  Biology: '生物学',
+  Chemistry: '化学',
+  'Computer science': '计算机科学',
+  Business: '商业',
+  Sociology: '社会学',
+  'Political science': '政治学',
+  Geology: '地质学',
+  Philosophy: '哲学',
+  History: '历史',
+  'Materials science': '材料科学',
+  Psychology: '心理学',
+  Physics: '物理学',
+  'Environmental science': '环境科学',
+  Mathematics: '数学',
+  Engineering: '工程学',
+  Geography: '地理学',
+  Economics: '经济学',
+  Art: '艺术'
+}
+
+const translateBoardName = (idOrName: string) => {
+  if (!idOrName) return '综合'
+  return boardNameMap[idOrName] || idOrName
+}
+
 // Configure marked with highlight.js
 marked.setOptions({
   highlight: function(code: string, lang: string) {
@@ -294,39 +322,53 @@ onMounted(() => {
 <style scoped lang="scss">
 .post-detail-page {
   min-height: 100vh;
-  background-color: #f5f7fa;
-  padding-bottom: 40px;
+  background: linear-gradient(180deg, #fbf6ec 0%, #f7efe2 100%); /* parchment base */
+  padding-bottom: 48px;
+  font-family: "Noto Serif", Georgia, "Times New Roman", serif;
+  color: #2e2a25;
 }
 
 .container {
-  max-width: 1000px;
-  margin: 20px auto;
+  max-width: 980px;
+  margin: 28px auto;
   padding: 0 20px;
 }
 
 .back-btn {
-  margin-bottom: 20px;
-  font-size: 16px;
+  margin-bottom: 18px;
+  font-size: 15px;
+  color: #5d4037;
+  --el-button-bg-color: transparent;
 }
 
 .main-post {
-  margin-bottom: 20px;
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  margin-bottom: 22px;
+  border-radius: 14px;
+  border: 1px solid rgba(90,55,21,0.06);
+  background: linear-gradient(180deg, rgba(255,255,250,0.9), rgba(249,244,236,0.95));
+  box-shadow: 0 12px 40px rgba(86,58,33,0.06);
+  padding: 22px 26px;
 
   .post-header {
     .post-title-row {
       display: flex;
       align-items: center;
-      gap: 15px;
-      margin-bottom: 20px;
-      
+      gap: 12px;
+      margin-bottom: 14px;
+
       h1 {
         margin: 0;
-        font-size: 24px;
-        color: #303133;
-        line-height: 1.4;
+        font-size: 26px;
+        color: #2e2a25;
+        line-height: 1.25;
+        font-weight: 700;
+      }
+
+      .el-tag {
+        background: rgba(212,175,55,0.08);
+        color: #7a5a2a;
+        border: 1px solid rgba(212,175,55,0.12);
+        font-weight: 700;
       }
     }
 
@@ -334,87 +376,90 @@ onMounted(() => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 10px;
-      
+      gap: 12px;
+      padding-bottom: 6px;
+
       .author-info {
         display: flex;
         align-items: center;
         gap: 12px;
-        
+
         .meta-text {
           display: flex;
           flex-direction: column;
-          
+
           .author-name {
-            font-weight: 600;
-            color: #303133;
+            font-weight: 700;
+            color: #3c2c1f;
+            font-size: 14px;
           }
-          
+
           .time {
             font-size: 12px;
-            color: #909399;
+            color: #7a6f63;
           }
         }
       }
 
       .post-stats {
         display: flex;
-        gap: 20px;
-        color: #909399;
-        font-size: 14px;
-        
-        span {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-        }
+        gap: 16px;
+        color: #7a6f63;
+        font-size: 13px;
       }
     }
   }
 
   .post-body {
-    padding: 20px 0;
-    line-height: 1.8;
-    color: #303133;
+    padding: 18px 2px 6px 2px;
+    line-height: 1.9;
+    color: #3c2c1f;
     font-size: 16px;
     min-height: 150px;
   }
 
   .post-actions {
-    margin-top: 30px;
+    margin-top: 22px;
     display: flex;
     justify-content: center;
-    gap: 20px;
-    padding-top: 20px;
-    border-top: 1px solid #ebeef5;
+    gap: 14px;
+    padding-top: 18px;
+    border-top: 1px dashed rgba(90,55,21,0.04);
   }
 }
 
 .replies-section {
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(180deg, rgba(255,255,250,0.95), rgba(249,244,236,0.98));
+  padding: 22px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(86,58,33,0.05);
 
   .section-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #ebeef5;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed rgba(90,55,21,0.06);
 
-    h3 { margin: 0; font-size: 18px; }
+    h3 { margin: 0; font-size: 18px; color: #3c2c1f }
   }
 
   .reply-item {
     display: flex;
-    gap: 20px;
-    padding: 20px 0;
-    border-bottom: 1px solid #f5f7fa;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px dashed rgba(90,55,21,0.04);
 
-    &:last-child {
-      border-bottom: none;
+    &:last-child { border-bottom: none }
+
+    .reply-avatar {
+      flex: 0 0 48px;
+      align-self: flex-start;
+      :deep(.el-avatar) {
+        border: 2px solid rgba(212,175,55,0.12);
+        box-shadow: 0 4px 12px rgba(86,58,33,0.06);
+      }
     }
 
     .reply-main {
@@ -423,69 +468,49 @@ onMounted(() => {
       .reply-info {
         display: flex;
         justify-content: space-between;
-        margin-bottom: 10px;
-        
-        .name {
-          font-weight: 600;
-          color: #303133;
-        }
-        
-        .floor {
-          color: #909399;
-          font-size: 12px;
-        }
+        margin-bottom: 8px;
+
+        .name { font-weight: 700; color: #3c2c1f }
+        .floor { color: #7a6f63; font-size: 12px }
       }
 
-      .reply-content {
-        color: #606266;
-        line-height: 1.6;
-        margin-bottom: 10px;
-      }
+      .reply-content { color: #4b3a2a; line-height: 1.7; margin-bottom: 10px }
 
       .reply-footer {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-size: 12px;
-        color: #909399;
+        font-size: 13px;
+        color: #7a6f63;
 
-        .actions {
-          display: flex;
-          gap: 10px;
-        }
+        .actions { display: flex; gap: 8px }
       }
     }
   }
 
   .reply-editor-card {
-    margin-top: 40px;
-    background: #f9fafc;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #ebeef5;
+    margin-top: 28px;
+    background: rgba(255,255,250,0.96);
+    padding: 18px;
+    border-radius: 10px;
+    border: 1px solid rgba(90,55,21,0.04);
 
-    .editor-header {
-      margin-bottom: 15px;
-      h4 { margin: 0; }
+    .editor-header { margin-bottom: 10px; h4 { margin: 0; color: #3c2c1f } }
+
+    .editor-toolbar { margin-bottom: 12px; display:flex; gap:8px }
+
+    .reply-textarea :deep(.el-textarea__inner) {
+      border: 1px solid rgba(90,55,21,0.06);
+      padding: 12px;
+      border-radius: 8px;
+      font-family: "Noto Serif", Georgia, serif;
+      font-size: 14px;
+      color: #3c2c1f;
+      background: rgba(255,255,255,0.96);
     }
 
-    .editor-toolbar {
-      margin-bottom: 10px;
-      display: flex;
-      gap: 10px;
-    }
-
-    .reply-textarea {
-      :deep(.el-textarea__inner) {
-        border: 1px solid #e4e7ed;
-        &:focus { border-color: #409eff; }
-      }
-    }
-
-    .editor-footer {
-      margin-top: 15px;
-      text-align: right;
-    }
+    .editor-footer { margin-top: 12px; text-align: right }
+    .editor-footer :deep(.el-button) { border-radius: 8px }
   }
 }
 
@@ -497,5 +522,14 @@ onMounted(() => {
   :deep(pre) { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: #f6f8fa; border-radius: 3px; }
   :deep(pre code) { display: inline; max-width: auto; padding: 0; margin: 0; overflow: visible; line-height: inherit; word-wrap: normal; background-color: initial; border: 0; }
   :deep(blockquote) { padding: 0 1em; color: #6a737d; border-left: 0.25em solid #dfe2e5; }
+}
+
+/* Responsive adjustments for detail page */
+@media (max-width: 768px) {
+  .container { padding: 0 12px }
+  .main-post { padding: 16px }
+  .post-body { font-size: 15px }
+  .reply-avatar { flex: 0 0 40px }
+  .reply-textarea :deep(.el-textarea__inner) { font-size: 14px }
 }
 </style>

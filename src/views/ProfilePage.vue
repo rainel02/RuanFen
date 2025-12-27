@@ -810,13 +810,15 @@ const handleRegister = async () => {
       registerForm.password,
       registerForm.role
     )
+    console.log('注册结果:', result)
     if (result.success) {
       // 确保使用绿色成功提示
-      ElMessage({
-        message: '注册成功，请登录',
-        type: 'success',
-        duration: 3000
-      })
+      ElMessage.success('注册成功，请登录')
+      // ElMessage({
+      //   message: '注册成功，请登录',
+      //   type: 'success',
+      //   duration: 3000
+      // })
       authTab.value = 'login'
       // 重置表单
       registerForm.name = ''
@@ -826,6 +828,19 @@ const handleRegister = async () => {
       registerForm.role = 'user'
       registerForm.inviteCode = ''
     } else {
+      console.log("HEREEEEEEEEEEEEEEEEEE")
+      if(result.message === "注册成功"){
+        ElMessage.success('注册成功')
+        authTab.value = 'login'
+        // 重置表单
+        registerForm.name = ''
+        registerForm.email = ''
+        registerForm.password = ''
+        registerForm.confirmPassword = ''
+        registerForm.role = 'user'
+        registerForm.inviteCode = ''
+        return
+      }
       ElMessage.error(result.message || '注册失败')
     }
   } catch (error: any) {

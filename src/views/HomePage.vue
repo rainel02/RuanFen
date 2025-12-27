@@ -187,6 +187,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { Search, ArrowRight } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import AppHeader from '../components/AppHeader.vue'
 import PaperCard from '../components/PaperCard.vue'
 import { usePapersStore } from '../stores/papers'
@@ -273,14 +274,65 @@ const onSearch = async () => {
   papersStore.pageSize = 12
   papersStore.currentPage = 1
 
+  // validate date range: 如果开始时间晚于截止时间，则提示并阻止查询
+  const parseDate = (d: any) => {
+    if (!d) return null
+    const dt = typeof d === 'string' ? new Date(d) : new Date(d)
+    return Number.isNaN(dt.getTime()) ? null : dt
+  }
+
+  const sDate = parseDate(startDateLocal.value)
+  const eDate = parseDate(endDateLocal.value)
+  if (sDate && !eDate) {
+    ElMessage({
+      message: '请填写截止时间',
+      type: 'error',
+      customClass: 'pf-message-parchment',
+      duration: 4000
+    })
+    return
+  }
+
+  if (!sDate && eDate) {
+    ElMessage({
+      message: '请填写开始时间',
+      type: 'error',
+      customClass: 'pf-message-parchment',
+      duration: 4000
+    })
+    return
+  }
+
+  if (sDate && eDate && sDate.getTime() > eDate.getTime()) {
+    ElMessage({
+      message: '请修改查询条件，保证开始时间早于截止时间',
+      type: 'error',
+      customClass: 'pf-message-parchment',
+      duration: 4000
+    })
+    return
+  }
+
+  const formatDate = (d: any) => {
+    if (!d) return ''
+    // if already a string (ISO or yyyy-mm-dd) return as-is
+    if (typeof d === 'string') return d
+    const dt = new Date(d)
+    if (Number.isNaN(dt.getTime())) return ''
+    const y = dt.getFullYear()
+    const m = String(dt.getMonth() + 1).padStart(2, '0')
+    const day = String(dt.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
   await papersStore.setFilters({
     // pass empties if not provided — backend supports empty filters
     q: searchQueryLocal.value || '',
     author: author.value || '',
     institution: organization.value || '',
     fields: fieldLocal.value ? [fieldLocal.value] : [],
-    startDate: startDateLocal.value || '',
-    endDate: endDateLocal.value || ''
+    startDate: formatDate(startDateLocal.value),
+    endDate: formatDate(endDateLocal.value)
   })
 }
 
@@ -760,5 +812,41 @@ onBeforeUnmount(() => {
   .el-radio__input.is-checked + .el-radio__label {
     color: var(--el-color-primary);
   }
+}
+</style>
+
+<!-- 自定义全局消息样式（棕色羊皮纸 / 巴洛克复古风格） -->
+<style lang="scss">
+.pf-message-parchment.el-message, .pf-message-parchment {
+  background: linear-gradient(180deg, #fbf6ec 0%, #f3e6cf 100%) !important; /* 羊皮纸渐变 */
+  color: #5a3715 !important; /* 深棕文字 */
+  border: 1px solid rgba(90,55,21,0.12) !important;
+  box-shadow: 0 8px 30px rgba(90,55,21,0.12) !important;
+  font-family: "Noto Serif", Georgia, "Times New Roman", serif !important;
+  font-weight: 700 !important;
+  border-left: 6px solid rgba(184,137,58,0.7) !important; /* 金色装饰条 */
+  border-radius: 8px !important;
+  padding: 12px 18px !important;
+}
+
+.pf-message-parchment .el-message__content {
+  color: #5a3715 !important;
+}
+
+/* 强制让图标也变为棕色（兼容不同 Element Plus 版本） */
+.pf-message-parchment svg, .pf-message-parchment .el-icon {
+  color: #5a3715 !important;
+  fill: #5a3715 !important;
+  stroke: #5a3715 !important;
+}
+
+/* 支持较老结构：根节点本身使用自定义类 */
+.pf-message-parchment {
+  background: linear-gradient(180deg, #fbf6ec 0%, #f3e6cf 100%) !important;
+  color: #5a3715 !important;
+  border: 1px solid rgba(90,55,21,0.12) !important;
+  box-shadow: 0 8px 30px rgba(90,55,21,0.12) !important;
+  font-family: "Noto Serif", Georgia, "Times New Roman", serif !important;
+  font-weight: 700 !important;
 }
 </style>
