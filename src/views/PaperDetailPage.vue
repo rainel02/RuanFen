@@ -5,36 +5,33 @@
     <div class="page-content">
       <div class="container">
         <div v-if="paper" class="paper-detail">
-          <div class="paper-header">
-            <el-breadcrumb separator="/">
-              <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
-              <el-breadcrumb-item>论文详情</el-breadcrumb-item>
-            </el-breadcrumb>
-
-            <div class="paper-actions">
-              <el-button
-                :type="paper.isfavorited ? 'primary' : 'default'"
-                :icon="Star"
-                @click="toggleFavorite"
-              >
-                {{ paper.isfavorited ? '已收藏' : '收藏' }}
-              </el-button>
-              <!-- <el-button :icon="Share">分享</el-button> -->
-              <!-- <el-button :icon="Download" v-if="paper.url">下载PDF</el-button> -->
-              <el-button
-                v-if="paper.landingPageUrl"
-                @click.prevent="openExternal(paper.landingPageUrl)"
-              >
-                查看原文
-              </el-button>
-            </div>
-          </div>
+          <!-- <div class="paper-header">
+          </div> -->
 
           <el-row :gutter="24">
             <el-col :lg="18" :md="24" :sm="24" :xs="24">
               <el-card class="main-content">
                 <div class="paper-title-row">
                   <h1 class="paper-title">{{ paper.title }}</h1>
+                  <div class="title-actions">
+                    <button
+                      class="btn-favorite icon-btn"
+                      :class="{ 'is-active': paper.isfavorited }"
+                      @click.stop="toggleFavorite"
+                      aria-label="收藏"
+                    >
+                      <el-icon><Star /></el-icon>
+                    </button>
+
+                    <button
+                      v-if="paper.landingPageUrl"
+                      class="btn-external icon-btn"
+                      @click.prevent.stop="openExternal(paper.landingPageUrl)"
+                      aria-label="查看原文"
+                    >
+                      <el-icon><Document /></el-icon>
+                    </button>
+                  </div>
                 </div>
 
                 <div class="paper-meta">
@@ -42,7 +39,8 @@
                     <!-- <span class="meta-label">刊物：</span> -->
                     <!-- <span>{{ paper.publication }}</span> -->
                     <span class="meta-label">机构：</span>
-                    <span>{{ paper.institution }}</span>
+                    <span v-if="paper.institution && paper.institution.length">{{ paper.institution }}</span>
+                    <span v-else class="empty-placeholder">暂无详细信息</span>
                   </div>
 
                   <div class="publication-info">
@@ -58,11 +56,14 @@
 
                 <div class="paper-abstract">
                   <h3>摘要</h3>
-                  <p>{{ paper.abstractText }}</p>
+                    <div v-if="paper.abstractText && paper.abstractText.length">
+                      <p>{{ paper.abstractText }}</p>
+                    </div>
+                    <div v-else class="empty-placeholder">暂无详细信息</div>
                 </div>
 
                 <div class="paper-keywords">
-                  <h3>关键词</h3>
+                  <h3>领域</h3>
                   <div class="keywords-list">
                     <el-tag
                     v-for="field in paper.concepts"
@@ -123,7 +124,7 @@
                         >
                           <el-avatar :size="40">{{ authorInitial(author) }}</el-avatar>
                           <div class="author-info">
-                            <router-link v-if="author && author.id" :to="`/scholars/${author.id}`" class="author-name">
+                            <router-link v-if="getAuthorId(author)" :to="`/scholars/${getAuthorId(author)}`" class="author-name">
                               {{ authorLabel(author) }}
                             </router-link>
                             <span v-else class="author-name">{{ authorLabel(author) }}</span>
@@ -139,17 +140,20 @@
                     <h4>相关论文</h4>
                   </template>
                   <div class="related-list">
-                    <div
-                      v-for="relatedPaper in relatedPapers"
-                      :key="relatedPaper.id"
-                      class="related-item"
-                    >
-                      <router-link :to="`/paper/${relatedPaper.id}`" class="related-title">
-                        {{ relatedPaper.title }}
-                      </router-link>
-                      <p class="related-authors">{{ (relatedPaper.authorships || []).map(a => authorLabel(a)).join(', ') }}</p>
+                      <template v-if="relatedPapers && relatedPapers.length">
+                        <div
+                          v-for="relatedPaper in relatedPapers"
+                          :key="relatedPaper.id"
+                          class="related-item"
+                        >
+                          <router-link :to="`/paper/${relatedPaper.id}`" class="related-title">
+                            {{ relatedPaper.title }}
+                          </router-link>
+                          <p class="related-authors">{{ (relatedPaper.authorships || []).map(a => authorLabel(a)).join(', ') }}</p>
+                        </div>
+                      </template>
+                      <div v-else class="empty-placeholder">暂无详细信息</div>
                     </div>
-                  </div>
                 </el-card>
               </div>
             </el-col>
@@ -166,6 +170,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { usePapersStore } from '@/stores/papers'
 import type { Paper } from '@/types/paper'
 import { useRoute } from 'vue-router'
 import { Star, Document, View } from '@element-plus/icons-vue'
@@ -193,6 +199,32 @@ const authorInitial = (author: any) => {
   return name ? name.charAt(0) : '?'
 }
 
+const getAuthorId = (author: any) => {
+  if (!author || typeof author === 'string') return null
+
+  const tryFromString = (s?: string | null) => {
+    if (!s) return null
+    const m = String(s).match(/(?:openalex\.org\/)([A-Za-z0-9]+)/)
+    return m ? m[1] : null
+  }
+
+  // common places: author.id or author.authorIds (array of URLs)
+  const fromId = tryFromString(author.id)
+  if (fromId) return fromId
+
+  const candidateArrays = [author.authorIds, author.ids]
+  for (const arr of candidateArrays) {
+    if (Array.isArray(arr)) {
+      for (const item of arr) {
+        const found = tryFromString(item)
+        if (found) return found
+      }
+    }
+  }
+
+  return null
+}
+
 const formatDate = (dateStringOrYear?: string | number) => {
   if (dateStringOrYear === undefined || dateStringOrYear === null) return ''
   if (typeof dateStringOrYear === 'number') return String(dateStringOrYear)
@@ -214,21 +246,48 @@ const formatDate = (dateStringOrYear?: string | number) => {
   return s
 }
 
+const papersStore = usePapersStore()
+
 const toggleFavorite = async () => {
   if (!paper.value) return
   const id = paper.value.id
-  if (!paper.value.isfavorited) {
-    const res = await api.addToCollections(id).catch(() => null)
-    if (res && (res.status === 201 || res.ok)) {
+
+  try {
+    const msgOpts = { customClass: 'swiss-message', duration: 1500, offset: 60 }
+    const errorMsgOpts = { customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 }
+    // if the store contains this paper, use store method (keeps central state)
+    const storeHas = !!(papersStore as any).papers?.find((p: any) => p.id === id)
+    if (storeHas) {
+      await papersStore.toggleFavorite(id)
+      const updated = (papersStore as any).papers.find((p: any) => p.id === id)
+      if (updated) {
+        paper.value.isfavorited = !!updated.isfavorited
+        // update favouriteCount if store provides it
+        if (typeof updated.favouriteCount !== 'undefined') paper.value.favouriteCount = updated.favouriteCount
+      }
+      if (!updated?.isfavorited) {
+        ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
+      } else {
+        ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
+      }
+      return
+    }
+
+    // fallback: call API directly and update local paper
+    if (!paper.value.isfavorited) {
+      const res = await api.addToCollections(id)
+      ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
       paper.value.isfavorited = true
       paper.value.favouriteCount = (paper.value.favouriteCount || 0) + 1
-    }
-  } else {
-    const res = await api.removeFromCollections(id).catch(() => null)
-    if (res && (res.status === 204 || res.ok)) {
+    } else {
+      const res = await api.removeFromCollections(id)
+      ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
       paper.value.isfavorited = false
       paper.value.favouriteCount = Math.max(0, (paper.value.favouriteCount || 1) - 1)
     }
+  } catch (error) {
+    console.error('Toggle favorite failed', error)
+    ElMessage.error({ message: '操作失败，请稍后重试', customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 })
   }
 }
 
@@ -238,12 +297,37 @@ const loadPaper = async (paperId: string) => {
     const data = await api.getAchievement(paperId)
     paper.value = data
     relatedPapers.value = data.relatedWorks || []
+    // If the central store already has this paper (e.g. user favorited from list), prefer store state
+    try {
+      const storePaper = (papersStore as any).papers?.find((p: any) => String(p.id) === String(paperId))
+      if (storePaper && paper.value) {
+        if (typeof storePaper.isfavorited !== 'undefined') paper.value.isfavorited = !!storePaper.isfavorited
+        if (typeof storePaper.favouriteCount !== 'undefined') paper.value.favouriteCount = storePaper.favouriteCount
+      }
+    } catch (e) {
+      // ignore store merge errors
+      console.warn('merge store paper state failed', e)
+    }
     // optional: scroll to top when navigating to another paper
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (e) {
     console.error('load paper error', e)
   }
 }
+
+// Keep detail page in sync if store papers change (e.g. user toggles favorite elsewhere)
+watch(
+  () => (papersStore as any).papers,
+  (newPapers: any[]) => {
+    if (!paper.value || !Array.isArray(newPapers)) return
+    const sp = newPapers.find((p: any) => String(p.id) === String(paper.value?.id))
+    if (sp) {
+      if (typeof sp.isfavorited !== 'undefined') paper.value.isfavorited = !!sp.isfavorited
+      if (typeof sp.favouriteCount !== 'undefined') paper.value.favouriteCount = sp.favouriteCount
+    }
+  },
+  { deep: true }
+)
 
 function openExternal(url?: string): void {
   if (!url) return
@@ -291,17 +375,20 @@ watch(() => route.params.id, (newId, oldId) => {
   background: linear-gradient(180deg, var(--pf-bg) 0%, #fdf9f2 100%);
   color: var(--pf-ink);
   font-family: var(--font-serif);
+  overflow: visible; /* allow top-floating controls to remain visible */
 }
 
 .page-content {
   flex: 1;
   padding: 48px 24px;
   @include mobile { padding: 24px 16px; }
+  overflow: visible;
 }
 
 .container {
   max-width: 1100px;
   margin: 0 auto;
+  overflow: visible;
 }
 
 /* Header Area */
@@ -373,10 +460,29 @@ watch(() => route.params.id, (newId, oldId) => {
 
     &:hover {
       border-color: var(--pf-accent);
-      color: var(--pf-accent);
-      background: rgba(184, 137, 58, 0.05);
+      color: var(--pf-accent) !important;
+      background: rgba(184, 137, 58, 0.05) !important;
     }
   }
+}
+
+/* Specific styling for external link button to avoid Element default blue hover/focus */
+:deep(.external-btn) {
+  background: transparent !important;
+  border: 1px solid var(--pf-border) !important;
+  color: var(--pf-ink) !important;
+  box-shadow: none !important;
+}
+
+:deep(.external-btn:hover) {
+  border-color: var(--pf-accent) !important;
+  color: var(--pf-accent) !important;
+  background: rgba(184, 137, 58, 0.05) !important;
+}
+
+:deep(.external-btn:focus), :deep(.external-btn:active) {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Cards General */
@@ -392,6 +498,8 @@ watch(() => route.params.id, (newId, oldId) => {
 .main-content {
   padding: 48px;
   margin-bottom: 32px;
+  overflow: visible; /* allow title action buttons to extend outside without being clipped */
+  position: relative; /* ensure absolute children position relative to this card */
 
   :deep(.el-card__body) { padding: 0; }
 
@@ -405,6 +513,65 @@ watch(() => route.params.id, (newId, oldId) => {
   color: var(--pf-ink);
   margin: 0 0 24px 0;
   letter-spacing: -0.01em;
+}
+
+.paper-title-row {
+  position: relative;
+  display: block;
+  padding-top: 12px; /* 保留顶部空间，避免按钮被遮挡 */
+}
+
+.title-actions {
+  position: absolute;
+  top: -30px; /* 放在标题上方，减小偏移以避免被上层元素遮挡 */
+  left: 0px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: none;
+  z-index: 9999; /* 提高层级，确保不被页面其它元素覆盖 */
+}
+
+.title-actions .icon-btn {
+  background: transparent;
+  border: 1px solid var(--pf-border);
+  color: var(--pf-ink);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.title-actions .icon-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 69, 19, 0.12);
+}
+
+.title-actions .btn-favorite.is-active {
+  background: var(--pf-accent);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(184, 137, 58, 0.18);
+}
+
+.title-actions .btn-external:hover {
+  border-color: var(--pf-accent);
+  color: var(--pf-accent);
+  background: rgba(184, 137, 58, 0.05);
+}
+
+@media (max-width: 767px) {
+  .title-actions {
+    position: static;
+    transform: none;
+    margin-top: 8px;
+    gap: 8px;
+  }
 }
 
 .paper-meta {
@@ -581,12 +748,19 @@ watch(() => route.params.id, (newId, oldId) => {
   &:last-child { margin-bottom: 0; }
 
   .el-avatar {
-    background: var(--pf-accent);
-    color: #fff;
-    font-family: var(--font-serif);
-    font-weight: 700;
-    border: 2px solid rgba(255,255,255,0.5);
-    box-shadow: 0 2px 8px rgba(184, 137, 58, 0.2);
+  background: var(--pf-accent);
+  color: #fff;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow: 0 2px 8px rgba(184, 137, 58, 0.2);
+  width: 40px !important; /* ensure fixed circular avatar */
+  height: 40px !important;
+  flex-shrink: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   }
 
   .author-info {
@@ -623,6 +797,17 @@ watch(() => route.params.id, (newId, oldId) => {
   font-style: italic;
 }
 
+/* Unified empty placeholder used across abstract, related list, institution, authors */
+.empty-placeholder {
+  color: var(--pf-muted);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  text-align: center;
+  padding: 14px 0;
+  font-style: italic;
+  background: transparent;
+}
+
 .related-item {
   padding-bottom: 16px;
   margin-bottom: 16px;
@@ -655,7 +840,72 @@ watch(() => route.params.id, (newId, oldId) => {
   }
 }
 
+/* Ensure Element Plus card internals don't clip our floating controls */
+:deep(.el-card), :deep(.el-card__body) {
+  overflow: visible !important;
+}
+
 .loading-state {
   padding: 40px;
+}
+</style>
+
+<style lang="scss">
+/* 全局样式 - 用于 ElMessage 等插入到 body 的元素 */
+.swiss-message {
+  --el-message-bg-color: #fffcf5 !important;
+  --el-message-border-color: rgba(184, 137, 58, 0.3) !important;
+  --el-message-text-color: #2e2a25 !important;
+  --el-color-success: #b8893a !important; /* 将成功图标颜色改为金色 */
+  
+  font-family: "Noto Serif", Georgia, serif !important;
+  border-radius: 4px !important;
+  box-shadow: 0 8px 24px rgba(46, 42, 37, 0.12) !important;
+  border-width: 1px !important;
+  padding: 12px 24px !important;
+  min-width: 300px !important;
+  
+  .el-message__content {
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+  }
+  
+  .el-icon {
+    font-size: 18px !important;
+  }
+}
+
+/* 强制覆盖 Element Plus 成功/图标颜色（有时 Element 使用更高优先级的选择器） */
+.swiss-message,
+.swiss-message * {
+  color: #2e2a25 !important;
+}
+.swiss-message {
+  background-color: #fffcf5 !important;
+  border: 1px solid rgba(184, 137, 58, 0.18) !important;
+}
+.swiss-message .el-icon,
+.swiss-message .el-message__icon,
+.swiss-message .el-icon svg,
+.swiss-message .el-icon path {
+  color: #b8893a !important;
+  fill: #b8893a !important;
+}
+.swiss-message .el-message__content {
+  color: #2e2a25 !important;
+}
+
+/* 错误/警告样式 - 复古红 */
+.swiss-message.swiss-message-error {
+  --el-message-border-color: rgba(166, 55, 55, 0.3) !important;
+  border-color: rgba(166, 55, 55, 0.25) !important;
+}
+
+.swiss-message.swiss-message-error .el-icon,
+.swiss-message.swiss-message-error .el-message__icon,
+.swiss-message.swiss-message-error .el-icon svg,
+.swiss-message.swiss-message-error .el-icon path {
+  color: #a63737 !important;
+  fill: #a63737 !important;
 }
 </style>

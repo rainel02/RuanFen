@@ -24,9 +24,9 @@
       <span class="authors-list">
         <template v-for="(author, index) in (paper.authorships || [])">
           <router-link
-            v-if="author && author.id" 
-            :key="author.id"
-            :to="`/scholars/${author.id}`"
+            v-if="getAuthorId(author, index)"
+            :key="getAuthorId(author, index) || `author-${index}`"
+            :to="`/scholars/${getAuthorId(author, index)}`"
             class="author-link"
           >
             {{ author.name }}{{ index < ((paper.authorships || []).length) - 1 ? ', ' : '' }}
@@ -131,10 +131,37 @@ const formatDate = (dateStringOrYear?: string | number) => {
   return s
 }
 
+// Extract an OpenAlex-style ID from an author object or fallback arrays.
+const getAuthorId = (author: any, index: number) => {
+  // If author has an id field
+  if (author && author.id) {
+    const idStr = String(author.id)
+    // If it's a URL, take last path segment
+    if (/^https?:\/\//.test(idStr)) {
+      const parts = idStr.split('/').filter(Boolean)
+      return parts.length ? parts[parts.length - 1] : null
+    }
+    return idStr
+  }
+
+  // Fallback: if the paper includes authorIds array, try to use that
+  const fallback = (props.paper as any).authorIds
+  if (Array.isArray(fallback) && fallback[index]) {
+    const idStr = String(fallback[index])
+    if (/^https?:\/\//.test(idStr)) {
+      const parts = idStr.split('/').filter(Boolean)
+      return parts.length ? parts[parts.length - 1] : null
+    }
+    return idStr
+  }
+
+  return null
+}
+
 const toggleFavorite = async () => {
   const id = props.paper.id
   console.log('Toggling favorite for paper', id)
-  const msgOpts = { customClass: 'swiss-message', duration: 2500, offset: 60 }
+  const msgOpts = { customClass: 'swiss-message', duration: 1500, offset: 60 }
   const errorMsgOpts = { customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 }
 
   try {
@@ -216,10 +243,17 @@ const toggleFavorite = async () => {
       line-height: 1.3;
       letter-spacing: -0.02em;
       color: var(--pc-ink);
+      min-width: 0; /* allow flex child to shrink and avoid pushing sibling button */
 
       .title-link {
         text-decoration: none;
         color: inherit;
+        display: -webkit-box;
+        -webkit-line-clamp: 4; /* limit to 4 lines */
+        line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
         background-image: linear-gradient(var(--pc-ink), var(--pc-ink));
         background-position: 0% 100%;
         background-repeat: no-repeat;
@@ -335,6 +369,7 @@ const toggleFavorite = async () => {
       margin: 0;
       display: -webkit-box;
       -webkit-line-clamp: 3;
+      line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
       opacity: 0.85;
@@ -431,6 +466,7 @@ const toggleFavorite = async () => {
       
       p {
         -webkit-line-clamp: 4; /* 移动端多显示一行 */
+        line-clamp: 4;
       }
     }
   }
