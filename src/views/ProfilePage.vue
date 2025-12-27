@@ -1034,7 +1034,20 @@ const handleMouseUp = () => {
 const loadCollections = async () => {
   try {
     const response = await achievementApi.getMyCollections()
-    collections.value = response?.collections || response || []
+    // 兼容数组/对象格式，兼容 achievementDTO 包裹
+    let arr = Array.isArray(response) ? response : (response?.collections || response?.content || response?.results || response?.data || [])
+    collections.value = arr.map((item: any) => {
+      const paper = item.achievementDTO || item
+      return {
+        id: paper.id || item.achievementId,
+        title: paper.title || '未命名成果',
+        authors: (paper.authorships && Array.isArray(paper.authorships))
+          ? paper.authorships.map((a: any) => a.name).filter(Boolean)
+          : (paper.authorNames || []),
+        year: paper.publicationDate || paper.year || '',
+        isfavorited: true
+      }
+    })
   } catch (error) {
     console.error('加载收藏失败', error)
     collections.value = []

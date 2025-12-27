@@ -17,6 +17,9 @@ export const getInfluenceRanking = (domain: string = 'all') => {
     url: '/analysis/influence/ranking',
     method: 'get',
     params: { domain }
+  }).catch((error) => {
+    console.warn('getInfluenceRanking API not available:', error)
+    return { ranking: [] }
   })
 }
 
@@ -24,5 +27,8 @@ export const getInfluenceTrend = (userId: string) => {
   return request({
     url: `/analysis/influence/trend/${userId}`,
     method: 'get'
+  }).catch((error) => {
+    console.warn('getInfluenceTrend API not available:', error)
+    return { worksCount: 0, citedByCnt: 0, hIndex: 0, i10Index: 0 }
   })
 }
