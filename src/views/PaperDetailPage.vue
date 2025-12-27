@@ -296,8 +296,13 @@ const generatePoster = async () => {
   }
   posterLoading.value = true
   posterImg.value = null
-  // 组装prompt
-  const prompt = `请根据以下论文信息生成一张学术风格的AI海报，内容需突出论文主题、作者和摘要，适合学术分享场景：\n论文题目：${paper.value.title}\n作者：${(paper.value.authorships||[]).map(a=>typeof a==='string'?a:a?.name).join('，')}\n摘要：${paper.value.abstractText}\n关键词：${(paper.value.concepts||[]).join('，')}`
+  // 组装prompt（以图像为主，图多于文字，文字极简）
+  const prompt = `请根据以下论文信息生成一张学术风格但以视觉为主的 AI 海报，要求图像元素丰富、文字极简：
+- 以一张主视觉插图（示意图/概念图/主题艺术化图）为焦点，视觉占比大；
+- 辅助加入 1-2 个简单的可视化元素（图标、简易图表或示意图），用于突出关键结论；
+- 文字尽量少：仅保留论文标题、作者和 1-2 行摘要/关键点作为文本层，字体清晰、层次分明；
+- 色调学术、干净，留白合理，适合线上分享与打印（高分辨率），整体风格严谨但有视觉吸引力；
+请使用下面的论文信息创作海报：\n论文题目：${paper.value.title}\n作者：${(paper.value.authorships||[]).map(a=>typeof a==='string'?a:a?.name).join('，')}\n摘要：${paper.value.abstractText}\n关键词：${(paper.value.concepts||[]).join('，')}`
   try {
     const img = await generatePosterImage(prompt)
     if (img) {
@@ -312,18 +317,48 @@ const generatePoster = async () => {
   }
 }
 
-// 下载海报逻辑
-const downloadPoster = () => {
+// 下载海报逻辑（支持 data URL 和跨域 URL -> fetch blob）
+const downloadPoster = async () => {
   console.log('downloadPoster invoked, posterImg:', posterImg.value)
   if (!posterImg.value) {
     console.log('no poster to download')
+    ElMessage.warning('当前没有可下载的海报')
     return
   }
-  const a = document.createElement('a')
-  a.href = posterImg.value
-  a.download = (paper.value?.title || 'poster') + '.png'
-  a.click()
-  showPosterDialog.value = false
+
+  const filename = `${(paper.value?.title || 'poster').replace(/[^a-z0-9\u4e00-\u9fa5_-]/gi, '_')}.png`
+
+  try {
+    // data URL 直接下载
+    if (posterImg.value.startsWith('data:')) {
+      const a = document.createElement('a')
+      a.href = posterImg.value
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      ElMessage.success('海报已下载')
+      return
+    }
+
+    // 否则尝试 fetch 为 blob（解决跨域或需要授权的场景）
+    const resp = await fetch(posterImg.value, { method: 'GET', credentials: 'omit' })
+    if (!resp.ok) throw new Error(`下载请求失败 ${resp.status}`)
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    // 释放对象 URL
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+    ElMessage.success('海报已下载')
+  } catch (e) {
+    console.error('downloadPoster error', e)
+    ElMessage.error('海报下载失败')
+  }
 }
 
 // 监听弹窗打开时自动生成海报
