@@ -192,20 +192,23 @@
         <el-dialog
           v-model="showPosterDialog"
           title="生成论文海报"
-          width="480px"
+            width="560px"
           class="poster-dialog"
           :close-on-click-modal="false"
           :close-on-press-escape="true"
         >
           <div class="poster-dialog-content">
             <div class="poster-preview">
-              <el-skeleton v-if="posterLoading" :rows="8" animated style="width:100%;height:100%" />
-              <img v-else-if="posterImg" :src="posterImg" alt="AI海报" style="max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 2px 8px #eee;" />
+              <div v-if="posterLoading" class="poster-loading">
+                <div class="spinner" role="status" aria-label="loading"></div>
+                <div class="loading-text">正在生成海报，请稍候…</div>
+              </div>
+              <img v-else-if="posterImg" :src="posterImg" alt="AI海报" class="poster-img" />
               <el-empty v-else description="海报预览占位" />
             </div>
             <div class="poster-dialog-actions">
               <el-button @click="showPosterDialog = false">取消</el-button>
-              <el-button type="primary" @click="downloadPoster">下载</el-button>
+              <el-button type="primary" :disabled="posterLoading || !posterImg" @click="downloadPoster">下载</el-button>
             </div>
           </div>
         </el-dialog>
@@ -550,8 +553,9 @@ watch(() => route.params.id, (newId, oldId) => {
 }
 
 .poster-preview {
-  width: 320px;
-  height: 480px;
+  /* 保持正方形预览以匹配生成的海报尺寸（通义万相默认我们请求为 1280x1280） */
+  width: 360px;
+  height: 360px;
   background: linear-gradient(135deg, #f7efe2 60%, #fdf9f2 100%);
   border: 1.5px dashed var(--pf-accent);
   border-radius: 16px;
@@ -559,6 +563,42 @@ watch(() => route.params.id, (newId, oldId) => {
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 24px rgba(46, 42, 37, 0.06);
+}
+
+.poster-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid rgba(0,0,0,0.08);
+  border-top-color: var(--pf-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--pf-muted);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: #fff;
 }
 
 .poster-dialog-actions {
