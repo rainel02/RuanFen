@@ -5,7 +5,7 @@
       <div class="header">
         <h2>数据分析看板</h2>
         <div class="header-actions">
-          <el-button type="primary" plain>导出报告</el-button>
+          <el-button class="retro-export-btn">导出报告</el-button>
         </div>
       </div>
 
@@ -29,7 +29,7 @@
             <template #header>
               <div class="card-header">
                 <span class="card-title">学科热点词云</span>
-                <el-radio-group v-model="hotTopicRange" size="small" @change="fetchHotTopics">
+                <el-radio-group v-model="hotTopicRange" size="small" @change="fetchHotTopics" class="retro-radio-group">
                   <el-radio-button value="1y">近1年</el-radio-button>
                   <el-radio-button value="3m">近3月</el-radio-button>
                   <el-radio-button value="all">全部</el-radio-button>
@@ -50,27 +50,27 @@
             <template #header>
               <div class="card-header">
                 <span class="card-title">影响力排行榜</span>
-                <el-select v-model="rankingDomain" size="small" style="width: 160px" @change="fetchRanking">
-                  <el-option label="全部" value="all" />
-                  <el-option label="Medicine" value="Medicine" />
-                  <el-option label="Biology" value="Biology" />
-                  <el-option label="Chemistry" value="Chemistry" />
-                  <el-option label="Computer science" value="Computer science" />
-                  <el-option label="Business" value="Business" />
-                  <el-option label="Sociology" value="Sociology" />
-                  <el-option label="Political science" value="Political science" />
-                  <el-option label="Geology" value="Geology" />
-                  <el-option label="Philosophy" value="Philosophy" />
-                  <el-option label="History" value="History" />
-                  <el-option label="Materials science" value="Materials science" />
-                  <el-option label="Psychology" value="Psychology" />
-                  <el-option label="Physics" value="Physics" />
-                  <el-option label="Environmental science" value="Environmental science" />
-                  <el-option label="Mathematics" value="Mathematics" />
-                  <el-option label="Engineering" value="Engineering" />
-                  <el-option label="Geography" value="Geography" />
-                  <el-option label="Economics" value="Economics" />
-                  <el-option label="Art" value="Art" />
+                <el-select v-model="rankingDomain" size="small" style="width: 160px" @change="fetchRanking" class="retro-select">
+                  <el-option label="全部" value="all" class="retro-option" />
+                  <el-option label="Medicine" value="Medicine" class="retro-option" />
+                  <el-option label="Biology" value="Biology" class="retro-option" />
+                  <el-option label="Chemistry" value="Chemistry" class="retro-option" />
+                  <el-option label="Computer science" value="Computer science" class="retro-option" />
+                  <el-option label="Business" value="Business" class="retro-option" />
+                  <el-option label="Sociology" value="Sociology" class="retro-option" />
+                  <el-option label="Political science" value="Political science" class="retro-option" />
+                  <el-option label="Geology" value="Geology" class="retro-option" />
+                  <el-option label="Philosophy" value="Philosophy" class="retro-option" />
+                  <el-option label="History" value="History" class="retro-option" />
+                  <el-option label="Materials science" value="Materials science" class="retro-option" />
+                  <el-option label="Psychology" value="Psychology" class="retro-option" />
+                  <el-option label="Physics" value="Physics" class="retro-option" />
+                  <el-option label="Environmental science" value="Environmental science" class="retro-option" />
+                  <el-option label="Mathematics" value="Mathematics" class="retro-option" />
+                  <el-option label="Engineering" value="Engineering" class="retro-option" />
+                  <el-option label="Geography" value="Geography" class="retro-option" />
+                  <el-option label="Economics" value="Economics" class="retro-option" />
+                  <el-option label="Art" value="Art" class="retro-option" />
                 </el-select>
               </div>
             </template>
@@ -546,5 +546,103 @@ onMounted(() => {
 }
 :deep(.el-table .rank-row-3) {
   background: rgba(205, 127, 50, 0.15);
+}
+
+.retro-export-btn {
+  background: linear-gradient(135deg, #f9f7ec 0%, #e7d3a1 100%) !important;
+  border: 2px solid #D4AF37 !important;
+  color: #8B4513 !important;
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.10), 0 1.5px 6px 0 rgba(44, 38, 24, 0.04);
+  padding: 10px 28px !important;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 2px #fff8e1;
+}
+.retro-export-btn:hover, .retro-export-btn:focus {
+  background: linear-gradient(135deg, #fffbe6 0%, #f3e7c6 100%) !important;
+  border-color: #B8860B !important;
+  color: #654321 !important;
+  box-shadow: 0 8px 24px rgba(212, 175, 55, 0.18), 0 2px 8px rgba(44, 38, 24, 0.08);
+  transform: translateY(-2px) scale(1.03);
+}
+
+/* 复古风格按钮/选项栏统一样式 */
+.retro-radio-group {
+  background: none;
+  border-radius: 8px;
+  padding: 2px 0;
+}
+// 复古风格单选按钮（时间选择等）
+.retro-radio-btn {
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  font-weight: 700 !important;
+  color: #8B4513 !important;
+  background: linear-gradient(135deg, #f9f7ec 0%, #e7d3a1 100%) !important;
+  border: 2px solid #D4AF37 !important;
+  border-radius: 8px !important;
+  margin-right: 8px !important;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.08);
+  transition: all 0.2s;
+  font-size: 15px !important;
+  letter-spacing: 0.5px;
+  min-width: 60px;
+  min-height: 32px;
+  padding: 0 18px;
+  text-align: center;
+}
+.retro-radio-btn.is-active,
+.retro-radio-btn:active,
+.retro-radio-btn:focus,
+.retro-radio-btn.el-radio-button__orig-radio:checked + .el-radio-button__inner {
+  background: linear-gradient(135deg, #fffbe6 0%, #f3e7c6 100%) !important;
+  color: #B8860B !important;
+  border-color: #B8860B !important;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.12);
+}
+.retro-radio-btn .el-radio-button__inner {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  font-size: inherit !important;
+  box-shadow: none !important;
+}
+.retro-radio-btn.is-active .el-radio-button__inner {
+  color: #B8860B !important;
+}
+.retro-radio-btn.is-active,
+.retro-radio-btn:active,
+.retro-radio-btn:focus {
+  background: linear-gradient(135deg, #fffbe6 0%, #f3e7c6 100%) !important;
+  color: #654321 !important;
+  border-color: #B8860B !important;
+  box-shadow: 0 4px 16px rgba(212, 175, 55, 0.12);
+}
+.retro-select {
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  font-weight: 700 !important;
+  color: #8B4513 !important;
+  background: linear-gradient(135deg, #f9f7ec 0%, #e7d3a1 100%) !important;
+  border: 2px solid #D4AF37 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(212, 175, 55, 0.08);
+  font-size: 15px !important;
+  letter-spacing: 0.5px;
+}
+.retro-option {
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  color: #8B4513 !important;
+  background: #fffef8 !important;
+  font-size: 15px !important;
+}
+.retro-select .el-input__inner {
+  color: #8B4513 !important;
+  font-weight: 700 !important;
+  font-family: 'Georgia', 'Times New Roman', serif !important;
 }
 </style>

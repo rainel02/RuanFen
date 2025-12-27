@@ -171,8 +171,9 @@
                 <div class="name-row">
                   <h1>{{ user?.name }}</h1>
                   <el-tag v-if="verificationStatus === 'certified' || verificationStatus === 'verified'" type="success" effect="dark" round size="small" class="verified-tag">
-                    <el-icon><Select /></el-icon> 认证学者
+                    <el-icon><Select /></el-icon>
                   </el-tag>
+                  <span v-if="verificationStatus === 'certified' || verificationStatus === 'verified'" class="verified-text">认证学者</span>
                   <el-tag v-else-if="verificationStatus === 'pending'" type="warning" effect="dark" round size="small" class="pending-tag">
                     审核中
                   </el-tag>
@@ -276,14 +277,6 @@
                           </el-button>
                         </div>
                       </div>
-                    </div>
-                  </el-tab-pane>
-                  <el-tab-pane label="浏览历史" name="history">
-                    <template #label>
-                      <span><el-icon><Clock /></el-icon> 浏览历史</span>
-                    </template>
-                    <div class="empty-state">
-                      <el-empty description="暂无浏览历史" />
                     </div>
                   </el-tab-pane>
                   <el-tab-pane label="我的帖子" name="posts">
