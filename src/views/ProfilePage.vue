@@ -601,9 +601,9 @@ const collections = ref<any[]>([])
 const showAchievementDialog = ref(false)
 const editingAchievement = ref<any>(null)
 
-// 关注和粉丝相关
-const followingCount = ref(0)
-const followersCount = ref(0)
+// 关注和粉丝相关（followingCount、followersCount 只声明一次）
+// const followingCount = ref(0)
+// const followersCount = ref(0)
 const followingList = ref<any[]>([])
 const followersList = ref<any[]>([])
 const showFollowingDialog = ref(false)
