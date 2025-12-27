@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 import type { Paper, SearchFilters } from '../types/paper'
 import api from '../api'
+import { normalizePaper } from '../utils/normalizePaper'
 
 export const usePapersStore = defineStore('papers', () => {
   const papers = ref<Paper[]>([])
@@ -74,7 +75,8 @@ export const usePapersStore = defineStore('papers', () => {
       // api 返回已由请求封装器 unwrap 为 `data` 对象
       // 例如后端原始响应为 { code, message, data: { content, totalElements } }
       // 此处 `data` 已等同于后端的 `data` 字段
-      papers.value = data.content || []
+      const content = data.content || []
+      papers.value = Array.isArray(content) ? content.map(normalizePaper) : []
       console.log(data)
       total.value = data.totalElements ?? papers.value.length
     } catch (e) {
@@ -108,9 +110,13 @@ export const usePapersStore = defineStore('papers', () => {
       try {
         // call collection API
         if (paper.isfavorited) {
-          await api.addToCollections(paper.id)
+          console.log('[DEBUG] Adding to collections:', paperId)
+          const res = await api.addToCollections(paper.id)
+          console.log('[DEBUG] addToCollections response:', res)
         } else {
-          await api.removeFromCollections(paper.id)
+          console.log('[DEBUG] Removing from collections:', paperId)
+          const res = await api.removeFromCollections(paper.id)
+          console.log('[DEBUG] removeFromCollections response:', res)
         }
       } catch (e) {
         console.error('Failed to toggle favorite, rolling back', e)
