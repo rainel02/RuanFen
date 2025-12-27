@@ -27,6 +27,9 @@
               >
                 查看原文
               </el-button>
+              <el-button type="primary" icon="MagicStick" class="poster-btn" style="margin-left:16px;" @click="showPosterDialog = true">
+                智能生成论文海报
+              </el-button>
             </div>
           </div>
 
@@ -56,22 +59,25 @@
                   </div>
                 </div>
 
-                <div class="paper-abstract">
-                  <h3>摘要</h3>
-                  <p>{{ paper.abstractText }}</p>
-                </div>
-
-                <div class="paper-keywords">
-                  <h3>关键词</h3>
-                  <div class="keywords-list">
-                    <el-tag
-                    v-for="field in paper.concepts"
-                    :key="field"
-                    size="large"
-                    effect="plain"
-                  >
-                    {{ field }}
-                  </el-tag>
+                <div class="main-info-row">
+                  <div class="main-info-left">
+                    <div class="paper-abstract">
+                      <h3>摘要</h3>
+                      <p>{{ paper.abstractText }}</p>
+                    </div>
+                    <div class="paper-keywords">
+                      <h3>关键词</h3>
+                      <div class="keywords-list">
+                        <el-tag
+                          v-for="field in paper.concepts"
+                          :key="field"
+                          size="large"
+                          effect="plain"
+                        >
+                          {{ field }}
+                        </el-tag>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </el-card>
@@ -159,6 +165,25 @@
         <div v-else class="loading-state">
           <el-skeleton :rows="10" animated />
         </div>
+        <!-- 生成海报弹窗 -->
+        <el-dialog
+          v-model="showPosterDialog"
+          title="生成论文海报"
+          width="480px"
+          class="poster-dialog"
+          :close-on-click-modal="false"
+          :close-on-press-escape="true"
+        >
+          <div class="poster-dialog-content">
+            <div class="poster-preview">
+              <el-empty description="海报预览占位" />
+            </div>
+            <div class="poster-dialog-actions">
+              <el-button @click="showPosterDialog = false">取消</el-button>
+              <el-button type="primary" @click="downloadPoster">下载</el-button>
+            </div>
+          </div>
+        </el-dialog>
       </div>
     </div>
   </div>
@@ -166,12 +191,34 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import type { Paper } from '@/types/paper'
 import { useRoute } from 'vue-router'
 import { Star, Document, View } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import api from '@/api'
-// import { usePapersStore } from '../stores/papers'
+
+// 控制弹窗显示
+const showPosterDialog = ref(false)
+
+// 生成海报逻辑（弹窗打开时自动调用）
+const generatePoster = () => {
+  // 这里可以放置实际生成海报的逻辑
+  ElMessage.success('海报已生成（示例）')
+}
+
+// 下载海报逻辑（此处为示例）
+const downloadPoster = () => {
+  ElMessage.success('海报已下载（示例）')
+  showPosterDialog.value = false
+}
+
+// 监听弹窗打开时自动生成海报
+watch(showPosterDialog, (val) => {
+  if (val) {
+    generatePoster()
+  }
+})
 
 const route = useRoute()
 
@@ -271,6 +318,54 @@ watch(() => route.params.id, (newId, oldId) => {
 </script>
 
 <style scoped lang="scss">
+// 生成海报弹窗样式
+.poster-dialog {
+  .el-dialog__header {
+    background: rgba(255, 252, 245, 0.8);
+    border-bottom: 1px solid var(--pf-border);
+    font-family: var(--font-sans);
+    font-size: 18px;
+    color: var(--pf-ink);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 20px 24px 12px 24px;
+  }
+  .el-dialog__body {
+    background: var(--card-bg);
+    padding: 32px 24px 16px 24px;
+  }
+  .el-dialog__footer {
+    background: transparent;
+    border-top: none;
+    padding: 0 24px 24px 24px;
+  }
+}
+
+.poster-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.poster-preview {
+  width: 320px;
+  height: 480px;
+  background: linear-gradient(135deg, #f7efe2 60%, #fdf9f2 100%);
+  border: 1.5px dashed var(--pf-accent);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 24px rgba(46, 42, 37, 0.06);
+}
+
+.poster-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  gap: 16px;
+}
 @mixin mobile { @media (max-width: 767px) { @content; } }
 
 .paper-detail-page {
