@@ -12,26 +12,17 @@ export const getHotTopics = (timeRange: '1y' | '3m' | 'all' = 'all') => {
   })
 }
 
-export const getInfluenceRanking = (domain: 'cs' | 'physics' | 'all' = 'all') => {
+export const getInfluenceRanking = (domain: string = 'all') => {
   return request({
     url: '/analysis/influence/ranking',
     method: 'get',
     params: { domain }
-  }).catch((error) => {
-    // 如果接口不存在，返回空数据而不是抛出错误
-    console.warn('getInfluenceRanking API not available:', error)
-    return { ranking: [] }
   })
 }
 
-export const getInfluenceTrend = (timeRange: string = '5y', metric: 'citations' | 'h-index' = 'citations') => {
+export const getInfluenceTrend = (userId: string) => {
   return request({
-    url: '/analysis/influence/trend/me',
-    method: 'get',
-    params: { time_range: timeRange, metric }
-  }).catch((error) => {
-    // 如果接口不存在，返回空数据而不是抛出错误
-    console.warn('getInfluenceTrend API not available:', error)
-    return { data: [] }
+    url: `/analysis/influence/trend/${userId}`,
+    method: 'get'
   })
 }
