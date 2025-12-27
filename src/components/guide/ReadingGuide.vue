@@ -3,15 +3,19 @@
     <!-- 顶部导航 -->
     <div class="guide-stepper glass-panel">
       <div class="stepper-content">
-          <el-steps :active="store.currentSectionIndex" finish-status="success" simple class="retro-steps">
-            <el-step 
+          <div class="custom-steps">
+            <div 
               v-for="(step, index) in store.steps" 
               :key="index" 
-              :title="step" 
+              class="custom-step-item"
+              :class="{ active: store.currentSectionIndex === index, completed: store.currentSectionIndex > index }"
               @click="store.setSection(index)"
-              style="cursor: pointer"
-            />
-          </el-steps>
+            >
+               <span class="step-number" v-if="store.currentSectionIndex <= index">{{ index + 1 }}</span>
+               <el-icon class="step-icon" v-else><Check /></el-icon>
+               <span class="step-text" :title="step">{{ formatStepTitle(step) }}</span>
+            </div>
+          </div>
       </div>
       <div class="stepper-actions">
           <el-button type="primary" link @click="handleAIReParse">
@@ -28,7 +32,9 @@
       <div class="original-text-panel glass-panel">
         <div class="panel-header">
           <h3 class="text-retro-brown">原文内容</h3>
-          <el-tag effect="dark" color="#8B4513" style="border: none;">{{ currentSection?.title }}</el-tag>
+          <el-tag effect="dark" color="#8B4513" class="section-title-tag" :title="currentSection?.title">
+            {{ currentSection?.title }}
+          </el-tag>
         </div>
         
         <div 
@@ -168,7 +174,7 @@ import { computed, ref, reactive, watch, nextTick } from 'vue';
 import { usePaperGuideStore } from '../../stores/paperGuide';
 import { marked } from 'marked';
 import { ElMessageBox, ElMessage } from 'element-plus';
-import { EditPen, QuestionFilled, Collection, Opportunity, MagicStick, Switch, ChatLineRound, Download } from '@element-plus/icons-vue';
+import { EditPen, QuestionFilled, Collection, Opportunity, MagicStick, Switch, ChatLineRound, Download, Check } from '@element-plus/icons-vue';
 
 const store = usePaperGuideStore();
 const userQuestion = ref('');
@@ -197,6 +203,12 @@ const renderedAnalysis = computed(() => {
   if (!hasAnalysis.value || !currentSection.value) return '';
   return marked(store.aiAnalysis[currentSection.value.id]);
 });
+
+const formatStepTitle = (title: string) => {
+  if (!title) return '';
+  // 截断过长的标题，防止挤压布局
+  return title.length > 10 ? title.substring(0, 10) + '...' : title;
+};
 
 const nextStep = () => {
   store.setSection(store.currentSectionIndex + 1);
@@ -353,10 +365,84 @@ watch(() => store.chatHistory.length, () => {
     display: flex;
     align-items: center;
     gap: 16px;
+    max-height: 80px; // 限制最大高度，防止挤压内容区
     
     .stepper-content {
         flex: 1;
         overflow-x: auto;
+        overflow-y: hidden; // 防止垂直滚动
+        white-space: nowrap; // 强制不换行
+        mask-image: linear-gradient(to right, black 95%, transparent 100%); // 添加渐变遮罩提示滚动
+        
+        // 隐藏滚动条但保留功能
+        &::-webkit-scrollbar {
+            height: 4px;
+        }
+        &::-webkit-scrollbar-thumb {
+            background: rgba(139, 69, 19, 0.2);
+            border-radius: 2px;
+        }
+
+        .custom-steps {
+            display: flex;
+            align-items: center;
+            gap: 12px; // Compact spacing
+            padding: 4px 0;
+        }
+
+        .custom-step-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex-shrink: 0; // Don't shrink
+            color: #5d4037;
+            
+            &:hover {
+                background: rgba(255, 255, 255, 0.8);
+                transform: translateY(-1px);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            }
+
+            &.active {
+                background: #8B4513;
+                color: white;
+                box-shadow: 0 2px 8px rgba(139, 69, 19, 0.2);
+                border-color: #8B4513;
+            }
+
+            &.completed {
+                color: #8B4513;
+                background: rgba(139, 69, 19, 0.1);
+                border-color: rgba(139, 69, 19, 0.2);
+            }
+            
+            .step-number {
+                font-weight: bold;
+                font-size: 12px;
+                width: 16px;
+                height: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                background: rgba(0,0,0,0.1);
+            }
+
+            &.active .step-number {
+                background: rgba(255,255,255,0.3);
+            }
+
+            .step-text {
+                font-size: 14px;
+                font-weight: 500;
+            }
+        }
     }
 
     .stepper-actions {
@@ -397,6 +483,16 @@ watch(() => store.chatHistory.length, () => {
         margin: 0;
         font-family: 'Georgia', serif;
         color: #5d4037;
+        white-space: nowrap; // 防止标题换行
+      }
+
+      .section-title-tag {
+          border: none;
+          max-width: 300px; // 限制标签最大宽度
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          vertical-align: middle;
       }
     }
 
