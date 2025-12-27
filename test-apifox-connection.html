@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apifox 连接测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    button {
+      background: #1890ff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #40a9ff;
+    }
+    .result {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .success {
+      background: #f6ffed;
+      border: 1px solid #b7eb8f;
+      color: #389e0d;
+    }
+    .error {
+      background: #fff2f0;
+      border: 1px solid #ffccc7;
+      color: #cf1322;
+    }
+    .info {
+      background: #e6f7ff;
+      border: 1px solid #91d5ff;
+      color: #0958d9;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Apifox 连接诊断工具</h1>
+  
+  <div class="test-section">
+    <h2>1. 检查 Apifox Mock 服务</h2>
+    <p>测试直接连接到 Apifox Mock 服务（不通过代理）</p>
+    <input type="text" id="apifoxUrl" placeholder="输入你的 Apifox Mock 地址，例如: http://127.0.0.1:4523/m1/你的项目ID/api" style="width: 100%; padding: 8px; margin: 10px 0;">
+    <button onclick="testDirectConnection()">测试直接连接</button>
+    <div id="directResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. 检查 Vite 代理</h2>
+    <p>测试通过 Vite 代理连接（需要开发服务器运行在 localhost:5173）</p>
+    <button onclick="testProxyConnection()">测试代理连接</button>
+    <div id="proxyResult" class="result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. 测试登录接口</h2>
+    <p>测试实际的登录接口（需要配置正确的项目 ID）</p>
+    <button onclick="testLoginAPI()">测试登录接口</button>
+    <div id="loginResult" class="result"></div>
+  </div>
+
+  <script>
+    async function testDirectConnection() {
+      const url = document.getElementById('apifoxUrl').value;
+      const resultDiv = document.getElementById('directResult');
+      
+      if (!url) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = '❌ 请先输入 Apifox Mock 地址';
+        return;
+      }
+
+      resultDiv.className = 'result info';
+      resultDiv.textContent = '⏳ 正在测试...';
+
+      try {
+        // 测试一个简单的 GET 请求
+        const testUrl = url.replace(/\/api$/, '') + '/auth/test';
+        const response = await fetch(testUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        resultDiv.className = 'result success';
+        resultDiv.textContent = `✅ 连接成功！\n状态码: ${response.status}\nURL: ${testUrl}\n\n如果返回 404，说明路径不对，但至少连接是通的。`;
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `❌ 连接失败：\n${error.message}\n\n可能的原因：\n1. Apifox Mock 服务未启动\n2. 地址或端口不正确\n3. 网络问题`;
+      }
+    }
+
+    async function testProxyConnection() {
+      const resultDiv = document.getElementById('proxyResult');
+      resultDiv.className = 'result info';
+      resultDiv.textContent = '⏳ 正在测试...';
+
+      try {
+        const response = await fetch('http://localhost:5173/api/auth/test', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        resultDiv.className = 'result success';
+        resultDiv.textContent = `✅ 代理连接成功！\n状态码: ${response.status}\n\n如果返回 404，说明代理工作正常，但接口路径可能不对。`;
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `❌ 代理连接失败：\n${error.message}\n\n可能的原因：\n1. 开发服务器未运行（请运行 npm run dev）\n2. vite.config.ts 中的项目 ID 不正确\n3. Apifox Mock 服务未启动`;
+      }
+    }
+
+    async function testLoginAPI() {
+      const resultDiv = document.getElementById('loginResult');
+      resultDiv.className = 'result info';
+      resultDiv.textContent = '⏳ 正在测试登录接口...';
+
+      try {
+        const response = await fetch('http://localhost:5173/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            account: 'test',
+            password: 'test'
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          resultDiv.className = 'result success';
+          resultDiv.textContent = `✅ 登录接口响应成功！\n状态码: ${response.status}\n响应数据: ${JSON.stringify(data, null, 2)}`;
+        } else {
+          resultDiv.className = 'result error';
+          resultDiv.textContent = `⚠️ 接口返回错误：\n状态码: ${response.status}\n响应: ${JSON.stringify(data, null, 2)}\n\n这至少说明连接是通的，只是接口逻辑返回了错误。`;
+        }
+      } catch (error) {
+        resultDiv.className = 'result error';
+        resultDiv.textContent = `❌ 请求失败：\n${error.message}\n\n请检查：\n1. 开发服务器是否运行\n2. vite.config.ts 配置是否正确\n3. Apifox Mock 服务是否启动`;
+      }
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+
