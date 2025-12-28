@@ -110,8 +110,16 @@ const toggleFollow = async () => {
       await unfollowUser(props.scholar.id)
       ElMessage.success('已取消关注')
     } else {
-      await followUser(props.scholar.id)
-      ElMessage.success('已关注')
+      try {
+        const res = await followUser(props.scholar.id)
+        let msg = (res && res.data && (res.data.message || res.data.msg)) || (res && res.message) || (typeof res === 'string' ? res : '') || '已关注'
+        ElMessage.success(msg)
+      } catch (err: any) {
+        // 处理已关注等400错误
+        let msg = err?.response?.data?.message || err?.message || '操作失败'
+        ElMessage.warning(msg)
+        return
+      }
     }
     // 通过 emit 通知父组件更新状态，而不是直接修改 props
     emit('follow-changed', { scholarId: props.scholar.id, isFollowed: newFollowStatus })

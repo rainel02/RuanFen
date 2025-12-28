@@ -416,7 +416,7 @@
           :key="item.userId || item.id"
           class="follow-item glass-panel"
         >
-          <div class="follow-item-content" @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false;">
+          <div class="follow-item-content" @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false; handleFollowChanged();">
             <el-avatar :src="item.avatarUrl || defaultAvatar" :size="40">{{ item.name?.charAt(0) || '?' }}</el-avatar>
             <div class="item-info">
               <h4>{{ item.name }}</h4>
@@ -425,7 +425,7 @@
           </div>
           <el-button 
             class="gothic-btn-small unfollow-btn"
-            @click.stop="handleUnfollow(item.userId || item.id)"
+            @click.stop="async () => { await handleUnfollow(item.userId || item.id); await handleFollowChanged(); }"
           >
             <el-icon><Close /></el-icon> 取消关注
           </el-button>
@@ -1172,13 +1172,16 @@ const loadFollowingAndFollowers = async () => {
 // 取消关注
 const handleUnfollow = async (userId: string) => {
   try {
-    await socialApi.unfollowUser(userId)
+    console.log('[unfollow] 调用接口，userId:', userId)
+    const res = await socialApi.unfollowUser(userId)
+    console.log('[unfollow] 接口返回:', res)
     ElMessage.success('已取消关注')
     // 从列表中移除
     followingList.value = followingList.value.filter(item => (item.userId || item.id) !== userId)
     // 更新关注数
     followingCount.value = Math.max(0, followingCount.value - 1)
   } catch (error: any) {
+    console.error('[unfollow] error:', error)
     ElMessage.error(error.message || '取消关注失败')
   }
 }

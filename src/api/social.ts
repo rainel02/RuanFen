@@ -29,7 +29,8 @@ export const sendMessage = (data: { receiverId: string; content: string }) => {
 export const followUser = (userId: string) => {
   return request({
     url: `/social/follow/${userId}`,
-    method: 'post'
+    method: 'post',
+    data: { userId }
   })
 }
 
