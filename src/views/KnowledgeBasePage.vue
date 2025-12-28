@@ -93,6 +93,7 @@
                   <el-table-column prop="status" label="状态" width="100">
                     <template #default="{ row }">
                       <el-tag :type="statusTag(row.status)" size="small">
+                        <el-icon v-if="['UPLOADING', 'PARSING'].includes(row.status)" class="is-loading"><Loading /></el-icon>
                         {{ statusText(row.status) }}
                       </el-tag>
                     </template>
@@ -137,14 +138,16 @@
                 </div>
 
                 <div class="qa-input-area">
-                  <el-input
-                    v-model="qaQuestion"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="请输入你的问题，基于当前用户的知识库回答"
-                  />
-                  <div class="qa-actions">
-                    <el-button type="primary" :loading="qaLoading" @click="handleQa">发送</el-button>
+                  <div class="input-with-button">
+                    <el-input
+                      v-model="qaQuestion"
+                      type="textarea"
+                      :rows="3"
+                      placeholder="请输入你的问题，基于当前用户的知识库回答"
+                      class="qa-input"
+                      @keydown.enter.prevent="handleQa"
+                    />
+                    <el-button type="primary" :loading="qaLoading" @click="handleQa" class="embedded-send-btn">发送</el-button>
                   </div>
                 </div>
               </div>
@@ -154,7 +157,7 @@
       </div>
     </div>
 
-    <div class="floating-qa">
+    <div class="floating-qa" v-if="!qaDialogVisible">
       <div class="qa-button-ball" @click="qaDialogVisible = !qaDialogVisible">
         <el-icon class="qa-icon"><ChatLineRound /></el-icon>
         <span class="qa-button-text">全库问答</span>
@@ -188,7 +191,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ChatLineRound, Close } from '@element-plus/icons-vue'
+import { ChatLineRound, Close, Loading } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import {
   listKnowledgeBases,
@@ -298,16 +301,42 @@ const handleUpload = async (options: any) => {
     return
   }
   const file: File = options.file
+
+  // 创建临时文档对象用于显示上传状态
+  const tempId = 'temp-' + Date.now() + Math.random()
+  const tempDoc: any = {
+    id: tempId,
+    knowledgeBaseId: currentKb.value.id,
+    originalFilename: file.name,
+    status: 'UPLOADING',
+    createdAt: new Date().toISOString(),
+    summary: '正在上传...'
+  }
+  
+  // 添加到列表头部
+  documents.value.unshift(tempDoc)
+
   try {
     const doc = await uploadDocument(currentKb.value.id, file)
     // 如果 ai_service 成功返回，则以其解析结果为准，将状态视为已解析
-    if (doc) {
-      doc.status = 'READY'
-      doc.parseError = undefined
+    const index = documents.value.findIndex(d => d.id === tempId)
+    if (index !== -1) {
+      if (doc) {
+        doc.status = 'READY'
+        doc.parseError = undefined
+        documents.value[index] = doc
+      } else {
+        // 如果没有返回doc，刷新列表
+        await selectKb(currentKb.value)
+      }
     }
     ElMessage.success('上传成功，正在解析')
-    await selectKb(currentKb.value)
   } catch (e: any) {
+    const index = documents.value.findIndex(d => d.id === tempId)
+    if (index !== -1) {
+      documents.value[index].status = 'FAILED'
+      documents.value[index].summary = '上传失败: ' + (e?.message || '未知错误')
+    }
     ElMessage.error(e?.message || '上传失败')
   }
 }
@@ -336,7 +365,7 @@ const formatDate = (val?: string) => {
   return val.replace('T', ' ').substring(0, 19)
 }
 
-const statusText = (status: KnowledgeDocument['status']) => {
+const statusText = (status: KnowledgeDocument['status'] | 'UPLOADING') => {
   switch (status) {
     case 'READY':
       return '已解析'
@@ -344,12 +373,14 @@ const statusText = (status: KnowledgeDocument['status']) => {
       return '解析中'
     case 'FAILED':
       return '失败'
+    case 'UPLOADING':
+      return '上传中'
     default:
       return '待处理'
   }
 }
 
-const statusTag = (status: KnowledgeDocument['status']) => {
+const statusTag = (status: KnowledgeDocument['status'] | 'UPLOADING') => {
   switch (status) {
     case 'READY':
       return 'success'
@@ -357,6 +388,8 @@ const statusTag = (status: KnowledgeDocument['status']) => {
       return 'warning'
     case 'FAILED':
       return 'danger'
+    case 'UPLOADING':
+      return 'primary'
     default:
       return 'info'
   }
@@ -868,9 +901,11 @@ const isNotFound = (text?: string) => {
     inset 0 -2px 4px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 140px);
   position: sticky;
-  top: 24px;
+  top: 80px;
+  margin-top: -60px;
+  z-index: 10;
 
   &::before {
     content: '';
@@ -1038,6 +1073,27 @@ const isNotFound = (text?: string) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.input-with-button {
+  position: relative;
+  
+  .qa-input {
+    :deep(.el-textarea__inner) {
+      padding-right: 80px;
+      padding-bottom: 40px;
+    }
+  }
+
+  .embedded-send-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    padding: 8px 16px;
+    height: 32px;
+    min-height: unset;
+    z-index: 10;
+  }
 }
 
 // 按钮样式
