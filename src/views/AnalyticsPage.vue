@@ -384,8 +384,8 @@ const fetchRanking = async () => {
 
 const fetchTrend = async () => {
   // Use current user ID or a default one if not logged in
-  const userId = authStore.user?.id || '1' 
-  
+  //const userId = authStore.user?.id || '1' 
+  const userId = authStore.user?.id || authStore.user?.userId || '1'   //authStore.user?.userId ||
   try {
     console.log(userId)
     const res = await getInfluenceTrend(userId)
@@ -803,7 +803,10 @@ const rebuildGraph = () => {
   };
 };
 
-onMounted(() => {
+onMounted(async () => {
+  if (!authStore.isLoggedIn) {
+     await authStore.initAuth?.(); 
+  }
   fetchHotTopics()
   fetchRanking()
   fetchTrend().then(() => {
