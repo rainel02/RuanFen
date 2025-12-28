@@ -65,7 +65,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
   const json = await response.json()
   if (json && typeof json === 'object' && 'code' in json) {
     const code = Number(json.code)
-    if (Number.isFinite(code) && code !== 200) {
+    // 后端使用 200/201 等 2xx 表示成功，这里放宽到 2xx 都视为成功
+    if (Number.isFinite(code) && (code < 200 || code >= 300)) {
       const message = json.message || `请求失败: ${code}`
       const error: any = new Error(message)
       error.response = { status: code, data: json }
