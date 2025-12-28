@@ -21,20 +21,8 @@
           <el-button type="primary" link @click="handleAIReParse">
               <el-icon><MagicStick /></el-icon> AI 智能识别生成
           </el-button>
-          <el-dropdown @command="handleExport">
-            <el-button type="success" link>
-                <el-icon><Download /></el-icon> 导出记录 <el-icon class="el-icon--right"><arrow-down /></el-icon>
-            </el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="json">导出 JSON</el-dropdown-item>
-                <el-dropdown-item command="markdown">导出 Markdown</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
       </div>
     </div>
-
     <div class="guide-body">
       <!-- 左侧：原文 -->
       <div class="original-text-panel glass-panel">
@@ -176,9 +164,29 @@
 
     <!-- 底部控制栏 -->
     <div class="guide-footer glass-panel">
-      <el-button @click="prevStep" :disabled="store.currentSectionIndex === 0">上一步</el-button>
-      <el-button type="danger" plain @click="confirmExit">结束阅读</el-button>
-      <el-button type="primary" color="#8B4513" @click="nextStep" :disabled="store.currentSectionIndex === store.steps.length - 1">下一步</el-button>
+      <div class="footer-left">
+          <el-button @click="prevStep" :disabled="store.currentSectionIndex === 0">上一步</el-button>
+          <el-button type="danger" plain @click="confirmExit">结束阅读</el-button>
+      </div>
+      
+      <div class="footer-center">
+          <el-dropdown @command="handleExport">
+            <el-button type="success" link>
+                <el-icon><Download /></el-icon> 导出记录 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="json">导出 JSON</el-dropdown-item>
+                <el-dropdown-item command="markdown">导出 Markdown</el-dropdown-item>
+                <el-dropdown-item command="pdf" divided>导出 PDF (打印)</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+      </div>
+
+      <div class="footer-right">
+          <el-button type="primary" color="#8B4513" @click="nextStep" :disabled="store.currentSectionIndex === store.steps.length - 1">下一步</el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -273,13 +281,19 @@ const handleTextSelection = () => {
         // 计算相对于 text-content 的位置
         const menuWidth = 380; // 估算菜单宽度，确保居中
         const menuHeight = 40;
+        const scrollTop = textContentRef.value.scrollTop;
         
         let x = rect.left - containerRect.left + (rect.width / 2) - (menuWidth / 2);
-        let y = rect.top - containerRect.top - 50; // 默认显示在上方
+        let y = rect.top - containerRect.top + scrollTop - 50; // 加上 scrollTop
 
         // 边界检查：如果上方空间不足，显示在下方
-        if (y < 10) {
-            y = rect.bottom - containerRect.top + 10;
+        // 注意：这里的边界检查也需要考虑 scrollTop，但 rect.top - containerRect.top 是可视区域的相对位置
+        // 如果 (rect.top - containerRect.top) < 50，说明在可视区域顶部边缘，菜单会遮挡或溢出
+        // 我们希望菜单显示在可视区域内，或者跟随文本
+        // 如果 y < scrollTop (即在可视区域上方)，则显示在下方
+        
+        if (rect.top - containerRect.top < 60) {
+             y = rect.bottom - containerRect.top + scrollTop + 10;
         }
         
         // 边界检查：左右不溢出
@@ -294,6 +308,10 @@ const handleTextSelection = () => {
 };
 
 const handleExport = (command: string) => {
+    if (command === 'pdf') {
+        window.print();
+        return;
+    }
     store.exportRecords(command as 'json' | 'markdown');
 };
 
@@ -328,7 +346,7 @@ const handleTranslateSelection = async () => {
 
 const handleAskSelection = () => {
     selectionMenu.visible = false;
-    userQuestion.value = `> 引用：${selectionMenu.text.substring(0, 50)}...\n\n请问`;
+    userQuestion.value = `> 引用：${selectionMenu.text}\n\n请问`;
     activeTab.value = 'chat';
     // 聚焦输入框 (简单实现，实际可能需要 ref)
     const inputEl = document.querySelector('.chat-input-area textarea') as HTMLTextAreaElement;
@@ -817,7 +835,14 @@ watch(() => store.chatHistory.length, () => {
     border-top: 1px solid rgba(139, 69, 19, 0.1);
     display: flex;
     justify-content: space-between;
+    align-items: center;
     background: rgba(255, 255, 255, 0.8);
+
+    .footer-left, .footer-center, .footer-right {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
   }
 
   .loading-dots {
@@ -856,5 +881,54 @@ watch(() => store.chatHistory.length, () => {
 .list-leave-to {
   opacity: 0;
   transform: translateX(30px);
+}
+</style>
+
+<style lang="scss">
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .reading-guide, .reading-guide * {
+        visibility: visible;
+    }
+    .reading-guide {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto !important;
+        overflow: visible !important;
+        background: white !important;
+    }
+    
+    // Hide interactive elements
+    .guide-stepper, 
+    .guide-footer, 
+    .chat-input-area,
+    .selection-menu,
+    .el-button,
+    .el-tabs__header {
+        display: none !important;
+    }
+
+    // Adjust layout for print
+    .guide-body {
+        display: block !important;
+        padding: 0 !important;
+    }
+
+    .original-text-panel, .ai-guide-panel {
+        box-shadow: none !important;
+        border: none !important;
+        margin-bottom: 20px;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .text-content, .analysis-content, .chat-history-area {
+        height: auto !important;
+        overflow: visible !important;
+    }
 }
 </style>
