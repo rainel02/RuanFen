@@ -111,7 +111,7 @@
       <el-button type="primary" round @click="qaDialogVisible = true">全库问答</el-button>
     </div>
 
-    <el-dialog v-model="showCreate" title="新建知识库" width="420px">
+    <el-dialog v-model="showCreate" title="新建知识库" width="420px" class="gothic-dialog">
       <el-form :model="createForm" label-width="80px">
         <el-form-item label="名称">
           <el-input v-model="createForm.name" placeholder="请输入名称" />
@@ -132,7 +132,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="qaDialogVisible" title="全库问答" width="560px">
+    <el-dialog v-model="qaDialogVisible" title="全库问答" width="560px" class="gothic-dialog">
       <div class="qa-chat">
         <div class="qa-messages">
           <div v-for="(msg, idx) in chatHistory" :key="idx" class="qa-msg" :class="msg.role">
@@ -350,29 +350,64 @@ const isNotFound = (text?: string) => {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .kb-page {
   min-height: 100vh;
-  background: #f6f1e5;
+  position: relative;
+  background-image: url('@/assets/frontBG.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  padding-bottom: 40px;
 }
 
 .kb-container {
   max-width: 1200px;
   margin: 24px auto 60px;
   padding: 0 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .kb-layout {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 
 .kb-sidebar {
   width: 340px;
-  background: #fff;
-  border-radius: 12px;
+  background: rgba(249, 247, 236, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  border: 3px solid rgba(184, 134, 11, 0.5);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
   padding: 20px 18px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.4) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+    pointer-events: none;
+  }
 }
 
 .sidebar-header {
@@ -380,46 +415,126 @@ const isNotFound = (text?: string) => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+
+  h4 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 900;
+    color: #654321;
+    font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .kb-menu {
   border: none;
   --el-menu-item-height: 44px;
   padding-right: 8px;
+  background: transparent !important;
+
+  :deep(.el-menu-item) {
+    border-radius: 8px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(184, 134, 11, 0.2);
+    transition: all 0.3s ease;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-weight: 600;
+    color: #654321;
+
+    &:hover {
+      background: rgba(212, 175, 55, 0.2);
+      border-color: rgba(184, 134, 11, 0.4);
+      transform: translateX(4px);
+    }
+
+    &.is-active {
+      background: rgba(212, 175, 55, 0.3);
+      border-color: #D4AF37;
+      color: #654321;
+    }
+  }
 }
 
 .menu-title {
   margin-right: 10px;
   font-weight: 600;
+  font-family: 'Georgia', 'Times New Roman', serif;
 }
 
 .sidebar-tip {
   margin-top: 10px;
   font-size: 12px;
-  color: #888;
+  color: #8B4513;
   line-height: 1.6;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-style: italic;
 }
 
 .kb-main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
 }
 
 .kb-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: rgba(249, 247, 236, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  border: 3px solid rgba(184, 134, 11, 0.5);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px 30px;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.4) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 900;
+    color: #654321;
+    font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    letter-spacing: 0.5px;
+  }
 }
 
 .kb-subtitle {
-  color: #888;
+  color: #8B4513;
+  font-size: 14px;
+  font-style: italic;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  margin-top: 4px;
 }
 
 .kb-actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .kb-cards {
@@ -429,6 +544,24 @@ const isNotFound = (text?: string) => {
 
 .current-kb-card {
   flex: 1;
+  background: rgba(249, 247, 236, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 3px solid rgba(184, 134, 11, 0.5) !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1) !important;
+  transition: all 0.4s ease !important;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 12px 32px rgba(0, 0, 0, 0.22),
+      0 0 0 2px rgba(212, 175, 55, 0.4),
+      inset 0 2px 6px rgba(255, 255, 255, 0.6) !important;
+  }
 }
 
 .current-title {
@@ -439,50 +572,169 @@ const isNotFound = (text?: string) => {
 }
 
 .current-name {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 900;
+  color: #654321;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .kb-desc {
-  color: #666;
+  color: #8B4513;
   margin: 4px 0;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-style: italic;
 }
 
 .kb-meta {
-  color: #999;
+  color: #B8860B;
   font-size: 12px;
+  font-family: 'Georgia', 'Times New Roman', serif;
 }
 
 .kb-ops {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
   gap: 8px;
 }
 
 .kb-content {
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  background: rgba(249, 247, 236, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  border: 3px solid rgba(184, 134, 11, 0.5);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.4) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+    pointer-events: none;
+  }
 }
 
 .upload-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f7f8fb;
-  border: 1px dashed #dcdfe6;
-  padding: 16px;
-  border-radius: 10px;
-  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.3);
+  border: 2px dashed rgba(184, 134, 11, 0.4);
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+
+  &:hover {
+    border-color: rgba(212, 175, 55, 0.6);
+    background: rgba(255, 255, 255, 0.4);
+  }
+
+  h4 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 900;
+    color: #654321;
+    font-family: 'Georgia', 'Times New Roman', serif;
+  }
+
+  p {
+    margin: 0;
+    color: #8B4513;
+    font-size: 13px;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-style: italic;
+  }
 }
 
 .upload-drag {
   width: 320px;
+
+  :deep(.el-upload-dragger) {
+    background: rgba(255, 255, 255, 0.5);
+    border: 2px dashed rgba(184, 134, 11, 0.4);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+
+    &:hover {
+      border-color: #D4AF37;
+      background: rgba(255, 255, 255, 0.7);
+    }
+  }
+
+  :deep(.el-icon-upload) {
+    color: #D4AF37;
+    font-size: 48px;
+  }
+
+  :deep(.el-upload__text) {
+    color: #654321;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    font-weight: 600;
+
+    em {
+      color: #D4AF37;
+      font-weight: 700;
+    }
+  }
 }
 
 .kb-table {
-  margin-top: 8px;
+  margin-top: 12px;
+
+  :deep(.el-table) {
+    background: rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(184, 134, 11, 0.3);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  :deep(.el-table__header) {
+    background: rgba(212, 175, 55, 0.2);
+    
+    th {
+      background: rgba(212, 175, 55, 0.2) !important;
+      color: #654321 !important;
+      font-weight: 900 !important;
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      border-bottom: 2px solid rgba(184, 134, 11, 0.4) !important;
+    }
+  }
+
+  :deep(.el-table__body) {
+    tr {
+      background: rgba(255, 255, 255, 0.3);
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(212, 175, 55, 0.15) !important;
+      }
+
+      td {
+        color: #654321;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        font-weight: 600;
+        border-bottom: 1px solid rgba(184, 134, 11, 0.2) !important;
+      }
+    }
+  }
 }
 
 .floating-qa {
@@ -508,15 +760,15 @@ const isNotFound = (text?: string) => {
 .qa-messages {
   max-height: 360px;
   overflow-y: auto;
-  padding: 10px;
-  background: #f7f8fb;
-  border: 1px solid #ebeef5;
-  border-radius: 10px;
+  padding: 15px;
+  background: rgba(249, 247, 236, 0.6);
+  border: 2px solid rgba(184, 134, 11, 0.3);
+  border-radius: 12px;
 }
 
 .qa-msg {
   display: flex;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .qa-msg.user {
@@ -529,38 +781,46 @@ const isNotFound = (text?: string) => {
 
 .qa-msg-bubble {
   max-width: 80%;
-  padding: 10px 12px;
+  padding: 12px 16px;
   border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(184, 134, 11, 0.2);
+  font-family: 'Georgia', 'Times New Roman', serif;
 }
 
 .qa-msg.user .qa-msg-bubble {
-  background: #e7f5ff;
-  border: 1px solid #c9e7fd;
+  background: rgba(212, 175, 55, 0.2);
+  border: 1px solid rgba(184, 134, 11, 0.4);
 }
 
 .qa-msg-role {
   font-size: 12px;
-  color: #666;
+  color: #8B4513;
   margin-bottom: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .qa-msg-text {
   line-height: 1.6;
   white-space: pre-wrap;
-  color: #333;
+  color: #654321;
+  font-weight: 600;
 }
 
 .qa-refs {
   margin-top: 8px;
   font-size: 12px;
-  color: #555;
+  color: #8B4513;
+  font-family: 'Georgia', 'Times New Roman', serif;
 }
 
 .qa-refs-title {
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 4px;
+  color: #654321;
 }
 
 .qa-refs ul {
@@ -570,13 +830,271 @@ const isNotFound = (text?: string) => {
 
 .qa-empty {
   text-align: center;
-  color: #999;
+  color: #8B4513;
   padding: 20px 0;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-style: italic;
 }
 
 .qa-hint {
   margin-top: 6px;
-  color: #888;
+  color: #B8860B;
   font-size: 12px;
+  font-style: italic;
+}
+
+// 按钮样式
+:deep(.el-button) {
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  border: 2px solid !important;
+  transition: all 0.3s ease !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+
+  &.el-button--primary {
+    background: #D4AF37 !important;
+    border-color: #B8860B !important;
+    color: #fff !important;
+
+    &:hover {
+      background: #B8860B !important;
+      border-color: #8B4513 !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(184, 134, 11, 0.4);
+    }
+  }
+
+  &.el-button--default {
+    background: rgba(212, 175, 55, 0.1) !important;
+    border-color: #D4AF37 !important;
+    color: #654321 !important;
+
+    &:hover {
+      background: rgba(212, 175, 55, 0.2) !important;
+      border-color: #B8860B !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(184, 134, 11, 0.3);
+    }
+  }
+
+  &.el-button--text {
+    color: #654321 !important;
+    border: none !important;
+    background: transparent !important;
+
+    &:hover {
+      color: #D4AF37 !important;
+      background: rgba(212, 175, 55, 0.1) !important;
+    }
+  }
+
+  &.el-button--danger {
+    background: rgba(139, 69, 19, 0.1) !important;
+    border-color: #8B4513 !important;
+    color: #8B4513 !important;
+
+    &:hover {
+      background: rgba(139, 69, 19, 0.2) !important;
+      border-color: #654321 !important;
+      color: #654321 !important;
+    }
+  }
+
+  &.el-button--link {
+    color: #D4AF37 !important;
+    border: none !important;
+    background: transparent !important;
+
+    &:hover {
+      color: #B8860B !important;
+    }
+  }
+
+  &.is-round {
+    border-radius: 24px !important;
+  }
+}
+
+// 标签样式
+:deep(.el-tag) {
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  border: 1px solid !important;
+
+  &.el-tag--info {
+    background: rgba(212, 175, 55, 0.15) !important;
+    border-color: rgba(184, 134, 11, 0.4) !important;
+    color: #654321 !important;
+  }
+
+  &.el-tag--success {
+    background: rgba(139, 69, 19, 0.15) !important;
+    border-color: rgba(139, 69, 19, 0.4) !important;
+    color: #8B4513 !important;
+  }
+}
+
+// 输入框样式
+:deep(.el-input__wrapper) {
+  border-radius: 8px !important;
+  box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.3) inset !important;
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  transition: all 0.3s ease !important;
+
+  &:hover {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.5) inset !important;
+  }
+
+  &.is-focus {
+    border-color: #B8860B !important;
+    box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.6) inset !important;
+  }
+}
+
+:deep(.el-input__inner) {
+  color: #654321 !important;
+  font-weight: 600 !important;
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+}
+
+// 文本域样式
+:deep(.el-textarea__inner) {
+  border-radius: 8px !important;
+  box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.3) inset !important;
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  color: #654321 !important;
+  font-weight: 600 !important;
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  transition: all 0.3s ease !important;
+
+  &:hover {
+    border-color: #D4AF37 !important;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.5) inset !important;
+  }
+
+  &:focus {
+    border-color: #B8860B !important;
+    box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.6) inset !important;
+  }
+}
+
+// 单选框样式
+:deep(.el-radio) {
+  .el-radio__label {
+    color: #654321 !important;
+    font-weight: 600 !important;
+    font-family: 'Georgia', 'Times New Roman', serif !important;
+  }
+
+  .el-radio__input.is-checked .el-radio__inner {
+    background-color: #D4AF37 !important;
+    border-color: #B8860B !important;
+  }
+}
+
+// 卡片样式
+:deep(.el-card) {
+  background: rgba(249, 247, 236, 0.85) !important;
+  border: 3px solid rgba(184, 134, 11, 0.5) !important;
+  border-radius: 16px !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1) !important;
+
+  .el-card__body {
+    color: #654321;
+    font-family: 'Georgia', 'Times New Roman', serif;
+  }
+}
+</style>
+
+<style lang="scss">
+// 全局对话框样式
+.gothic-dialog {
+  .el-dialog {
+    background: rgba(249, 247, 236, 0.95) !important;
+    backdrop-filter: blur(20px) !important;
+    border: 3px solid rgba(184, 134, 11, 0.6) !important;
+    border-radius: 16px !important;
+    box-shadow: 
+      0 12px 40px rgba(0, 0, 0, 0.25),
+      0 0 0 2px rgba(212, 175, 55, 0.3) inset,
+      inset 0 2px 6px rgba(255, 255, 255, 0.6),
+      inset 0 -2px 6px rgba(0, 0, 0, 0.15) !important;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      right: -3px;
+      bottom: -3px;
+      background: linear-gradient(135deg, 
+        rgba(212, 175, 55, 0.5) 0%, 
+        transparent 25%, 
+        transparent 75%, 
+        rgba(212, 175, 55, 0.5) 100%);
+      border-radius: 16px;
+      z-index: -1;
+      opacity: 0.7;
+      pointer-events: none;
+    }
+  }
+
+  .el-dialog__header {
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.2) 0%, 
+      rgba(184, 134, 11, 0.15) 100%);
+    border-bottom: 2px solid rgba(184, 134, 11, 0.4);
+    padding: 20px 24px;
+    border-radius: 16px 16px 0 0;
+
+    .el-dialog__title {
+      color: #654321 !important;
+      font-size: 22px !important;
+      font-weight: 900 !important;
+      font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif !important;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1) !important;
+      letter-spacing: 0.5px !important;
+    }
+
+    .el-dialog__headerbtn {
+      .el-dialog__close {
+        color: #654321 !important;
+        font-size: 20px !important;
+        font-weight: 700 !important;
+
+        &:hover {
+          color: #D4AF37 !important;
+        }
+      }
+    }
+  }
+
+  .el-dialog__body {
+    padding: 24px;
+    color: #654321;
+    font-family: 'Georgia', 'Times New Roman', serif;
+  }
+
+  .el-dialog__footer {
+    border-top: 2px solid rgba(184, 134, 11, 0.3);
+    padding: 16px 24px;
+    background: rgba(249, 247, 236, 0.5);
+    border-radius: 0 0 16px 16px;
+  }
+
+  .el-form-item__label {
+    color: #654321 !important;
+    font-weight: 700 !important;
+    font-family: 'Georgia', 'Times New Roman', serif !important;
+  }
 }
 </style>
