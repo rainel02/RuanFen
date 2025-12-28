@@ -192,7 +192,7 @@
                 <p class="title">{{ user?.title || '用户' }}</p>
                 <p class="institution">
                   <el-icon><School /></el-icon> 
-                  {{ user?.institution || '未设置机构' }}
+                  {{ user?.organization || '未设置机构' }}
                 </p>
                 <div class="bio-preview">{{ user?.bio || '这个人很懒，什么都没有写...' }}</div>
                 
@@ -416,7 +416,7 @@
           :key="item.userId || item.id"
           class="follow-item glass-panel"
         >
-          <div class="follow-item-content" @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false;">
+          <div class="follow-item-content" @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false; handleFollowChanged();">
             <el-avatar :src="item.avatarUrl || defaultAvatar" :size="40">{{ item.name?.charAt(0) || '?' }}</el-avatar>
             <div class="item-info">
               <h4>{{ item.name }}</h4>
@@ -425,7 +425,7 @@
           </div>
           <el-button 
             class="gothic-btn-small unfollow-btn"
-            @click.stop="handleUnfollow(item.userId || item.id)"
+            @click.stop="async () => { await handleUnfollow(item.userId || item.id); await handleFollowChanged(); }"
           >
             <el-icon><Close /></el-icon> 取消关注
           </el-button>
@@ -457,49 +457,8 @@
 </template>
 
 <script setup lang="ts">
-import { getFollowers, getFollowing } from '../api/social'
 const followersCount = ref(0)
 const followingCount = ref(0)
-
-const loadFollowStats = async () => {
-  if (!authStore.user || !authStore.user.id) return
-  try {
-    const [followersRes, followingRes] = await Promise.all([
-      getFollowers(authStore.user.id),
-      getFollowing(authStore.user.id)
-    ])
-    console.log('getFollowers 返回:', followersRes)
-    console.log('getFollowing 返回:', followingRes)
-    // 兼容返回 { total, following: [...] } 或 { total, followers: [...] }
-    const followersResAny = followersRes as any
-    const followingResAny = followingRes as any
-    const followersData: any = followersResAny?.data || followersResAny
-    const followingData: any = followingResAny?.data || followingResAny
-    
-    if (followersData && Array.isArray(followersData.followers)) {
-      followersCount.value = followersData.followers.length
-    } else if (followersData && Array.isArray(followersData.results)) {
-      followersCount.value = followersData.results.length
-    } else if (Array.isArray(followersData)) {
-      followersCount.value = followersData.length
-    } else {
-      followersCount.value = 0
-    }
-    
-    if (followingData && Array.isArray(followingData.following)) {
-      followingCount.value = followingData.following.length
-    } else if (followingData && Array.isArray(followingData.results)) {
-      followingCount.value = followingData.results.length
-    } else if (Array.isArray(followingData)) {
-      followingCount.value = followingData.length
-    } else {
-      followingCount.value = 0
-    }
-  } catch (e) {
-    followersCount.value = 0
-    followingCount.value = 0
-  }
-}
 
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import type { FormRules, FormInstance } from 'element-plus'
@@ -1142,8 +1101,21 @@ const removeFromCollection = async (achievementId: string) => {
 }
 
 // 加载关注和粉丝数据
+const parseFollowPayload = (payload: any, listKey: 'followers' | 'following') => {
+  const data = payload?.data ?? payload
+  const listCandidate = data?.[listKey] ?? data?.results ?? (Array.isArray(data) ? data : [])
+  const list = Array.isArray(listCandidate) ? listCandidate : []
+  const total = typeof data?.total === 'number' ? data.total : list.length
+  return { list, total }
+}
+
 const loadFollowingAndFollowers = async () => {
-  if (!authStore.user?.id) {
+  const currentUserId = authStore.user?.id
+    ?? (authStore.user as any)?.userId
+    ?? (authStore.user as any)?.uid
+
+  if (!currentUserId) {
+    console.warn('[profile] 无法加载关注/粉丝：user.id 缺失，authStore.user =', authStore.user)
     followingCount.value = 0
     followersCount.value = 0
     followingList.value = []
@@ -1151,15 +1123,21 @@ const loadFollowingAndFollowers = async () => {
     return
   }
   try {
-    const followingResponse: any = await socialApi.getFollowing(authStore.user.id)
-    const followingData = followingResponse?.data || followingResponse
-    followingList.value = followingData.following || followingData.results || (Array.isArray(followingData) ? followingData : [])
-    followingCount.value = followingData.total || followingList.value.length
+    console.debug('[profile] loadFollowingAndFollowers -> 请求用户 ID', currentUserId)
+    const [followersResponse, followingResponse] = await Promise.all([
+      socialApi.getFollowers(currentUserId),
+      socialApi.getFollowing(currentUserId)
+    ])
+    console.log('[profile] getFollowers 返回:', followersResponse)
+    console.log('[profile] getFollowing 返回:', followingResponse)
 
-    const followersResponse: any = await socialApi.getFollowers(authStore.user.id)
-    const followersData = followersResponse?.data || followersResponse
-    followersList.value = followersData.followers || followersData.results || (Array.isArray(followersData) ? followersData : [])
-    followersCount.value = followersData.total || followersList.value.length
+    const followersParsed = parseFollowPayload(followersResponse, 'followers')
+    const followingParsed = parseFollowPayload(followingResponse, 'following')
+
+    followersList.value = followersParsed.list
+    followersCount.value = followersParsed.total
+    followingList.value = followingParsed.list
+    followingCount.value = followingParsed.total
   } catch (error) {
     console.error('加载关注和粉丝数据失败', error)
     followingCount.value = 0
@@ -1169,16 +1147,24 @@ const loadFollowingAndFollowers = async () => {
   }
 }
 
+const handleFollowChanged = async () => {
+  console.debug('[profile] handleFollowChanged -> 重新加载关注/粉丝')
+  await loadFollowingAndFollowers()
+}
+
 // 取消关注
 const handleUnfollow = async (userId: string) => {
   try {
-    await socialApi.unfollowUser(userId)
+    console.log('[unfollow] 调用接口，userId:', userId)
+    const res = await socialApi.unfollowUser(userId)
+    console.log('[unfollow] 接口返回:', res)
     ElMessage.success('已取消关注')
     // 从列表中移除
     followingList.value = followingList.value.filter(item => (item.userId || item.id) !== userId)
     // 更新关注数
     followingCount.value = Math.max(0, followingCount.value - 1)
   } catch (error: any) {
+    console.error('[unfollow] error:', error)
     ElMessage.error(error.message || '取消关注失败')
   }
 }

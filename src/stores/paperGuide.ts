@@ -22,6 +22,7 @@ interface GuideState {
   parsedPaper: ParsedPaper | null;
   currentSectionIndex: number;
   isAnalyzing: boolean;
+  isChatting: boolean; // 新增聊天加载状态
   aiAnalysis: Record<string, string>; // sectionId -> analysis result
   mindCards: Record<string, any[]>; // sectionId -> list of mind cards
   chatHistory: ChatMessage[];
@@ -34,6 +35,7 @@ export const usePaperGuideStore = defineStore('paperGuide', {
     parsedPaper: null,
     currentSectionIndex: 0,
     isAnalyzing: false,
+    isChatting: false,
     aiAnalysis: {},
     mindCards: {},
     chatHistory: [],
@@ -291,6 +293,7 @@ export const usePaperGuideStore = defineStore('paperGuide', {
         // Get context from current section
         const context = this.currentSection?.content || '';
         
+        this.isChatting = true;
         // Call AI
         try {
             // Convert chat history to format expected by AIService
@@ -304,10 +307,12 @@ export const usePaperGuideStore = defineStore('paperGuide', {
         } catch (e) {
             console.error('Chat failed', e);
             await this.addChatMessage('ai', '抱歉，我遇到了一些问题，无法回答您的问题。');
+        } finally {
+            this.isChatting = false;
         }
     },
 
-    exportRecords() {
+    exportRecords(format: 'json' | 'markdown' = 'json') {
         const data = {
             paperTitle: this.parsedPaper?.sections[0]?.content.split('\n')[0] || 'Paper Analysis',
             analysis: this.aiAnalysis,
@@ -316,11 +321,46 @@ export const usePaperGuideStore = defineStore('paperGuide', {
             exportDate: new Date().toISOString()
         };
 
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        if (format === 'json') {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            this.downloadFile(blob, `paper-analysis-${Date.now()}.json`);
+        } else if (format === 'markdown') {
+            let mdContent = `# ${data.paperTitle}\n\n导出时间: ${data.exportDate}\n\n`;
+            
+            mdContent += `## 1. AI 导读分析\n`;
+            for (const [sectionId, analysis] of Object.entries(this.aiAnalysis)) {
+                const section = this.parsedPaper?.sections.find(s => s.id === sectionId);
+                mdContent += `### ${section?.title || sectionId}\n\n${analysis}\n\n`;
+            }
+
+            mdContent += `## 2. 思维卡片\n`;
+            for (const [sectionId, cards] of Object.entries(this.mindCards)) {
+                const section = this.parsedPaper?.sections.find(s => s.id === sectionId);
+                mdContent += `### ${section?.title || sectionId}\n`;
+                cards.forEach((card: any) => {
+                    mdContent += `- **${card.title}**: ${card.definition}\n`;
+                    mdContent += `  - 核心概念: ${card.concept}\n`;
+                    mdContent += `  - 关键点: ${card.keyPoints.join(', ')}\n`;
+                    mdContent += `  - 意义: ${card.implication}\n\n`;
+                });
+            }
+
+            mdContent += `## 3. 问答记录\n`;
+            this.chatHistory.forEach(msg => {
+                const role = msg.role === 'user' ? '我' : 'AI';
+                mdContent += `**${role}**: ${msg.content}\n\n`;
+            });
+
+            const blob = new Blob([mdContent], { type: 'text/markdown' });
+            this.downloadFile(blob, `paper-analysis-${Date.now()}.md`);
+        }
+    },
+
+    downloadFile(blob: Blob, filename: string) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `paper-analysis-${Date.now()}.json`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

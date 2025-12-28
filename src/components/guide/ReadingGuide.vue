@@ -21,12 +21,8 @@
           <el-button type="primary" link @click="handleAIReParse">
               <el-icon><MagicStick /></el-icon> AI 智能识别生成
           </el-button>
-          <el-button type="success" link @click="store.exportRecords">
-              <el-icon><Download /></el-icon> 导出记录
-          </el-button>
       </div>
     </div>
-
     <div class="guide-body">
       <!-- 左侧：原文 -->
       <div class="original-text-panel glass-panel">
@@ -135,14 +131,21 @@
                     <div v-if="store.chatHistory.length === 0" class="empty-chat">
                         <el-empty description="有问题？随时问我！" image-size="80" />
                     </div>
-                    <div v-else v-for="(msg, index) in store.chatHistory" :key="index" :class="['chat-message', msg.role]">
-                        <div class="message-content">
-                            <span class="role-label">{{ msg.role === 'user' ? '我' : 'AI' }}:</span>
-                            {{ msg.content }}
+                    <template v-else>
+                        <div v-for="(msg, index) in store.chatHistory" :key="index" :class="['chat-message', msg.role]">
+                            <span class="role-label">{{ msg.role === 'user' ? '我' : 'AI 助手' }}</span>
+                            <div class="message-content markdown-body" v-html="marked(msg.content)"></div>
+                        </div>
+                    </template>
+                    
+                    <div v-if="store.isChatting" class="chat-message ai">
+                        <span class="role-label">AI 助手</span>
+                        <div class="message-content loading-dots">
+                            <span>.</span><span>.</span><span>.</span>
                         </div>
                     </div>
                 </div>
-
+            </el-tab-pane>
                 <!-- 简单的对话框 -->
                 <div class="chat-input-area">
                    <el-input
@@ -155,16 +158,35 @@
                    />
                    <el-button type="primary" :icon="ChatLineRound" @click="askQuestion" circle />
                 </div>
-            </el-tab-pane>
         </el-tabs>
       </div>
     </div>
 
     <!-- 底部控制栏 -->
     <div class="guide-footer glass-panel">
-      <el-button @click="prevStep" :disabled="store.currentSectionIndex === 0">上一步</el-button>
-      <el-button type="danger" plain @click="confirmExit">结束阅读</el-button>
-      <el-button type="primary" color="#8B4513" @click="nextStep" :disabled="store.currentSectionIndex === store.steps.length - 1">下一步</el-button>
+      <div class="footer-left">
+          <el-button @click="prevStep" :disabled="store.currentSectionIndex === 0">上一步</el-button>
+          <el-button type="danger" plain @click="confirmExit">结束阅读</el-button>
+      </div>
+      
+      <div class="footer-center">
+          <el-dropdown @command="handleExport">
+            <el-button type="success" link>
+                <el-icon><Download /></el-icon> 导出记录 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="json">导出 JSON</el-dropdown-item>
+                <el-dropdown-item command="markdown">导出 Markdown</el-dropdown-item>
+                <el-dropdown-item command="pdf" divided>导出 PDF (打印)</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+      </div>
+
+      <div class="footer-right">
+          <el-button type="primary" color="#8B4513" @click="nextStep" :disabled="store.currentSectionIndex === store.steps.length - 1">下一步</el-button>
+      </div>
     </div>
   </div>
 </template>
@@ -174,7 +196,7 @@ import { computed, ref, reactive, watch, nextTick } from 'vue';
 import { usePaperGuideStore } from '../../stores/paperGuide';
 import { marked } from 'marked';
 import { ElMessageBox, ElMessage } from 'element-plus';
-import { EditPen, QuestionFilled, Collection, Opportunity, MagicStick, Switch, ChatLineRound, Download, Check } from '@element-plus/icons-vue';
+import { EditPen, QuestionFilled, Collection, Opportunity, MagicStick, Switch, ChatLineRound, Download, Check, ArrowDown, Loading } from '@element-plus/icons-vue';
 
 const store = usePaperGuideStore();
 const userQuestion = ref('');
@@ -259,13 +281,19 @@ const handleTextSelection = () => {
         // 计算相对于 text-content 的位置
         const menuWidth = 380; // 估算菜单宽度，确保居中
         const menuHeight = 40;
+        const scrollTop = textContentRef.value.scrollTop;
         
         let x = rect.left - containerRect.left + (rect.width / 2) - (menuWidth / 2);
-        let y = rect.top - containerRect.top - 50; // 默认显示在上方
+        let y = rect.top - containerRect.top + scrollTop - 50; // 加上 scrollTop
 
         // 边界检查：如果上方空间不足，显示在下方
-        if (y < 10) {
-            y = rect.bottom - containerRect.top + 10;
+        // 注意：这里的边界检查也需要考虑 scrollTop，但 rect.top - containerRect.top 是可视区域的相对位置
+        // 如果 (rect.top - containerRect.top) < 50，说明在可视区域顶部边缘，菜单会遮挡或溢出
+        // 我们希望菜单显示在可视区域内，或者跟随文本
+        // 如果 y < scrollTop (即在可视区域上方)，则显示在下方
+        
+        if (rect.top - containerRect.top < 60) {
+             y = rect.bottom - containerRect.top + scrollTop + 10;
         }
         
         // 边界检查：左右不溢出
@@ -279,41 +307,46 @@ const handleTextSelection = () => {
     }
 };
 
+const handleExport = (command: string) => {
+    if (command === 'pdf') {
+        window.print();
+        return;
+    }
+    store.exportRecords(command as 'json' | 'markdown');
+};
+
 const handleSummarizeSelection = async () => {
     selectionMenu.visible = false;
     const result = await store.analyzeSelection(selectionMenu.text, 'summary');
-    // 简单追加到当前分析中，或者弹窗显示
-    // 这里为了演示，直接追加到 AI 导读
-    if (currentSection.value) {
-        const currentAnalysis = store.aiAnalysis[currentSection.value.id] || '';
-        store.aiAnalysis[currentSection.value.id] = currentAnalysis + '\n\n' + result;
-        activeTab.value = 'guide';
-    }
+    await store.addChatMessage('user', '请总结选中的文本');
+    await store.addChatMessage('ai', result);
+    activeTab.value = 'chat';
 };
 
 const handleExplainSelection = async () => {
     selectionMenu.visible = false;
     const result = await store.analyzeSelection(selectionMenu.text, 'explain');
-    if (currentSection.value) {
-        const currentAnalysis = store.aiAnalysis[currentSection.value.id] || '';
-        store.aiAnalysis[currentSection.value.id] = currentAnalysis + '\n\n' + result;
-        activeTab.value = 'guide';
-    }
+    await store.addChatMessage('user', '请解释选中的文本');
+    await store.addChatMessage('ai', result);
+    activeTab.value = 'chat';
 };
 
 const handleTranslateSelection = async () => {
     selectionMenu.visible = false;
-    const result = await store.analyzeSelection(selectionMenu.text, 'translate');
-    if (currentSection.value) {
-        const currentAnalysis = store.aiAnalysis[currentSection.value.id] || '';
-        store.aiAnalysis[currentSection.value.id] = currentAnalysis + '\n\n' + result;
-        activeTab.value = 'guide';
-    }
+    const originalText = selectionMenu.text;
+    const result = await store.analyzeSelection(originalText, 'translate');
+    
+    // 拼接原文和译文
+    const combinedResult = `**原文：**\n${originalText}\n\n**译文：**\n${result}`;
+    
+    await store.addChatMessage('user', '请翻译选中的文本');
+    await store.addChatMessage('ai', combinedResult);
+    activeTab.value = 'chat';
 };
 
 const handleAskSelection = () => {
     selectionMenu.visible = false;
-    userQuestion.value = `> 引用：${selectionMenu.text.substring(0, 50)}...\n\n请问`;
+    userQuestion.value = `> 引用：${selectionMenu.text}\n\n请问`;
     activeTab.value = 'chat';
     // 聚焦输入框 (简单实现，实际可能需要 ref)
     const inputEl = document.querySelector('.chat-input-area textarea') as HTMLTextAreaElement;
@@ -802,13 +835,42 @@ watch(() => store.chatHistory.length, () => {
     border-top: 1px solid rgba(139, 69, 19, 0.1);
     display: flex;
     justify-content: space-between;
+    align-items: center;
     background: rgba(255, 255, 255, 0.8);
+
+    .footer-left, .footer-center, .footer-right {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+  }
+
+  .loading-dots {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px !important;
+      
+      span {
+          width: 6px;
+          height: 6px;
+          background: #888;
+          border-radius: 50%;
+          animation: bounce 1.4s infinite ease-in-out both;
+          
+          &:nth-child(1) { animation-delay: -0.32s; }
+          &:nth-child(2) { animation-delay: -0.16s; }
+      }
   }
 }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
 }
 
 .list-enter-active,
@@ -819,5 +881,54 @@ watch(() => store.chatHistory.length, () => {
 .list-leave-to {
   opacity: 0;
   transform: translateX(30px);
+}
+</style>
+
+<style lang="scss">
+@media print {
+    body * {
+        visibility: hidden;
+    }
+    .reading-guide, .reading-guide * {
+        visibility: visible;
+    }
+    .reading-guide {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: auto !important;
+        overflow: visible !important;
+        background: white !important;
+    }
+    
+    // Hide interactive elements
+    .guide-stepper, 
+    .guide-footer, 
+    .chat-input-area,
+    .selection-menu,
+    .el-button,
+    .el-tabs__header {
+        display: none !important;
+    }
+
+    // Adjust layout for print
+    .guide-body {
+        display: block !important;
+        padding: 0 !important;
+    }
+
+    .original-text-panel, .ai-guide-panel {
+        box-shadow: none !important;
+        border: none !important;
+        margin-bottom: 20px;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .text-content, .analysis-content, .chat-history-area {
+        height: auto !important;
+        overflow: visible !important;
+    }
 }
 </style>
