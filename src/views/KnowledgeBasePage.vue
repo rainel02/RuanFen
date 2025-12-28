@@ -40,75 +40,125 @@
             </div>
           </div>
 
-          <div class="kb-cards" v-if="currentKb">
-            <el-card shadow="hover" class="current-kb-card">
-              <div class="current-title">
-                <el-tag type="info" size="small">{{ currentKb.visibility === 'PRIVATE' ? '私密库' : '公开库' }}</el-tag>
-                <span class="current-name">{{ currentKb.name }}</span>
+          <div class="main-content-layout">
+            <!-- 知识库内容区域 -->
+            <div class="kb-content-wrapper">
+              <div class="kb-cards" v-if="currentKb">
+                <el-card shadow="hover" class="current-kb-card">
+                  <div class="current-title">
+                    <el-tag type="info" size="small">{{ currentKb.visibility === 'PRIVATE' ? '私密库' : '公开库' }}</el-tag>
+                    <span class="current-name">{{ currentKb.name }}</span>
+                  </div>
+                  <p class="kb-desc">{{ currentKb.description || '暂无描述' }}</p>
+                  <div class="kb-meta">创建于 {{ formatDate(currentKb.createdAt) }}</div>
+                  <div class="kb-ops">
+                    <el-button text type="primary" @click="selectKb(currentKb)">查看文档</el-button>
+                    <el-popconfirm title="确认删除该知识库及其文档？" @confirm="handleDelete(currentKb.id)">
+                      <template #reference>
+                        <el-button text type="danger">删除</el-button>
+                      </template>
+                    </el-popconfirm>
+                  </div>
+                </el-card>
               </div>
-              <p class="kb-desc">{{ currentKb.description || '暂无描述' }}</p>
-              <div class="kb-meta">创建于 {{ formatDate(currentKb.createdAt) }}</div>
-              <div class="kb-ops">
-                <el-button text type="primary" @click="selectKb(currentKb)">查看文档</el-button>
-                <el-popconfirm title="确认删除该知识库及其文档？" @confirm="handleDelete(currentKb.id)">
-                  <template #reference>
-                    <el-button text type="danger">删除</el-button>
-                  </template>
-                </el-popconfirm>
-              </div>
-            </el-card>
-          </div>
 
-          <div class="kb-content">
-            <div class="upload-banner">
-              <div>
-                <h4>上传论文</h4>
-                <p>支持拖拽 PDF，自动解析摘要和页数，入库后可用于 AI 问答</p>
+              <div class="kb-content">
+                <div class="upload-banner">
+                  <div>
+                    <h4>上传论文</h4>
+                    <p>支持拖拽 PDF，自动解析摘要和页数，入库后可用于 AI 问答</p>
+                  </div>
+                  <el-upload
+                    drag
+                    multiple
+                    :http-request="handleUpload"
+                    :show-file-list="false"
+                    accept="application/pdf"
+                    class="upload-drag"
+                  >
+                    <i class="el-icon-upload"></i>
+                    <div class="el-upload__text">将 PDF 拖到此处，或 <em>点击上传</em></div>
+                  </el-upload>
+                </div>
+
+                <el-table
+                  v-loading="loadingDocs"
+                  :data="documents"
+                  border
+                  style="width: 100%"
+                  empty-text="请选择左侧知识库后上传文档"
+                  class="kb-table"
+                >
+                  <el-table-column prop="originalFilename" label="文件名" min-width="240" />
+                  <el-table-column prop="status" label="状态" width="100">
+                    <template #default="{ row }">
+                      <el-tag :type="statusTag(row.status)" size="small">
+                        {{ statusText(row.status) }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                <!-- 移除页数、错误列，解析时间改为上传时间 -->
+                <el-table-column prop="summary" label="摘要" min-width="220" show-overflow-tooltip />
+                <el-table-column prop="createdAt" label="上传时间" width="160">
+                  <template #default="{ row }">
+                    {{ formatDate(row.createdAt) }}
+                  </template>
+                </el-table-column>
+                </el-table>
               </div>
-              <el-upload
-                drag
-                multiple
-                :http-request="handleUpload"
-                :show-file-list="false"
-                accept="application/pdf"
-                class="upload-drag"
-              >
-                <i class="el-icon-upload"></i>
-                <div class="el-upload__text">将 PDF 拖到此处，或 <em>点击上传</em></div>
-              </el-upload>
             </div>
 
-            <el-table
-              v-loading="loadingDocs"
-              :data="documents"
-              border
-              style="width: 100%"
-              empty-text="请选择左侧知识库后上传文档"
-              class="kb-table"
-            >
-              <el-table-column prop="originalFilename" label="文件名" min-width="240" />
-              <el-table-column prop="status" label="状态" width="100">
-                <template #default="{ row }">
-                  <el-tag :type="statusTag(row.status)" size="small">
-                    {{ statusText(row.status) }}
-                  </el-tag>
-                </template>
-              </el-table-column>
-            <!-- 移除页数、错误列，解析时间改为上传时间 -->
-            <el-table-column prop="summary" label="摘要" min-width="220" show-overflow-tooltip />
-            <el-table-column prop="createdAt" label="上传时间" width="160">
-              <template #default="{ row }">
-                {{ formatDate(row.createdAt) }}
-              </template>
-            </el-table-column>
-            </el-table>
+            <!-- AI问答聊天框 -->
+            <div class="qa-chat-panel" v-if="qaDialogVisible">
+              <div class="qa-panel-header">
+                <h3>全库问答</h3>
+                <el-button text @click="qaDialogVisible = false" class="close-btn">
+                  <el-icon><Close /></el-icon>
+                </el-button>
+              </div>
+              <div class="qa-chat">
+                <div class="qa-messages">
+                  <div v-for="(msg, idx) in chatHistory" :key="idx" class="qa-msg" :class="msg.role">
+                    <div class="qa-msg-bubble">
+                      <div class="qa-msg-role">{{ msg.role === 'user' ? '我' : '助手' }}</div>
+                      <div class="qa-msg-text">{{ msg.content }}</div>
+                      <div v-if="isNotFound(msg.content)" class="qa-hint">请更具体提问，如包含论文标题或关键词。</div>
+                      <div v-if="msg.references?.length && !isNotFound(msg.content)" class="qa-refs">
+                        <div class="qa-refs-title">引用</div>
+                        <ul>
+                          <li v-for="(ref, rIdx) in msg.references" :key="rIdx">
+                            [{{ rIdx + 1 }}] {{ ref.source || '未知来源' }}
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="!chatHistory.length" class="qa-empty">还没有对话，提一个问题试试</div>
+                </div>
+
+                <div class="qa-input-area">
+                  <el-input
+                    v-model="qaQuestion"
+                    type="textarea"
+                    :rows="3"
+                    placeholder="请输入你的问题，基于当前用户的知识库回答"
+                  />
+                  <div class="qa-actions">
+                    <el-button type="primary" :loading="qaLoading" @click="handleQa">发送</el-button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </main>
       </div>
     </div>
 
     <div class="floating-qa">
-      <el-button type="primary" round @click="qaDialogVisible = true">全库问答</el-button>
+      <div class="qa-button-ball" @click="qaDialogVisible = !qaDialogVisible">
+        <el-icon class="qa-icon"><ChatLineRound /></el-icon>
+        <span class="qa-button-text">全库问答</span>
+      </div>
     </div>
 
     <el-dialog v-model="showCreate" title="新建知识库" width="420px" class="gothic-dialog">
@@ -132,45 +182,13 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="qaDialogVisible" title="全库问答" width="560px" class="gothic-dialog">
-      <div class="qa-chat">
-        <div class="qa-messages">
-          <div v-for="(msg, idx) in chatHistory" :key="idx" class="qa-msg" :class="msg.role">
-            <div class="qa-msg-bubble">
-              <div class="qa-msg-role">{{ msg.role === 'user' ? '我' : '助手' }}</div>
-              <div class="qa-msg-text">{{ msg.content }}</div>
-              <div v-if="isNotFound(msg.content)" class="qa-hint">请更具体提问，如包含论文标题或关键词。</div>
-              <div v-if="msg.references?.length && !isNotFound(msg.content)" class="qa-refs">
-                <div class="qa-refs-title">引用</div>
-                <ul>
-                  <li v-for="(ref, rIdx) in msg.references" :key="rIdx">
-                    [{{ rIdx + 1 }}] {{ ref.source || '未知来源' }}
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div v-if="!chatHistory.length" class="qa-empty">还没有对话，提一个问题试试</div>
-        </div>
-
-        <el-input
-          v-model="qaQuestion"
-          type="textarea"
-          :rows="3"
-          placeholder="请输入你的问题，基于当前用户的知识库回答"
-        />
-        <div class="qa-actions">
-          <el-button @click="qaDialogVisible = false">关闭</el-button>
-          <el-button type="primary" :loading="qaLoading" @click="handleQa">发送</el-button>
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { ChatLineRound, Close } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import {
   listKnowledgeBases,
@@ -363,7 +381,7 @@ const isNotFound = (text?: string) => {
 }
 
 .kb-container {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 24px auto 60px;
   padding: 0 20px;
   position: relative;
@@ -372,11 +390,13 @@ const isNotFound = (text?: string) => {
 
 .kb-layout {
   display: flex;
-  gap: 20px;
+  gap: 16px;
+  width: 100%;
 }
 
 .kb-sidebar {
-  width: 340px;
+  width: 260px;
+  flex-shrink: 0;
   background: rgba(249, 247, 236, 0.85);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -387,7 +407,7 @@ const isNotFound = (text?: string) => {
     0 0 0 1px rgba(212, 175, 55, 0.2) inset,
     inset 0 2px 4px rgba(255, 255, 255, 0.5),
     inset 0 -2px 4px rgba(0, 0, 0, 0.1);
-  padding: 20px 18px;
+  padding: 18px 16px;
   position: relative;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -476,6 +496,23 @@ const isNotFound = (text?: string) => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.main-content-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  width: 100%;
+  min-width: 0;
+}
+
+.kb-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  max-width: calc(100% - 480px); // 为右侧聊天框留出空间（440px + 20px gap + 20px padding）
 }
 
 .kb-header {
@@ -739,10 +776,155 @@ const isNotFound = (text?: string) => {
 
 .floating-qa {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  z-index: 99;
+  bottom: 30px;
+  right: 30px;
+  z-index: 1000;
 }
+
+.qa-button-ball {
+  min-width: 120px;
+  height: 64px;
+  border-radius: 32px;
+  background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%);
+  border: 3px solid rgba(184, 134, 11, 0.6);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 4px 12px rgba(184, 134, 11, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 20px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    border-radius: 32px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.6) 0%, 
+      transparent 50%, 
+      rgba(184, 134, 11, 0.6) 100%);
+    z-index: -1;
+    opacity: 0.8;
+  }
+
+  &:hover {
+    transform: scale(1.05) translateY(-4px);
+    box-shadow: 
+      0 12px 32px rgba(0, 0, 0, 0.4),
+      0 6px 16px rgba(184, 134, 11, 0.5),
+      inset 0 2px 6px rgba(255, 255, 255, 0.4),
+      inset 0 -2px 6px rgba(0, 0, 0, 0.3);
+    border-color: rgba(212, 175, 55, 0.8);
+  }
+
+  &:active {
+    transform: scale(1.02) translateY(-2px);
+  }
+
+  .qa-icon {
+    font-size: 24px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .qa-button-text {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+  }
+
+  &:hover .qa-icon {
+    transform: scale(1.1);
+  }
+}
+
+.qa-chat-panel {
+  width: 420px;
+  flex-shrink: 0;
+  background: rgba(249, 247, 236, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px;
+  border: 3px solid rgba(184, 134, 11, 0.5);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 200px);
+  position: sticky;
+  top: 24px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.4) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+}
+
+.qa-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 2px solid rgba(184, 134, 11, 0.3);
+  background: linear-gradient(135deg, 
+    rgba(212, 175, 55, 0.2) 0%, 
+    rgba(184, 134, 11, 0.15) 100%);
+  border-radius: 16px 16px 0 0;
+  flex-shrink: 0;
+
+  h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 900;
+    color: #654321;
+    font-family: 'Georgia', 'Times New Roman', 'Goudy Old Style', serif;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.5px;
+  }
+
+  .close-btn {
+    padding: 4px;
+    color: #654321;
+    font-size: 20px;
+
+    &:hover {
+      color: #D4AF37;
+      background: rgba(212, 175, 55, 0.1);
+    }
+  }
+}
+
 
 .qa-actions {
   display: flex;
@@ -754,16 +936,21 @@ const isNotFound = (text?: string) => {
 .qa-chat {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  flex: 1;
+  min-height: 0;
+  padding: 20px;
+  gap: 16px;
 }
 
 .qa-messages {
-  max-height: 360px;
+  flex: 1;
   overflow-y: auto;
-  padding: 15px;
+  padding: 20px;
   background: rgba(249, 247, 236, 0.6);
   border: 2px solid rgba(184, 134, 11, 0.3);
   border-radius: 12px;
+  min-height: 400px;
+  max-height: 600px;
 }
 
 .qa-msg {
@@ -780,8 +967,8 @@ const isNotFound = (text?: string) => {
 }
 
 .qa-msg-bubble {
-  max-width: 80%;
-  padding: 12px 16px;
+  max-width: 90%;
+  padding: 18px 24px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   background: rgba(255, 255, 255, 0.7);
@@ -795,32 +982,34 @@ const isNotFound = (text?: string) => {
 }
 
 .qa-msg-role {
-  font-size: 12px;
+  font-size: 16px;
   color: #8B4513;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .qa-msg-text {
-  line-height: 1.6;
+  line-height: 2;
   white-space: pre-wrap;
   color: #654321;
   font-weight: 600;
+  font-size: 18px;
 }
 
 .qa-refs {
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 12px;
+  font-size: 16px;
   color: #8B4513;
   font-family: 'Georgia', 'Times New Roman', serif;
 }
 
 .qa-refs-title {
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
   color: #654321;
+  font-size: 17px;
 }
 
 .qa-refs ul {
@@ -831,16 +1020,24 @@ const isNotFound = (text?: string) => {
 .qa-empty {
   text-align: center;
   color: #8B4513;
-  padding: 20px 0;
+  padding: 60px 0;
   font-family: 'Georgia', 'Times New Roman', serif;
   font-style: italic;
+  font-size: 18px;
 }
 
 .qa-hint {
-  margin-top: 6px;
+  margin-top: 10px;
   color: #B8860B;
-  font-size: 12px;
+  font-size: 16px;
   font-style: italic;
+}
+
+.qa-input-area {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 // 按钮样式
