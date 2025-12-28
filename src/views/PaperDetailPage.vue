@@ -13,14 +13,17 @@
 
             <div class="paper-actions">
               <el-button
+                @click="copyCitation"
+              >
+                引用
+              </el-button>
+              <el-button
                 :type="paper.isfavorited ? 'primary' : 'default'"
                 :icon="Star"
                 @click="toggleFavorite"
               >
                 {{ paper.isfavorited ? '已收藏' : '收藏' }}
               </el-button>
-              <!-- <el-button :icon="Share">分享</el-button> -->
-              <!-- <el-button :icon="Download" v-if="paper.url">下载PDF</el-button> -->
               <el-button
                 v-if="paper.landingPageUrl"
                 @click.prevent="openExternal(paper.landingPageUrl)"
@@ -484,6 +487,71 @@ const toggleFavorite = async () => {
   } catch (error) {
     console.error('Toggle favorite failed', error)
     ElMessage.error({ message: '操作失败，请稍后重试', customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 })
+  }
+}
+
+// GB/T 7714-2015 citation formatter (basic implementation)
+const formatAuthorsGb = (authors: any[] | undefined) => {
+  if (!authors || authors.length === 0) return ''
+  // Use up to 3 authors then add '等' (et al.) per common GB/T conventions
+  const names = authors.map((a: any) => (typeof a === 'string' ? a : a?.name || '')).filter(Boolean)
+  if (names.length === 0) return ''
+  if (names.length <= 3) return names.join('; ')
+  return names.slice(0, 3).join('; ') + ' 等'
+}
+
+const getGbCitation = (p: Paper | null) => {
+  if (!p) return ''
+  const authors = formatAuthorsGb(p.authorships as any[])
+  const title = p.title || ''
+  const journal = p.publication || ''
+  const year = p.publicationDate ? String(p.publicationDate).slice(0,4) : ''
+  // volume/issue/pages might not be available; try common fields if present
+  // fallbacks: p.volume, p.issue, p.startPage, p.endPage
+  // Try to access generically if available
+  const vol = (p as any).volume ? String((p as any).volume) : ''
+  const issue = (p as any).issue ? String((p as any).issue) : ''
+  const sp = (p as any).startPage ? String((p as any).startPage) : ''
+  const ep = (p as any).endPage ? String((p as any).endPage) : ''
+  let pubPart = ''
+  if (journal) pubPart += journal
+  if (year) pubPart += (pubPart ? ', ' : '') + year
+  if (vol) pubPart += (vol ? ', ' + vol : '')
+  if (issue) pubPart += (issue ? '(' + issue + ')' : '')
+  if (sp && ep) pubPart += ': ' + sp + '-' + ep
+
+  const doi = p.doi ? ` DOI: ${p.doi}` : ''
+  // Assemble according to GB/T 7714 basic article format: 作者. 题名[J]. 刊名, 年, 卷(期): 起止页. DOI
+  const authorsPart = authors ? authors + '. ' : ''
+  const titlePart = title ? title + '[J]. ' : ''
+  const citation = `${authorsPart}${titlePart}${pubPart ? pubPart + '.' : ''}${doi}`.trim()
+  return citation
+}
+
+const copyCitation = async () => {
+  if (!paper.value) return
+  const txt = getGbCitation(paper.value)
+  if (!txt) {
+    ElMessage.warning({ message: '无法生成引用内容', customClass: 'swiss-message', duration: 2000, offset: 60 })
+    return
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(txt)
+    } else {
+      const ta = document.createElement('textarea')
+      ta.value = txt
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      ta.remove()
+    }
+    ElMessage.success({ message: '引用已复制到剪贴板', customClass: 'swiss-message', duration: 1800, offset: 60 })
+  } catch (e) {
+    console.error('copyCitation failed', e)
+    ElMessage.error({ message: '复制失败，请手动复制', customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 })
   }
 }
 

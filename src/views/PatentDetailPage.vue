@@ -35,12 +35,12 @@
                   <p class="text-content">{{ patent.abstract }}</p>
                 </div>
 
-                <div class="patent-section">
+                <!-- <div class="patent-section">
                   <h3>主权项</h3>
                   <div class="claims-content">
                     <p class="text-content">{{ patent.claims }}</p>
                   </div>
-                </div>
+                </div> -->
               </el-card>
             </el-col>
 
@@ -72,9 +72,9 @@
                 </el-card>
 
                 <el-card class="actions-card">
-                  <el-button type="primary" class="action-btn download-btn" :icon="Download" @click="handleDownload">
+                  <!-- <el-button type="primary" class="action-btn download-btn" :icon="Download" @click="handleDownload">
                     下载全文 PDF
-                  </el-button>
+                  </el-button> -->
                   <el-button class="action-btn" :icon="DocumentCopy" @click="handleCite">
                     引用此专利
                   </el-button>
@@ -136,7 +136,14 @@ const handleCite = () => {
 onMounted(async () => {
   const id = route.params.id as string
   if (id) {
-    patent.value = await patentsStore.getPatentById(id) || null
+    // try to find patent from already-fetched list
+    let found = patentsStore.patents.find((p: Patent) => p.id === id || p.applicationNumber === id)
+    if (!found) {
+      // ensure patents list is loaded, then try again
+      await patentsStore.fetchPatents()
+      found = patentsStore.patents.find((p: Patent) => p.id === id || p.applicationNumber === id)
+    }
+    patent.value = found || null
   }
   loading.value = false
 })
