@@ -11,5 +11,5 @@ export interface User {
   citations: number
   papers: number
   bio?: string
-  role?: 'user' | 'admin' | 'administrator'
+  role?: 'user' | 'admin' | 'administrator' | 'ADMIN'
 }
