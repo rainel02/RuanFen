@@ -78,6 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
       const response = await authApi.register({ username, email, password, role })
       return { success: true, data: response }
     } catch (error: any) {
+      console.log('注册错误信息:', error)
       return { success: false, message: error.message || '注册失败' }
     }
   }

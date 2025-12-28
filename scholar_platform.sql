@@ -341,21 +341,60 @@ DROP TABLE IF EXISTS `scholar_influence`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `scholar_influence` (
-  `scholar_id` char(36) NOT NULL COMMENT '学者ID',
-  `year` int NOT NULL COMMENT '年份',
-  `value` decimal(18,4) NOT NULL COMMENT '影响力数值',
-  PRIMARY KEY (`scholar_id`,`year`),
-  CONSTRAINT `fk_inf_scholar` FOREIGN KEY (`scholar_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='学者影响力年表';
+  `user_id` varchar(36) NOT NULL COMMENT '用户ID，主键，对应users表ID',
+  `author_name` varchar(255) DEFAULT NULL COMMENT '作者显示名称 (OpenAlex display_name)',
+  `works_count` int DEFAULT 0 COMMENT '发表作品总数',
+  `cited_by_cnt` int DEFAULT 0 COMMENT '被引用总次数',
+  `h_index` int DEFAULT 0 COMMENT 'H指数',
+  `i10_index` int DEFAULT 0 COMMENT 'i10指数',
+  `open_alex_id` varchar(255) DEFAULT NULL COMMENT 'OpenAlex原始ID (用于关联ES数据)',
+  `domain` varchar(255) default null comment '学科'
+  PRIMARY KEY (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学者影响力数据缓存表';
 /*!40101 SET character_set_client = @saved_cs_client */;
+
 
 --
 -- Dumping data for table `scholar_influence`
 --
 
+
+
+
 LOCK TABLES `scholar_influence` WRITE;
 /*!40000 ALTER TABLE `scholar_influence` DISABLE KEYS */;
 /*!40000 ALTER TABLE `scholar_influence` ENABLE KEYS */;
+UNLOCK TABLES;
+
+
+--
+-- Table structure for table `scholar_ranking`
+--
+
+DROP TABLE IF EXISTS `scholar_ranking`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `scholar_ranking` (
+  `id` VARCHAR(100) PRIMARY KEY,     -- 唯一标识
+  `display_name` VARCHAR(255),       -- 姓名
+  `domain` VARCHAR(100),             -- 用于 WHERE 查询的一级学科
+  `primary_tags` VARCHAR(255),       -- 直接存拼好的字符串，如 "Gynecology, Stroke"
+  `h_index` INT,
+  `i10_index` INT,
+  `works_count` INT,
+  `influence_score` DOUBLE,          -- 后端根据算法算好的总分
+  `rank_in_domain` INT,              -- 预存该领域的排名，查询更快
+  INDEX `idx_domain_score` (`domain`, `influence_score` DESC) -- 核心索引
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `scholar_ranking`
+--
+
+LOCK TABLES `scholar_ranking` WRITE;
+/*!40000 ALTER TABLE `scholar_ranking` DISABLE KEYS */;
+/*!40000 ALTER TABLE `scholar_ranking` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -620,28 +659,6 @@ INSERT INTO `scholar_certifications` (`id`, `user_id`, `real_name`, `organizatio
 ('cert1111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111', '张三', '清华大学计算机科学与技术系', 'zhangsan@tsinghua.edu.cn', '教授', '["proof1.pdf", "proof2.pdf"]', 'approved', NULL, '2023-01-15 10:00:00', NULL, '2023-01-20 14:30:00'),
 ('cert2222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333', '王五', '中科院计算技术研究所', 'wangwu@ict.ac.cn', '研究员', '["proof3.pdf"]', 'pending', NULL, '2023-12-01 09:00:00', NULL, NULL);
 /*!40000 ALTER TABLE `scholar_certifications` ENABLE KEYS */;
-UNLOCK TABLES;
-
--- 插入学者影响力数据（用于测试影响力相关接口）
-LOCK TABLES `scholar_influence` WRITE;
-/*!40000 ALTER TABLE `scholar_influence` DISABLE KEYS */;
-INSERT INTO `scholar_influence` (`scholar_id`, `year`, `value`) VALUES
-('11111111-1111-1111-1111-111111111111', 2021, 85.5000),
-('11111111-1111-1111-1111-111111111111', 2022, 92.3000),
-('11111111-1111-1111-1111-111111111111', 2023, 98.7000),
-('22222222-2222-2222-2222-222222222222', 2021, 78.2000),
-('22222222-2222-2222-2222-222222222222', 2022, 85.6000),
-('22222222-2222-2222-2222-222222222222', 2023, 91.4000),
-('33333333-3333-3333-3333-333333333333', 2021, 72.8000),
-('33333333-3333-3333-3333-333333333333', 2022, 79.5000),
-('33333333-3333-3333-3333-333333333333', 2023, 86.2000),
-('44444444-4444-4444-4444-444444444444', 2021, 88.1000),
-('44444444-4444-4444-4444-444444444444', 2022, 94.5000),
-('44444444-4444-4444-4444-444444444444', 2023, 99.2000),
-('55555555-5555-5555-5555-555555555555', 2021, 75.3000),
-('55555555-5555-5555-5555-555555555555', 2022, 82.7000),
-('55555555-5555-5555-5555-555555555555', 2023, 89.1000);
-/*!40000 ALTER TABLE `scholar_influence` ENABLE KEYS */;
 UNLOCK TABLES;
 
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
