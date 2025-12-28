@@ -1,41 +1,101 @@
+import request from '../utils/request'
 import { mockPatents } from '../mock/patents'
 import type { Patent, PatentSearchFilters } from '../types/patent'
 
-// 模拟延迟
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+const mapBackendToPatent = (item: any): Patent => {
+  const applicationNumber = item.applicationNumber || item.applicationNo || ''
+  const publicationNumber = item.grantNumber || item.publicationNumber || ''
+  const applicationYear = item.applicationYear != null ? String(item.applicationYear) : (item.applicationYearStr || '')
+  const publicationYear = item.grantYear != null ? String(item.grantYear) : (item.publicationYearStr || '')
+  const inventors = (item.inventor || item.inventors || '').split(/[;；]/).map((s: string) => s.trim()).filter(Boolean)
+  const ipc = (item.ipcCode || item.ipcClassification || '')
+
+  return {
+    id: applicationNumber || publicationNumber || (item.patentName || item.title || '').slice(0, 60),
+    title: item.patentName || item.title || '',
+    type: item.patentType || item.type || '',
+    applicant: item.applicant || '',
+    applicantType: item.applicantType,
+    applicationNumber: applicationNumber || '',
+    applicationYear,
+    publicationNumber: publicationNumber || '',
+    publicationYear,
+    ipcClassification: ipc,
+    inventors,
+    abstract: item.abstractText || item.abstract || '',
+    claims: item.claims || '',
+    currentAssignee: item.currentAssignee || item.applicant || '',
+    citedCount: typeof item.citedCount === 'number' ? item.citedCount : (item.citedCount ? Number(item.citedCount) : undefined),
+    grantNumber: publicationNumber
+  }
+}
 
 export default {
-  async getPatents(page = 1, pageSize = 10, filters: PatentSearchFilters = {}) {
-    await delay(500) // 模拟网络延迟
+  async getPatents(page = 1, pageSize = 12, filters: PatentSearchFilters = {}) {
+    try {
+      const params: any = {}
+      if (filters.q) params.q = filters.q
+      if (filters.applicationYear != null) params.applicationYear = filters.applicationYear
+      if (filters.grantYear != null) params.grantYear = filters.grantYear
+      // include pagination params (backend expects 0-based page index)
+      params.page = page - 1
+      params.pageSize = pageSize
 
-    let filtered = [...mockPatents]
+      const raw: any = await request.get('/patent', { params })
+      console.log('Raw patent API response:', raw)
+      console.log(raw.content);
 
-    if (filters.q) {
-      const q = filters.q.toLowerCase()
-      filtered = filtered.filter(p => 
-        p.title.toLowerCase().includes(q) || 
-        p.abstract.toLowerCase().includes(q) ||
-        p.applicant.toLowerCase().includes(q)
-      )
-    }
+      // normalize response: some servers wrap with { code, message, data },
+      // request interceptor usually unwraps to data, but handle both shapes
+      const res: any = raw.content
 
-    if (filters.type) {
-      filtered = filtered.filter(p => p.type === filters.type)
-    }
+      let list: Patent[] = []
+      let total = 0
 
-    const total = filtered.length
-    const start = (page - 1) * pageSize
-    const end = start + pageSize
-    const list = filtered.slice(start, end)
+      if (Array.isArray(res)) {
+        // raw array
+        list = res.map(mapBackendToPatent)
+        total = raw.totalElements
+      } else {
+        // fallback to mock if response shape unexpected
+        list = mockPatents.map((m: any) => ({ ...m }))
+        total = list.length
+      }
 
-    return {
-      list,
-      total
+      // apply client-side pagination if backend returned full list
+      if (list.length && !(res && ((res.list && res.total) || (res.data && (res.total || res.data.length)) || (res.patents && (res.total || res.patents.length)) || (res.content && (res.totalElements || res.content.length))))) {
+        const start = (page - 1) * pageSize
+        const end = start + pageSize
+        const paged = list.slice(start, end)
+        return { list: paged, total: list.length }
+      }
+
+      return { list, total }
+    } catch (error) {
+      console.error('Failed to fetch patents from backend, falling back to mock:', error)
+      const list = mockPatents.map((m: any) => ({ ...m }))
+      return { list, total: list.length }
     }
   },
 
   async getPatentById(id: string) {
-    await delay(300)
-    return mockPatents.find(p => p.id === id) || null
+    try {
+      // Try to query backend by application number or id via q
+      const raw: any = await request.get('/achievements/patent', { params: { q: id } })
+      const res: any = raw && (raw as any).data ? (raw as any).data : raw
+      let found: any = null
+      if (Array.isArray(res)) {
+        found = res.find((it: any) => (it.applicationNumber === id) || (it.grantNumber === id) || (it.id === id))
+      } else if (res && Array.isArray((res as any).list)) {
+        found = (res as any).list[0]
+      }
+      if (found) return mapBackendToPatent(found)
+    } catch (e) {
+      console.warn('getPatentById backend lookup failed, fallback to mock', e)
+    }
+
+    // fallback to mock
+    const fromMock = mockPatents.find(p => p.id === id || p.applicationNumber === id) || null
+    return fromMock
   }
 }

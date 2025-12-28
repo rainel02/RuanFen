@@ -17,7 +17,7 @@
                   </el-button>
                 </div>
 
-                <div class="segmented search-mode" role="tablist" aria-label="搜索模式" v-if="searchMode === 'paper'">
+                <div class="segmented search-mode" role="tablist" aria-label="搜索模式">
                   <el-button :class="{ active: !isAdvanced }" @click="isAdvanced = false">普通搜索</el-button>
                   <el-button :class="{ active: isAdvanced }" @click="isAdvanced = true">高级搜索</el-button>
                 </div>
@@ -47,7 +47,8 @@
 
                 <template v-else>
                   <div class="swiss-advanced-panel">
-                    <div class="filter-grid">
+                    <!-- Advanced for Paper -->
+                    <div v-if="searchMode === 'paper'" class="filter-grid">
                       <div class="filter-item">
                         <label>关键词</label>
                         <el-input v-model="searchQueryLocal" placeholder="任意关键词" clearable />
@@ -81,6 +82,29 @@
                       <div class="filter-item">
                         <label>截止时间</label>
                         <el-date-picker v-model="endDateLocal" type="date" placeholder="截止日期" clearable />
+                      </div>
+
+                      <div class="filter-actions">
+                        <el-button class="btn-reset" @click="onClearAdvanced">重置</el-button>
+                        <el-button type="primary" class="btn-apply" @click="onSearch">搜索</el-button>
+                      </div>
+                    </div>
+
+                    <!-- Advanced for Patent -->
+                    <div v-else class="filter-grid">
+                      <div class="filter-item">
+                        <label>关键词</label>
+                        <el-input v-model="searchQueryLocal" placeholder="专利名称/摘要/申请人" clearable />
+                      </div>
+
+                      <div class="filter-item">
+                        <label>申请年份</label>
+                        <el-input-number v-model="applicationYearLocal" :min="1800" :max="new Date().getFullYear()" controls-position="right" style="width:100%" />
+                      </div>
+
+                      <div class="filter-item">
+                        <label>授权年份</label>
+                        <el-input-number v-model="grantYearLocal" :min="1800" :max="new Date().getFullYear()" controls-position="right" style="width:100%" />
                       </div>
 
                       <div class="filter-actions">
@@ -311,14 +335,14 @@ const startDateLocal = ref('')
 const endDateLocal = ref('')
 const fieldLocal = ref('')
 const isInputFocused = ref(false)
+const applicantLocal = ref('')
+const inventorLocal = ref('')
+const applicationYearLocal = ref<number | null>(null)
+const grantYearLocal = ref<number | null>(null)
 
 // Watch search mode to reset local query or sync it
 watch(searchMode, (newMode) => {
   searchQueryLocal.value = newMode === 'paper' ? papersStore.searchQuery : patentsStore.searchQuery
-  // Reset advanced mode if switching to patent (since patent doesn't have advanced UI yet)
-  if (newMode === 'patent') {
-    isAdvanced.value = false
-  }
 })
 
 // unified search handler for basic and advanced modes
@@ -368,11 +392,15 @@ const onSearch = async () => {
       startDate: formatDate(startDateLocal.value),
       endDate: formatDate(endDateLocal.value)
     })
-  } else {
+    } else {
     // Patent Search
     patentsStore.pageSize = 12
     patentsStore.currentPage = 1
-    await patentsStore.searchPatents(searchQueryLocal.value || '')
+    await patentsStore.setFilters({
+      q: searchQueryLocal.value || '',
+      applicationYear: applicationYearLocal.value ?? undefined,
+      grantYear: grantYearLocal.value ?? undefined
+    })
   }
 }
 
@@ -383,6 +411,10 @@ const onClearAdvanced = async () => {
   endDateLocal.value = ''
   fieldLocal.value = ''
   searchQueryLocal.value = ''
+  applicantLocal.value = ''
+  inventorLocal.value = ''
+  applicationYearLocal.value = null
+  grantYearLocal.value = null
   
   if (searchMode.value === 'paper') {
     papersStore.pageSize = 12
@@ -680,6 +712,16 @@ onBeforeUnmount(() => {
 
 .filter-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items:start }
 @include mobile { .filter-grid { grid-template-columns: 1fr } }
+
+.filter-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  grid-column: 1 / -1; /* full width */
+}
+
+.filter-item { padding: 6px; }
 
 .filter-item label { font-size:12px; color:var(--pf-muted); font-weight:700; margin-bottom:6px; text-transform:uppercase }
 .filter-item :deep(.el-input__inner), .filter-item :deep(.el-select), .filter-item :deep(.el-date-editor__editor) { background: transparent }

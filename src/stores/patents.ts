@@ -14,6 +14,18 @@ export const usePatentsStore = defineStore('patents', () => {
   // Filters
   const typeFilter = ref('')
   const applicantFilter = ref('')
+  const applicationYear = ref<number | null>(null)
+  const grantYear = ref<number | null>(null)
+
+  const setFilters = async (filters: Partial<PatentSearchFilters>) => {
+    console.log('Applying filters:', filters)
+    if (filters.q !== undefined) searchQuery.value = filters.q as string
+    if (filters.applicationYear !== undefined) applicationYear.value = Number(filters.applicationYear) || null
+    if (filters.grantYear !== undefined) grantYear.value = Number(filters.grantYear) || null
+    console.log('Setting filters:', filters)
+    currentPage.value = 1
+    await fetchPatents()
+  }
 
   const paginatedPatents = computed(() => patents.value)
   const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
@@ -23,9 +35,10 @@ export const usePatentsStore = defineStore('patents', () => {
     try {
       const filters: PatentSearchFilters = {
         q: searchQuery.value,
-        type: typeFilter.value || undefined,
-        applicant: applicantFilter.value || undefined
+        applicationYear: applicationYear.value ?? undefined,
+        grantYear: grantYear.value ?? undefined
       }
+      console.log('Fetching patents with filters:', filters)
       
       const res = await patentApi.getPatents(currentPage.value, pageSize.value, filters)
       patents.value = res.list
@@ -65,6 +78,9 @@ export const usePatentsStore = defineStore('patents', () => {
     paginatedPatents,
     typeFilter,
     applicantFilter,
+    applicationYear,
+    grantYear,
+    setFilters,
     fetchPatents,
     searchPatents,
     getPatentById
