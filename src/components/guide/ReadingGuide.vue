@@ -21,9 +21,17 @@
           <el-button type="primary" link @click="handleAIReParse">
               <el-icon><MagicStick /></el-icon> AI 智能识别生成
           </el-button>
-          <el-button type="success" link @click="store.exportRecords">
-              <el-icon><Download /></el-icon> 导出记录
-          </el-button>
+          <el-dropdown @command="handleExport">
+            <el-button type="success" link>
+                <el-icon><Download /></el-icon> 导出记录 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="json">导出 JSON</el-dropdown-item>
+                <el-dropdown-item command="markdown">导出 Markdown</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
       </div>
     </div>
 
@@ -135,14 +143,21 @@
                     <div v-if="store.chatHistory.length === 0" class="empty-chat">
                         <el-empty description="有问题？随时问我！" image-size="80" />
                     </div>
-                    <div v-else v-for="(msg, index) in store.chatHistory" :key="index" :class="['chat-message', msg.role]">
-                        <div class="message-content">
-                            <span class="role-label">{{ msg.role === 'user' ? '我' : 'AI' }}:</span>
-                            {{ msg.content }}
+                    <template v-else>
+                        <div v-for="(msg, index) in store.chatHistory" :key="index" :class="['chat-message', msg.role]">
+                            <span class="role-label">{{ msg.role === 'user' ? '我' : 'AI 助手' }}</span>
+                            <div class="message-content markdown-body" v-html="marked(msg.content)"></div>
+                        </div>
+                    </template>
+                    
+                    <div v-if="store.isChatting" class="chat-message ai">
+                        <span class="role-label">AI 助手</span>
+                        <div class="message-content loading-dots">
+                            <span>.</span><span>.</span><span>.</span>
                         </div>
                     </div>
                 </div>
-
+            </el-tab-pane>
                 <!-- 简单的对话框 -->
                 <div class="chat-input-area">
                    <el-input
@@ -155,7 +170,6 @@
                    />
                    <el-button type="primary" :icon="ChatLineRound" @click="askQuestion" circle />
                 </div>
-            </el-tab-pane>
         </el-tabs>
       </div>
     </div>
@@ -174,7 +188,7 @@ import { computed, ref, reactive, watch, nextTick } from 'vue';
 import { usePaperGuideStore } from '../../stores/paperGuide';
 import { marked } from 'marked';
 import { ElMessageBox, ElMessage } from 'element-plus';
-import { EditPen, QuestionFilled, Collection, Opportunity, MagicStick, Switch, ChatLineRound, Download, Check } from '@element-plus/icons-vue';
+import { EditPen, QuestionFilled, Collection, Opportunity, MagicStick, Switch, ChatLineRound, Download, Check, ArrowDown, Loading } from '@element-plus/icons-vue';
 
 const store = usePaperGuideStore();
 const userQuestion = ref('');
@@ -279,36 +293,37 @@ const handleTextSelection = () => {
     }
 };
 
+const handleExport = (command: string) => {
+    store.exportRecords(command as 'json' | 'markdown');
+};
+
 const handleSummarizeSelection = async () => {
     selectionMenu.visible = false;
     const result = await store.analyzeSelection(selectionMenu.text, 'summary');
-    // 简单追加到当前分析中，或者弹窗显示
-    // 这里为了演示，直接追加到 AI 导读
-    if (currentSection.value) {
-        const currentAnalysis = store.aiAnalysis[currentSection.value.id] || '';
-        store.aiAnalysis[currentSection.value.id] = currentAnalysis + '\n\n' + result;
-        activeTab.value = 'guide';
-    }
+    await store.addChatMessage('user', '请总结选中的文本');
+    await store.addChatMessage('ai', result);
+    activeTab.value = 'chat';
 };
 
 const handleExplainSelection = async () => {
     selectionMenu.visible = false;
     const result = await store.analyzeSelection(selectionMenu.text, 'explain');
-    if (currentSection.value) {
-        const currentAnalysis = store.aiAnalysis[currentSection.value.id] || '';
-        store.aiAnalysis[currentSection.value.id] = currentAnalysis + '\n\n' + result;
-        activeTab.value = 'guide';
-    }
+    await store.addChatMessage('user', '请解释选中的文本');
+    await store.addChatMessage('ai', result);
+    activeTab.value = 'chat';
 };
 
 const handleTranslateSelection = async () => {
     selectionMenu.visible = false;
-    const result = await store.analyzeSelection(selectionMenu.text, 'translate');
-    if (currentSection.value) {
-        const currentAnalysis = store.aiAnalysis[currentSection.value.id] || '';
-        store.aiAnalysis[currentSection.value.id] = currentAnalysis + '\n\n' + result;
-        activeTab.value = 'guide';
-    }
+    const originalText = selectionMenu.text;
+    const result = await store.analyzeSelection(originalText, 'translate');
+    
+    // 拼接原文和译文
+    const combinedResult = `**原文：**\n${originalText}\n\n**译文：**\n${result}`;
+    
+    await store.addChatMessage('user', '请翻译选中的文本');
+    await store.addChatMessage('ai', combinedResult);
+    activeTab.value = 'chat';
 };
 
 const handleAskSelection = () => {
@@ -804,11 +819,33 @@ watch(() => store.chatHistory.length, () => {
     justify-content: space-between;
     background: rgba(255, 255, 255, 0.8);
   }
+
+  .loading-dots {
+      display: flex;
+      gap: 4px;
+      padding: 12px 16px !important;
+      
+      span {
+          width: 6px;
+          height: 6px;
+          background: #888;
+          border-radius: 50%;
+          animation: bounce 1.4s infinite ease-in-out both;
+          
+          &:nth-child(1) { animation-delay: -0.32s; }
+          &:nth-child(2) { animation-delay: -0.16s; }
+      }
+  }
 }
 
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
 }
 
 .list-enter-active,
