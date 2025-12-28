@@ -5,7 +5,18 @@
       <div class="header">
         <h2>数据分析看板</h2>
         <div class="header-actions">
-          <el-button class="retro-export-btn">导出报告</el-button>
+          <el-dropdown @command="handleExport">
+            <el-button class="retro-export-btn">
+              导出报告 <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="image">导出为图片 (PNG)</el-dropdown-item>
+                <el-dropdown-item command="pdf">导出为 PDF</el-dropdown-item>
+                <el-dropdown-item command="excel">导出排行榜数据 (Excel)</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
 
@@ -145,6 +156,11 @@ import VChart from 'vue-echarts'
 import 'echarts-wordcloud'
 import { getHotTopics, getInfluenceRanking, getInfluenceTrend, getRelationData } from '../api/analysis'
 import { useAuthStore } from '../stores/auth'
+import { ArrowDown } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import html2canvas from 'html2canvas'
+import jsPDF from 'jspdf'
+import * as XLSX from 'xlsx'
 
 use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent])
 
@@ -157,11 +173,87 @@ const wordCloudOption = ref<any>({})
 const trendOption = ref<any>({})
 const rankingData = ref<any[]>([])
 
+
+const handleExport = (command: string) => {
+  if (command === 'image') exportAsImage()
+  if (command === 'pdf') exportAsPDF()
+  if (command === 'excel') exportRankingData()
+}
+
+const exportAsImage = async () => {
+  const element = document.querySelector('.analytics-page') as HTMLElement
+  if (!element) return
+  
+  try {
+    const canvas = await html2canvas(element, {
+      useCORS: true,
+      scale: 2,
+      backgroundColor: '#f5f5f5'
+    })
+    
+    const link = document.createElement('a')
+    link.download = `数据分析报告_${new Date().toLocaleDateString()}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+    ElMessage.success('导出图片成功')
+  } catch (error) {
+    console.error('导出图片失败:', error)
+    ElMessage.error('导出图片失败')
+  }
+}
+
+const exportAsPDF = async () => {
+  const element = document.querySelector('.analytics-page') as HTMLElement
+  if (!element) return
+
+  try {
+    const canvas = await html2canvas(element, {
+      useCORS: true,
+      scale: 2,
+      backgroundColor: '#f5f5f5'
+    })
+    
+    const imgData = canvas.toDataURL('image/png')
+    const pdf = new jsPDF('p', 'mm', 'a4')
+    const imgProps = pdf.getImageProperties(imgData)
+    const pdfWidth = pdf.internal.pageSize.getWidth()
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+    pdf.save(`数据分析报告_${new Date().toLocaleDateString()}.pdf`)
+    ElMessage.success('导出PDF成功')
+  } catch (error) {
+    console.error('导出PDF失败:', error)
+    ElMessage.error('导出PDF失败')
+  }
+}
+
+const exportRankingData = () => {
+  if (rankingData.value.length === 0) {
+    ElMessage.warning('暂无数据可导出')
+    return
+  }
+  
+  const dataToExport = rankingData.value.map(item => ({
+    '排名': item.rank,
+    '学者姓名': item.name,
+    '所属机构': item.institution,
+    '影响力指数': item.score
+  }))
+  
+  const ws = XLSX.utils.json_to_sheet(dataToExport)
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, '影响力排行榜')
+  XLSX.writeFile(wb, `影响力排行榜_${new Date().toLocaleDateString()}.xlsx`)
+  ElMessage.success('导出Excel成功')
+}
+
 const relationOption = ref({});
 
 const expandedAuthors = ref(new Set()); // 存储已展开的学者姓名
 const allRelationData = ref<any[]>([]);        // 存储当前所有从后端累加的关系原始数据
 const initialAuthorName = ref<string>('');//"Li Fei-Fei";
+
 
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
