@@ -86,6 +86,14 @@ const emit = defineEmits<{
 const router = useRouter()
 const authStore = useAuthStore()
 
+const extractApiMessage = (payload: any, fallback = '操作失败') => {
+  const data = payload?.response?.data ?? payload?.data ?? payload
+  const message = data?.message ?? data?.msg ?? payload?.message
+  if (typeof message === 'string' && message.trim()) return message.trim()
+  if (typeof data === 'string' && data.trim()) return data.trim()
+  return fallback
+}
+
 const goToDetail = () => {
   router.push(`/scholars/${props.scholar.id}`)
 }
@@ -105,26 +113,18 @@ const toggleFollow = async () => {
     return
   }
   try {
+    const targetId = props.scholar.id
     const newFollowStatus = !props.scholar.isFollowed
     if (props.scholar.isFollowed) {
-      await unfollowUser(props.scholar.id)
-      ElMessage.success('已取消关注')
+      const res = await unfollowUser(targetId)
+      ElMessage.success(extractApiMessage(res, '已取消关注'))
     } else {
-      try {
-        const res = await followUser(props.scholar.id)
-        let msg = (res && res.data && (res.data.message || res.data.msg)) || (res && res.message) || (typeof res === 'string' ? res : '') || '已关注'
-        ElMessage.success(msg)
-      } catch (err: any) {
-        // 处理已关注等400错误
-        let msg = err?.response?.data?.message || err?.message || '操作失败'
-        ElMessage.warning(msg)
-        return
-      }
+      const res = await followUser(targetId)
+      ElMessage.success(extractApiMessage(res, '已关注'))
     }
-    // 通过 emit 通知父组件更新状态，而不是直接修改 props
-    emit('follow-changed', { scholarId: props.scholar.id, isFollowed: newFollowStatus })
+    emit('follow-changed', { scholarId: targetId, isFollowed: newFollowStatus })
   } catch (error: any) {
-    ElMessage.error(error.message || '操作失败')
+    ElMessage.error(extractApiMessage(error))
   }
 }
 

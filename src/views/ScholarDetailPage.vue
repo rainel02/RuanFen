@@ -216,6 +216,14 @@ const activeTab = ref('papers')
 const papersSortBy = ref('date')
 const networkData = ref<any>({ nodes: [], links: [] })
 
+const extractApiMessage = (payload: any, fallback = '操作失败') => {
+  const data = payload?.response?.data ?? payload?.data ?? payload
+  const message = data?.message ?? data?.msg ?? payload?.message
+  if (typeof message === 'string' && message.trim()) return message.trim()
+  if (typeof data === 'string' && data.trim()) return data.trim()
+  return fallback
+}
+
 // 随机选择背景图片
 const backgroundImages = [pic1, pic2, pic3]
 const headerBgImage = ref(backgroundImages[Math.floor(Math.random() * backgroundImages.length)])
@@ -321,15 +329,15 @@ const toggleFollow = async () => {
   
   try {
     if (scholar.value.isFollowed) {
-      await unfollowUser(scholar.value.id)
-      ElMessage.success('已取消关注')
+      const res = await unfollowUser(scholar.value.id)
+      ElMessage.success(extractApiMessage(res, '已取消关注'))
     } else {
-      await followUser(scholar.value.id)
-      ElMessage.success('已关注')
+      const res = await followUser(scholar.value.id)
+      ElMessage.success(extractApiMessage(res, '已关注'))
     }
     scholar.value.isFollowed = !scholar.value.isFollowed
   } catch (error: any) {
-    ElMessage.error(error.message || '操作失败')
+    ElMessage.error(extractApiMessage(error))
   }
 }
 
