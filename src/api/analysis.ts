@@ -32,3 +32,13 @@ export const getInfluenceTrend = (userId: string) => {
     return { worksCount: 0, citedByCnt: 0, hIndex: 0, i10Index: 0 }
   })
 }
+
+export const getRelationData = (authorName: string) => {
+  return request({
+    url: `/analysis/relation/${authorName}`,
+    method: 'get'
+  }).catch((error) => {
+    console.warn('getRelationData API not available:', error)
+    return { author1Id: "000", author1Name: "null", author2Id: "000", author2Name: "null" }
+  })
+}

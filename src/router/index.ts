@@ -45,6 +45,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '论文详情' }
   },
   {
+    path: '/patent/:id',
+    name: 'PatentDetail',
+    component: () => import('../views/PatentDetailPage.vue'),
+    meta: { title: '专利详情' }
+  },
+  {
     path: '/scholars/:id',
     name: 'ScholarDetail',
     component: () => import('../views/ScholarDetailPage.vue'),
@@ -106,10 +112,6 @@ const routes: RouteRecordRaw[] = [
     meta: { title: '申诉处理' }
   },
   {
-    path: '/admin/tasks',
-    name: 'AdminTasks',
-    component: () => import('../views/admin/AdminTasksPage.vue'),
-    meta: { title: '系统任务' }
   }
 ]
 

@@ -4,7 +4,7 @@
 
     <!-- Vanta.js Birds 背景（已登录用户） -->
     <div v-if="isLoggedIn" id="vanta-birds-bg" class="vanta-background"></div>
-
+    <!-- ...existing code... -->
     <!-- 登录背景轮播 -->
     <div v-if="!isLoggedIn" class="login-carousel-container" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd" @mousedown="handleMouseDown" @mousemove="handleMouseMove" @mouseup="handleMouseUp" @mouseleave="handleMouseUp">
       <div 
@@ -160,7 +160,7 @@
         <div v-if="isLoggedIn" class="profile-content">
           <!-- Profile Header Card -->
           <div class="profile-header-card glass-panel">
-            <div class="header-bg"></div>
+            <div class="header-bg" :style="{ backgroundImage: `url(${headerBgImage})` }"></div>
             <div class="header-content">
               <div class="avatar-section">
                 <el-avatar :src="user?.avatar || defaultAvatar" :size="140" class="main-avatar">
@@ -169,18 +169,30 @@
               </div>
               <div class="info-section">
                 <div class="name-row">
-                  <h1>{{ user?.name }}</h1>
-                  <el-tag v-if="verificationStatus === 'certified' || verificationStatus === 'verified'" type="success" effect="dark" round size="small" class="verified-tag">
-                    <el-icon><Select /></el-icon> 认证学者
-                  </el-tag>
-                  <el-tag v-else-if="verificationStatus === 'pending'" type="warning" effect="dark" round size="small" class="pending-tag">
-                    审核中
-                  </el-tag>
+                  <h1 style="display: inline-flex; align-items: center; gap: 8px;">
+                    {{ user?.name }}
+                    <template v-if="verificationStatus === 'approved'">
+                      <el-tag
+                        type="success"
+                        effect="dark"
+                        round
+                        size="small"
+                        class="verified-tag"
+                        style="display: inline-flex; align-items: center; gap: 4px; font-size: 15px; margin-left: 4px; vertical-align: middle;"
+                      >
+                        <el-icon><Select /></el-icon>
+                        认证学者
+                      </el-tag>
+                    </template>
+                    <template v-else-if="verificationStatus === 'pending'">
+                      <el-tag type="warning" effect="dark" round size="small" class="pending-tag" style="margin-left: 4px;">审核中</el-tag>
+                    </template>
+                  </h1>
                 </div>
                 <p class="title">{{ user?.title || '用户' }}</p>
                 <p class="institution">
                   <el-icon><School /></el-icon> 
-                  {{ user?.institution || '未设置机构' }}
+                  {{ user?.organization || '未设置机构' }}
                 </p>
                 <div class="bio-preview">{{ user?.bio || '这个人很懒，什么都没有写...' }}</div>
                 
@@ -191,13 +203,14 @@
                   >
                     <el-icon><Edit /></el-icon> 编辑资料
                   </el-button>
-                  <el-button 
-                    v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'"
-                    class="gothic-btn"
-                    @click="showVerificationDialog = true"
-                  >
-                    <el-icon><DocumentChecked /></el-icon> 申请认证
-                  </el-button>
+                  <template v-if="verificationStatus != 'pending' && verificationStatus != 'approved'">
+                    <el-button 
+                      class="gothic-btn"
+                      @click="showVerificationDialog = true"
+                    >
+                      <el-icon><DocumentChecked /></el-icon> 申请认证
+                    </el-button>
+                  </template>
                   <el-button 
                     class="gothic-btn danger-btn"
                     @click="handleLogout"
@@ -278,21 +291,42 @@
                       </div>
                     </div>
                   </el-tab-pane>
-                  <el-tab-pane label="浏览历史" name="history">
-                    <template #label>
-                      <span><el-icon><Clock /></el-icon> 浏览历史</span>
-                    </template>
-                    <div class="empty-state">
-                      <el-empty description="暂无浏览历史" />
-                    </div>
-                  </el-tab-pane>
                   <el-tab-pane label="我的帖子" name="posts">
                     <template #label>
                       <span><el-icon><ChatLineRound /></el-icon> 我的帖子</span>
                     </template>
-                    <div class="empty-state">
-                      <el-empty description="暂无帖子" />
-                    </div>
+                    <template v-if="myPosts && myPosts.length === 0">
+                      <div class="empty-state">
+                        <el-empty description="暂无帖子" />
+                      </div>
+                    </template>
+                    <template v-else-if="myPosts && myPosts.length > 0">
+                      <div class="my-posts-list">
+                        <div
+                          v-for="post in myPosts"
+                          :key="post.postId || post.id"
+                          class="my-post-card"
+                          @click="router.push(`/forum/post/${post.postId || post.id}`)"
+                        >
+                          <div class="my-post-title">
+                            <el-icon style="color:#b8893a"><ChatLineRound /></el-icon>
+                            {{ post.title || '未命名帖子' }}
+                          </div>
+                          <div class="my-post-meta">
+                            <span>{{ post.boardName || post.boardId || '未知板块' }}</span>
+                            <span v-if="post.createdAt">{{ post.createdAt.split('T')[0] }}</span>
+                          </div>
+                          <div class="my-post-divider"></div>
+                          <div class="my-post-summary">
+                            {{ post.contentPreview || post.content?.replace(/[#*`]/g, '').slice(0, 80) || '无内容摘要' }}<span v-if="(post.content?.length || 0) > 80">...</span>
+                          </div>
+                          <div class="my-post-actions">
+                            <span class="my-post-author">作者：{{ post.author?.username || post.authorName || user?.name || '我' }}</span>
+                            <el-button size="small" type="primary" plain @click.stop="router.push(`/forum/post/${post.postId || post.id}`)">查看详情</el-button>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
                   </el-tab-pane>
                 </el-tabs>
               </div>
@@ -303,7 +337,7 @@
     </div>
 
     <!-- Edit Profile Dialog -->
-    <el-dialog v-model="showEditDialog" title="编辑个人资料" width="500px">
+    <el-dialog v-model="showEditDialog" title="编辑个人资料" width="500px" class="gothic-dialog">
       <el-form :model="editForm" label-position="top">
         <el-form-item label="姓名">
           <el-input v-model="editForm.name" />
@@ -335,7 +369,7 @@
     </el-dialog>
 
     <!-- Verification Dialog -->
-    <el-dialog v-model="showVerificationDialog" title="学者身份认证" width="500px">
+    <el-dialog v-model="showVerificationDialog" title="学者身份认证" width="500px" class="gothic-dialog">
       <el-form 
         ref="verificationFormRef"
         :model="verificationForm" 
@@ -382,7 +416,7 @@
           :key="item.userId || item.id"
           class="follow-item glass-panel"
         >
-          <div class="follow-item-content" @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false;">
+          <div class="follow-item-content" @click="router.push(`/scholars/${item.userId || item.id}`); showFollowingDialog = false; handleFollowChanged();">
             <el-avatar :src="item.avatarUrl || defaultAvatar" :size="40">{{ item.name?.charAt(0) || '?' }}</el-avatar>
             <div class="item-info">
               <h4>{{ item.name }}</h4>
@@ -391,7 +425,7 @@
           </div>
           <el-button 
             class="gothic-btn-small unfollow-btn"
-            @click.stop="handleUnfollow(item.userId || item.id)"
+            @click.stop="async () => { await handleUnfollow(item.userId || item.id); await handleFollowChanged(); }"
           >
             <el-icon><Close /></el-icon> 取消关注
           </el-button>
@@ -423,49 +457,8 @@
 </template>
 
 <script setup lang="ts">
-import { getFollowers, getFollowing } from '../api/social'
 const followersCount = ref(0)
 const followingCount = ref(0)
-
-const loadFollowStats = async () => {
-  if (!authStore.user || !authStore.user.id) return
-  try {
-    const [followersRes, followingRes] = await Promise.all([
-      getFollowers(authStore.user.id),
-      getFollowing(authStore.user.id)
-    ])
-    console.log('getFollowers 返回:', followersRes)
-    console.log('getFollowing 返回:', followingRes)
-    // 兼容返回 { total, following: [...] } 或 { total, followers: [...] }
-    const followersResAny = followersRes as any
-    const followingResAny = followingRes as any
-    const followersData: any = followersResAny?.data || followersResAny
-    const followingData: any = followingResAny?.data || followingResAny
-    
-    if (followersData && Array.isArray(followersData.followers)) {
-      followersCount.value = followersData.followers.length
-    } else if (followersData && Array.isArray(followersData.results)) {
-      followersCount.value = followersData.results.length
-    } else if (Array.isArray(followersData)) {
-      followersCount.value = followersData.length
-    } else {
-      followersCount.value = 0
-    }
-    
-    if (followingData && Array.isArray(followingData.following)) {
-      followingCount.value = followingData.following.length
-    } else if (followingData && Array.isArray(followingData.results)) {
-      followingCount.value = followingData.results.length
-    } else if (Array.isArray(followingData)) {
-      followingCount.value = followingData.length
-    } else {
-      followingCount.value = 0
-    }
-  } catch (e) {
-    followersCount.value = 0
-    followingCount.value = 0
-  }
-}
 
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import type { FormRules, FormInstance } from 'element-plus'
@@ -483,6 +476,29 @@ import * as userApi from '../api/user'
 import * as achievementApi from '../api/index'
 import * as socialApi from '../api/social'
 import defaultAvatar from '@/assets/profile.png'
+import pic1 from '@/assets/pic1.jpg'
+import pic2 from '@/assets/pic2.jpg'
+import pic3 from '@/assets/pic3.jpg'
+
+// 我的帖子相关
+const myPosts = ref<any[]>([])
+const loadMyPosts = async () => {
+  myPosts.value = []
+  try {
+    const res = await socialApi.getPosts()
+    // 兼容多种返回格式
+    let posts = (res as any).posts || (res as any).data || res
+    if (!Array.isArray(posts)) posts = []
+    const userId = authStore.user?.id || (authStore.user as any)?.userId
+    myPosts.value = posts.filter((p: any) => {
+      // 兼容 author 字段结构
+      const authorId = p.author?.id || p.author?.userId || p.authorId || p.userId
+      return userId && authorId && String(authorId) === String(userId)
+    })
+  } catch (e) {
+    myPosts.value = []
+  }
+}
 
 // 导入登录背景图片
 import login1 from '@/assets/login1.png'
@@ -511,6 +527,10 @@ let dragOffset = ref(0)
 
 let vantaEffect: any = null
 let vantaPromise: Promise<void> | null = null
+
+// 随机选择背景图片
+const backgroundImages = [pic1, pic2, pic3]
+const headerBgImage = ref(backgroundImages[Math.floor(Math.random() * backgroundImages.length)])
 
 // 动态加载外部脚本
 const loadScript = (src: string) => {
@@ -749,13 +769,15 @@ const handleRegister = async () => {
       registerForm.password,
       registerForm.role
     )
+    console.log('注册结果:', result)
     if (result.success) {
       // 确保使用绿色成功提示
-      ElMessage({
-        message: '注册成功，请登录',
-        type: 'success',
-        duration: 3000
-      })
+      ElMessage.success('注册成功，请登录')
+      // ElMessage({
+      //   message: '注册成功，请登录',
+      //   type: 'success',
+      //   duration: 3000
+      // })
       authTab.value = 'login'
       // 重置表单
       registerForm.name = ''
@@ -765,6 +787,19 @@ const handleRegister = async () => {
       registerForm.role = 'user'
       registerForm.inviteCode = ''
     } else {
+      console.log("HEREEEEEEEEEEEEEEEEEE")
+      if(result.message === "注册成功"){
+        ElMessage.success('注册成功')
+        authTab.value = 'login'
+        // 重置表单
+        registerForm.name = ''
+        registerForm.email = ''
+        registerForm.password = ''
+        registerForm.confirmPassword = ''
+        registerForm.role = 'user'
+        registerForm.inviteCode = ''
+        return
+      }
       ElMessage.error(result.message || '注册失败')
     }
   } catch (error: any) {
@@ -887,11 +922,11 @@ const loadCertificationStatus = async () => {
   if (!authStore.isLoggedIn) return
   try {
     const response = await userApi.getCertificationStatus()
-    if (response.status) {
-      const status = String(response.status)
-      verificationStatus.value = status === 'certified' ? 'verified' : 
-                                  status === 'pending' ? 'pending' :
-                                  status === 'rejected' ? 'rejected' : 'unverified'
+    // 兼容后端返回的 status 字段，直接赋值
+    if (response && response.status) {
+      verificationStatus.value = String(response.status)
+    } else {
+      verificationStatus.value = 'unverified'
     }
   } catch (error) {
     // 如果接口返回404或其他错误，说明未申请认证
@@ -1066,8 +1101,21 @@ const removeFromCollection = async (achievementId: string) => {
 }
 
 // 加载关注和粉丝数据
+const parseFollowPayload = (payload: any, listKey: 'followers' | 'following') => {
+  const data = payload?.data ?? payload
+  const listCandidate = data?.[listKey] ?? data?.results ?? (Array.isArray(data) ? data : [])
+  const list = Array.isArray(listCandidate) ? listCandidate : []
+  const total = typeof data?.total === 'number' ? data.total : list.length
+  return { list, total }
+}
+
 const loadFollowingAndFollowers = async () => {
-  if (!authStore.user?.id) {
+  const currentUserId = authStore.user?.id
+    ?? (authStore.user as any)?.userId
+    ?? (authStore.user as any)?.uid
+
+  if (!currentUserId) {
+    console.warn('[profile] 无法加载关注/粉丝：user.id 缺失，authStore.user =', authStore.user)
     followingCount.value = 0
     followersCount.value = 0
     followingList.value = []
@@ -1075,15 +1123,21 @@ const loadFollowingAndFollowers = async () => {
     return
   }
   try {
-    const followingResponse: any = await socialApi.getFollowing(authStore.user.id)
-    const followingData = followingResponse?.data || followingResponse
-    followingList.value = followingData.following || followingData.results || (Array.isArray(followingData) ? followingData : [])
-    followingCount.value = followingData.total || followingList.value.length
+    console.debug('[profile] loadFollowingAndFollowers -> 请求用户 ID', currentUserId)
+    const [followersResponse, followingResponse] = await Promise.all([
+      socialApi.getFollowers(currentUserId),
+      socialApi.getFollowing(currentUserId)
+    ])
+    console.log('[profile] getFollowers 返回:', followersResponse)
+    console.log('[profile] getFollowing 返回:', followingResponse)
 
-    const followersResponse: any = await socialApi.getFollowers(authStore.user.id)
-    const followersData = followersResponse?.data || followersResponse
-    followersList.value = followersData.followers || followersData.results || (Array.isArray(followersData) ? followersData : [])
-    followersCount.value = followersData.total || followersList.value.length
+    const followersParsed = parseFollowPayload(followersResponse, 'followers')
+    const followingParsed = parseFollowPayload(followingResponse, 'following')
+
+    followersList.value = followersParsed.list
+    followersCount.value = followersParsed.total
+    followingList.value = followingParsed.list
+    followingCount.value = followingParsed.total
   } catch (error) {
     console.error('加载关注和粉丝数据失败', error)
     followingCount.value = 0
@@ -1093,16 +1147,24 @@ const loadFollowingAndFollowers = async () => {
   }
 }
 
+const handleFollowChanged = async () => {
+  console.debug('[profile] handleFollowChanged -> 重新加载关注/粉丝')
+  await loadFollowingAndFollowers()
+}
+
 // 取消关注
 const handleUnfollow = async (userId: string) => {
   try {
-    await socialApi.unfollowUser(userId)
+    console.log('[unfollow] 调用接口，userId:', userId)
+    const res = await socialApi.unfollowUser(userId)
+    console.log('[unfollow] 接口返回:', res)
     ElMessage.success('已取消关注')
     // 从列表中移除
     followingList.value = followingList.value.filter(item => (item.userId || item.id) !== userId)
     // 更新关注数
     followingCount.value = Math.max(0, followingCount.value - 1)
   } catch (error: any) {
+    console.error('[unfollow] error:', error)
     ElMessage.error(error.message || '取消关注失败')
   }
 }
@@ -1112,9 +1174,12 @@ onMounted(async () => {
   settingsStore.loadSettings()
   
   if (authStore.isLoggedIn) {
+    // 强制刷新认证状态
+    verificationStatus.value = 'unverified'
     await loadCertificationStatus()
     await loadCollections()
     await loadFollowingAndFollowers()
+    await loadMyPosts()
     await ensureVantaBirds()
     // 等待 DOM 渲染后再初始化 Vanta.js
     setTimeout(() => {
@@ -1160,6 +1225,69 @@ onUnmounted(() => {
 .profile-page {
   min-height: 100vh;
   position: relative;
+}
+
+.my-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 8px;
+}
+.my-post-card {
+  background: var(--pf-card-bg, #fffef8);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px 0 rgba(180, 137, 58, 0.08), 0 1.5px 6px 0 rgba(44, 38, 24, 0.04);
+  padding: 20px 24px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.2s;
+  border: 1px solid #f3e7c6;
+  position: relative;
+  cursor: pointer;
+}
+.my-post-card:hover {
+  box-shadow: 0 6px 24px 0 rgba(180, 137, 58, 0.18), 0 2px 8px 0 rgba(44, 38, 24, 0.08);
+  transform: translateY(-2px) scale(1.01);
+  border-color: #e2c88f;
+}
+.my-post-title {
+  font-size: 1.18rem;
+  font-weight: 600;
+  color: #2e2a25;
+  margin-bottom: 4px;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.my-post-meta {
+  font-size: 0.98rem;
+  color: #b8893a;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.my-post-summary {
+  color: #7a6f63;
+  font-size: 0.98rem;
+  margin-bottom: 8px;
+  line-height: 1.6;
+  min-height: 1.5em;
+}
+.my-post-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+}
+.my-post-author {
+  font-size: 0.92rem;
+  color: #b8893a;
+  margin-right: 8px;
+}
+.my-post-divider {
+  border-top: 1px dashed #e2c88f;
+  margin: 10px 0 8px 0;
 }
 
 // Vanta.js Birds 背景样式
@@ -1902,10 +2030,9 @@ onUnmounted(() => {
 
   .header-bg {
     height: 140px;
-    background: linear-gradient(135deg,
-      rgba(212, 175, 55, 0.3) 0%,
-      rgba(184, 134, 11, 0.4) 50%,
-      rgba(139, 69, 19, 0.3) 100%);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
     position: relative;
 
     &::after {
@@ -1915,9 +2042,9 @@ onUnmounted(() => {
       left: 0;
       right: 0;
       bottom: 0;
-      background:
-        radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.2) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(184, 134, 11, 0.2) 0%, transparent 50%);
+      background: linear-gradient(to bottom, 
+        rgba(0, 0, 0, 0.1) 0%,
+        rgba(0, 0, 0, 0.2) 100%);
     }
   }
 
@@ -2289,6 +2416,546 @@ onUnmounted(() => {
     .info-section {
       .name-row { justify-content: center; }
       .email { justify-content: center; }
+    }
+  }
+}
+
+// 中世纪复古风格弹窗
+:deep(.gothic-dialog) {
+  .el-dialog {
+    background: rgba(249, 247, 236, 0.95) !important;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 16px !important;
+    border: 3px solid rgba(184, 134, 11, 0.5) !important;
+    box-shadow: 
+      0 8px 24px rgba(0, 0, 0, 0.18),
+      0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+      inset 0 2px 4px rgba(255, 255, 255, 0.5),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.1) !important;
+    overflow: hidden;
+    position: relative;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: -3px;
+      right: -3px;
+      bottom: -3px;
+      background: linear-gradient(135deg, 
+        rgba(212, 175, 55, 0.4) 0%, 
+        transparent 25%, 
+        transparent 75%, 
+        rgba(212, 175, 55, 0.4) 100%);
+      border-radius: 16px;
+      z-index: -1;
+      opacity: 0.6;
+    }
+
+    .el-dialog__header {
+      padding: 24px 32px 16px !important;
+      background: linear-gradient(135deg, 
+        rgba(212, 175, 55, 0.2) 0%, 
+        rgba(184, 134, 11, 0.15) 100%);
+      border-bottom: 2px solid rgba(184, 134, 11, 0.3);
+      
+      .el-dialog__title {
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-size: 24px !important;
+        font-weight: 900 !important;
+        color: #654321 !important;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) !important;
+        letter-spacing: 0.5px;
+      }
+
+      .el-dialog__headerbtn {
+        .el-dialog__close {
+          color: #8B4513 !important;
+          font-size: 20px;
+          
+          &:hover {
+            color: #654321 !important;
+          }
+        }
+      }
+    }
+
+    .el-dialog__body {
+      padding: 24px 32px !important;
+      
+      :deep(.el-form-item__label) {
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-weight: 700 !important;
+        color: #654321 !important;
+        font-size: 15px !important;
+        margin-bottom: 8px;
+      }
+
+      :deep(.el-input__wrapper) {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 2px solid rgba(184, 134, 11, 0.4) !important;
+        border-radius: 8px !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        transition: all 0.3s ease;
+
+        &:hover {
+          border-color: rgba(212, 175, 55, 0.6) !important;
+        }
+
+        &.is-focus {
+          border-color: #D4AF37 !important;
+          box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(212, 175, 55, 0.3) !important;
+        }
+      }
+
+      :deep(.el-input__inner) {
+        font-family: 'Georgia', serif !important;
+        color: #654321 !important;
+        font-weight: 600;
+
+        &::placeholder {
+          color: rgba(101, 67, 33, 0.5) !important;
+        }
+      }
+
+      :deep(.el-textarea__inner) {
+        background: rgba(255, 255, 255, 0.9) !important;
+        border: 2px solid rgba(184, 134, 11, 0.4) !important;
+        border-radius: 8px !important;
+        font-family: 'Georgia', serif !important;
+        color: #654321 !important;
+        font-weight: 600;
+
+        &:focus {
+          border-color: #D4AF37 !important;
+        }
+      }
+
+      :deep(.el-select) {
+        .el-input__wrapper {
+          background: rgba(255, 255, 255, 0.9) !important;
+        }
+      }
+
+      .empty-state {
+        padding: 40px 0;
+      }
+
+      .following-list,
+      .followers-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 8px;
+
+        &::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        &::-webkit-scrollbar-track {
+          background: rgba(184, 134, 11, 0.1);
+          border-radius: 4px;
+        }
+
+        &::-webkit-scrollbar-thumb {
+          background: rgba(184, 134, 11, 0.4);
+          border-radius: 4px;
+
+          &:hover {
+            background: rgba(184, 134, 11, 0.6);
+          }
+        }
+      }
+
+      .follow-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.6) !important;
+        border: 2px solid rgba(184, 134, 11, 0.3) !important;
+        border-radius: 10px !important;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border-color: rgba(212, 175, 55, 0.5) !important;
+          transform: translateX(3px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .follow-item-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          cursor: pointer;
+
+          .item-info {
+            h4 {
+              margin: 0;
+              font-family: 'Georgia', 'Times New Roman', serif !important;
+              font-weight: 700 !important;
+              color: #654321 !important;
+              font-size: 15px;
+            }
+
+            p {
+              margin: 4px 0 0 0;
+              font-family: 'Georgia', 'Times New Roman', serif !important;
+              color: #8B4513 !important;
+              font-size: 13px;
+              font-style: italic;
+            }
+          }
+        }
+
+        .unfollow-btn {
+          font-family: 'Georgia', 'Times New Roman', serif !important;
+          font-weight: 600 !important;
+          padding: 6px 12px !important;
+          font-size: 12px !important;
+        }
+      }
+    }
+
+    .el-dialog__footer {
+      padding: 20px 32px 24px !important;
+      border-top: 2px solid rgba(184, 134, 11, 0.3);
+      background: linear-gradient(135deg, 
+        rgba(249, 247, 236, 0.5) 0%, 
+        rgba(255, 255, 255, 0.3) 100%);
+
+      .dialog-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      :deep(.el-button) {
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-weight: 700 !important;
+        border-radius: 8px !important;
+        padding: 10px 20px !important;
+        transition: all 0.3s ease;
+
+        &.el-button--default {
+          background: linear-gradient(135deg, #8B4513 0%, #654321 100%) !important;
+          border-color: #654321 !important;
+          color: #f9f7ec !important;
+
+          &:hover {
+            background: linear-gradient(135deg, #654321 0%, #4a2c1a 100%) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          }
+        }
+
+        &.el-button--primary {
+          background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+          border-color: #B8860B !important;
+          color: #654321 !important;
+          box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3) !important;
+
+          &:hover {
+            background: linear-gradient(135deg, #B8860B 0%, #9a7209 100%) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4) !important;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 全局样式，确保对话框样式正确应用（Element Plus使用Teleport）
+</style>
+
+<style lang="scss">
+// 全局样式：中世纪复古风格弹窗
+// 由于Element Plus的对话框通过Teleport渲染，需要使用全局样式
+.gothic-dialog.el-dialog {
+  background: rgba(249, 247, 236, 0.95) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 16px !important;
+  border: 3px solid rgba(184, 134, 11, 0.5) !important;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    0 0 0 1px rgba(212, 175, 55, 0.2) inset,
+    inset 0 2px 4px rgba(255, 255, 255, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1) !important;
+  overflow: hidden;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.4) 0%, 
+      transparent 25%, 
+      transparent 75%, 
+      rgba(212, 175, 55, 0.4) 100%);
+    border-radius: 16px;
+    z-index: -1;
+    opacity: 0.6;
+  }
+
+  .el-dialog__header {
+    padding: 24px 32px 16px !important;
+    background: linear-gradient(135deg, 
+      rgba(212, 175, 55, 0.2) 0%, 
+      rgba(184, 134, 11, 0.15) 100%);
+    border-bottom: 2px solid rgba(184, 134, 11, 0.3);
+    
+    .el-dialog__title {
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      font-size: 24px !important;
+      font-weight: 900 !important;
+      color: #654321 !important;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2) !important;
+      letter-spacing: 0.5px;
+    }
+
+    .el-dialog__headerbtn {
+      .el-dialog__close {
+        color: #8B4513 !important;
+        font-size: 20px;
+        
+        &:hover {
+          color: #654321 !important;
+        }
+      }
+    }
+  }
+
+  .el-dialog__body {
+    padding: 24px 32px !important;
+    
+    .el-form-item__label {
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      font-weight: 700 !important;
+      color: #654321 !important;
+      font-size: 15px !important;
+      margin-bottom: 8px;
+    }
+
+    .el-input__wrapper {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border: 2px solid rgba(184, 134, 11, 0.4) !important;
+      border-radius: 8px !important;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+      transition: all 0.3s ease;
+
+      &:hover {
+        border-color: rgba(212, 175, 55, 0.6) !important;
+      }
+
+      &.is-focus {
+        border-color: #D4AF37 !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(212, 175, 55, 0.3) !important;
+      }
+    }
+
+    .el-input__inner {
+      font-family: 'Georgia', serif !important;
+      color: #654321 !important;
+      font-weight: 600;
+
+      &::placeholder {
+        color: rgba(101, 67, 33, 0.5) !important;
+      }
+    }
+
+    .el-textarea__inner {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border: 2px solid rgba(184, 134, 11, 0.4) !important;
+      border-radius: 8px !important;
+      font-family: 'Georgia', serif !important;
+      color: #654321 !important;
+      font-weight: 600;
+
+      &:focus {
+        border-color: #D4AF37 !important;
+      }
+    }
+
+    .el-select {
+      .el-input__wrapper {
+        background: rgba(255, 255, 255, 0.9) !important;
+      }
+    }
+
+    .el-empty {
+      .el-empty__description {
+        color: #8B4513 !important;
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-weight: 600 !important;
+      }
+    }
+
+    .empty-state {
+      padding: 40px 0;
+    }
+
+    .following-list,
+    .followers-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 8px;
+
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: rgba(184, 134, 11, 0.1);
+        border-radius: 4px;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: rgba(184, 134, 11, 0.4);
+        border-radius: 4px;
+
+        &:hover {
+          background: rgba(184, 134, 11, 0.6);
+        }
+      }
+    }
+
+    .follow-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.6) !important;
+      border: 2px solid rgba(184, 134, 11, 0.3) !important;
+      border-radius: 10px !important;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.8) !important;
+        border-color: rgba(212, 175, 55, 0.5) !important;
+        transform: translateX(3px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+
+      .follow-item-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+        cursor: pointer;
+
+        .item-info {
+          h4 {
+            margin: 0;
+            font-family: 'Georgia', 'Times New Roman', serif !important;
+            font-weight: 700 !important;
+            color: #654321 !important;
+            font-size: 15px;
+          }
+
+          p {
+            margin: 4px 0 0 0;
+            font-family: 'Georgia', 'Times New Roman', serif !important;
+            color: #8B4513 !important;
+            font-size: 13px;
+            font-style: italic;
+          }
+        }
+      }
+
+      .unfollow-btn {
+        font-family: 'Georgia', 'Times New Roman', serif !important;
+        font-weight: 600 !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+      }
+    }
+  }
+
+  .el-dialog__footer {
+    padding: 20px 32px 24px !important;
+    border-top: 2px solid rgba(184, 134, 11, 0.3);
+    background: linear-gradient(135deg, 
+      rgba(249, 247, 236, 0.5) 0%, 
+      rgba(255, 255, 255, 0.3) 100%);
+
+    .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .el-button {
+      font-family: 'Georgia', 'Times New Roman', serif !important;
+      font-weight: 700 !important;
+      border-radius: 8px !important;
+      padding: 10px 20px !important;
+      transition: all 0.3s ease;
+
+      &.el-button--default {
+        background: linear-gradient(135deg, #8B4513 0%, #654321 100%) !important;
+        border-color: #654321 !important;
+        color: #f9f7ec !important;
+
+        &:hover {
+          background: linear-gradient(135deg, #654321 0%, #4a2c1a 100%) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+      }
+
+      &.el-button--primary {
+        background: linear-gradient(135deg, #D4AF37 0%, #B8860B 100%) !important;
+        border-color: #B8860B !important;
+        color: #654321 !important;
+        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3) !important;
+
+        &:hover {
+          background: linear-gradient(135deg, #B8860B 0%, #9a7209 100%) !important;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(212, 175, 55, 0.4) !important;
+        }
+      }
+    }
+  }
+}
+
+// 下拉选择框样式
+.el-select-dropdown {
+  background: rgba(249, 247, 236, 0.98) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 2px solid rgba(184, 134, 11, 0.5) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18) !important;
+
+  .el-select-dropdown__item {
+    font-family: 'Georgia', 'Times New Roman', serif !important;
+    color: #654321 !important;
+    font-weight: 600 !important;
+    
+    &:hover {
+      background: rgba(212, 175, 55, 0.3) !important;
+      color: #8B4513 !important;
+    }
+
+    &.selected {
+      background: rgba(212, 175, 55, 0.4) !important;
+      color: #654321 !important;
+      font-weight: 700 !important;
     }
   }
 }

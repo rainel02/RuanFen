@@ -7,9 +7,20 @@
         <div class="main-content">
           <div class="swiss-search-section">
             <div class="search-controls">
-                <div class="segmented" role="tablist" aria-label="搜索模式">
-                <el-button :class="{ active: !isAdvanced }" @click="isAdvanced = false">普通搜索</el-button>
-                <el-button :class="{ active: isAdvanced }" @click="isAdvanced = true">高级搜索</el-button>
+              <div class="controls-groups">
+                <div class="segmented mode-toggle" role="tablist" aria-label="资源类型">
+                  <el-button :class="{ active: searchMode === 'paper' }" @click="searchMode = 'paper'">
+                    <el-icon><Document /></el-icon> 论文
+                  </el-button>
+                  <el-button :class="{ active: searchMode === 'patent' }" @click="searchMode = 'patent'">
+                    <el-icon><Reading /></el-icon> 专利
+                  </el-button>
+                </div>
+
+                <div class="segmented search-mode" role="tablist" aria-label="搜索模式">
+                  <el-button :class="{ active: !isAdvanced }" @click="isAdvanced = false">普通搜索</el-button>
+                  <el-button :class="{ active: isAdvanced }" @click="isAdvanced = true">高级搜索</el-button>
+                </div>
               </div>
 
               <div class="search-wrapper">
@@ -22,7 +33,7 @@
                     <input
                       v-model="searchQueryLocal"
                       class="premium-input"
-                      placeholder="搜索论文关键词..."
+                      :placeholder="searchMode === 'paper' ? '搜索论文关键词...' : '搜索专利名称、申请人...'"
                       @focus="isInputFocused = true"
                       @blur="isInputFocused = false"
                       @keyup.enter="onSearch"
@@ -36,7 +47,8 @@
 
                 <template v-else>
                   <div class="swiss-advanced-panel">
-                    <div class="filter-grid">
+                    <!-- Advanced for Paper -->
+                    <div v-if="searchMode === 'paper'" class="filter-grid">
                       <div class="filter-item">
                         <label>关键词</label>
                         <el-input v-model="searchQueryLocal" placeholder="任意关键词" clearable />
@@ -70,6 +82,29 @@
                       <div class="filter-item">
                         <label>截止时间</label>
                         <el-date-picker v-model="endDateLocal" type="date" placeholder="截止日期" clearable />
+                      </div>
+
+                      <div class="filter-actions">
+                        <el-button class="btn-reset" @click="onClearAdvanced">重置</el-button>
+                        <el-button type="primary" class="btn-apply" @click="onSearch">搜索</el-button>
+                      </div>
+                    </div>
+
+                    <!-- Advanced for Patent -->
+                    <div v-else class="filter-grid">
+                      <div class="filter-item">
+                        <label>关键词</label>
+                        <el-input v-model="searchQueryLocal" placeholder="专利名称/摘要/申请人" clearable />
+                      </div>
+
+                      <div class="filter-item">
+                        <label>申请年份</label>
+                        <el-input-number v-model="applicationYearLocal" :min="1800" :max="new Date().getFullYear()" controls-position="right" style="width:100%" />
+                      </div>
+
+                      <div class="filter-item">
+                        <label>授权年份</label>
+                        <el-input-number v-model="grantYearLocal" :min="1800" :max="new Date().getFullYear()" controls-position="right" style="width:100%" />
                       </div>
 
                       <div class="filter-actions">
@@ -131,7 +166,7 @@
           <div class="content-header">
             <div class="results-info">
               <span class="results-count">
-                找到 {{ papersStoreTotalDisplay }} 篇相关论文
+                找到 {{ totalDisplay }} 篇相关{{ searchMode === 'paper' ? '论文' : '专利' }}
               </span>
               <span v-if="searchQuery" class="search-query">
                 "{{ searchQuery }}"
@@ -152,25 +187,36 @@
               </div>
             </template>
             <template v-else>
-              <div
-                v-for="paper in paginatedPapers"
-                :key="paper.id"
-                class="paper-item"
-              >
-                <PaperCard :paper="paper" />
-              </div>
+              <template v-if="searchMode === 'paper'">
+                <div
+                  v-for="paper in paginatedPapers"
+                  :key="paper.id"
+                  class="paper-item"
+                >
+                  <PaperCard :paper="paper" />
+                </div>
+              </template>
+              <template v-else>
+                <div
+                  v-for="patent in paginatedPatents"
+                  :key="patent.id"
+                  class="paper-item"
+                >
+                  <PatentCard :patent="patent" />
+                </div>
+              </template>
             </template>
           </div>
 
-          <div v-if="paginatedPapers.length === 0 && !loading" class="empty-state">
-            <el-empty description="暂无符合条件的论文" />
+          <div v-if="(searchMode === 'paper' ? paginatedPapers.length : paginatedPatents.length) === 0 && !loading" class="empty-state">
+            <el-empty :description="`暂无符合条件的${searchMode === 'paper' ? '论文' : '专利'}`" />
           </div>
 
           <div v-if="totalPages > 1" class="pagination-wrapper">
             <el-pagination
               v-model:current-page="currentPage"
               :page-size="pageSize"
-              :total="papersStoreTotal"
+              :total="searchMode === 'paper' ? papersStoreTotal : patentsStoreTotal"
               :page-sizes="[12, 24, 48]"
               :small="false"
               layout="total, sizes, prev, pager, next, jumper"
@@ -185,15 +231,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { Search, ArrowRight } from '@element-plus/icons-vue'
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
+import { Search, ArrowRight, Document, Reading } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import AppHeader from '../components/AppHeader.vue'
 import PaperCard from '../components/PaperCard.vue'
+import PatentCard from '../components/PatentCard.vue'
 import { usePapersStore } from '../stores/papers'
+import { usePatentsStore } from '../stores/patents'
 // import { useSettingsStore } from '../stores/settings'
 import { fieldOptions } from '../constants/fields'
 
 const papersStore = usePapersStore()
+const patentsStore = usePatentsStore()
 // const settingsStore = useSettingsStore()
 
 const homePageRef = ref<HTMLElement | null>(null)
@@ -211,77 +261,147 @@ function loadScript(src: string) {
   })
 }
 
-const loading = computed(() => papersStore.loading)
+// Search Mode
+const searchMode = ref<'paper' | 'patent'>('paper')
+
+// Unified Computed Properties
+const loading = computed(() => searchMode.value === 'paper' ? papersStore.loading : patentsStore.loading)
+
+// Paper specific
 const paginatedPapers = computed(() => papersStore.paginatedPapers)
 const filteredPapers = computed(() => papersStore.filteredPapers)
-const searchQuery = computed(() => papersStore.searchQuery)
-const currentPage = computed({
-  get: () => papersStore.currentPage,
-  set: (value) => { papersStore.currentPage = value }
-})
-const pageSize = computed({
-  get: () => papersStore.pageSize,
-  set: (value) => { papersStore.pageSize = value }
-})
-const totalPages = computed(() => papersStore.totalPages)
 const papersStoreTotal = computed(() => (papersStore.total ?? filteredPapers.value.length))
-// Display string for results count: show "10000+" when backend caps total at 10000
-const papersStoreTotalDisplay = computed(() => {
-  const t = papersStoreTotal.value
-  return t === 10000 ? '10000+' : t
+
+// Patent specific
+const paginatedPatents = computed(() => patentsStore.paginatedPatents)
+const patentsStoreTotal = computed(() => patentsStore.total)
+
+// Unified Pagination & Search Query
+const searchQuery = computed(() => searchMode.value === 'paper' ? papersStore.searchQuery : patentsStore.searchQuery)
+
+const currentPage = computed({
+  get: () => searchMode.value === 'paper' ? papersStore.currentPage : patentsStore.currentPage,
+  set: (value) => { 
+    if (searchMode.value === 'paper') papersStore.currentPage = value
+    else patentsStore.currentPage = value
+  }
 })
 
-// 显示论文导读功能
-// const showPaperGuide = computed(() => settingsStore.settings.enablePaperGuide)
+const pageSize = computed({
+  get: () => searchMode.value === 'paper' ? papersStore.pageSize : patentsStore.pageSize,
+  set: (value) => { 
+    if (searchMode.value === 'paper') papersStore.pageSize = value
+    else patentsStore.pageSize = value
+  }
+})
 
-// // 推荐论文（简化版）
-// const recommendedPapers = computed(() => {
-//   return filteredPapers.value.slice(0, 3).map(paper => ({
-//     ...paper,
-//     recommendationReason: '基于兴趣推荐'
-//   }))
-// })
+const totalPages = computed(() => searchMode.value === 'paper' ? papersStore.totalPages : patentsStore.totalPages)
 
+const totalDisplay = computed(() => {
+  const t = searchMode.value === 'paper' ? papersStoreTotal.value : patentsStoreTotal.value
+  return (searchMode.value === 'paper' && t === 10000) ? '10000+' : t
+})
 
 const handleSizeChange = async (size: number) => {
-  // prevent watcher from causing a duplicate fetch
-  papersStore.skipNextFetchOnPageChange = true
-  papersStore.pageSize = size
-  papersStore.currentPage = 1
-  await papersStore.fetchPapers()
+  if (searchMode.value === 'paper') {
+    papersStore.skipNextFetchOnPageChange = true
+    papersStore.pageSize = size
+    papersStore.currentPage = 1
+    await papersStore.fetchPapers()
+  } else {
+    patentsStore.pageSize = size
+    patentsStore.currentPage = 1
+    await patentsStore.fetchPatents()
+  }
 }
 
 const handleCurrentChange = async (page: number) => {
-  papersStore.skipNextFetchOnPageChange = true
-  papersStore.currentPage = page
-  await papersStore.fetchPapers()
+  if (searchMode.value === 'paper') {
+    papersStore.skipNextFetchOnPageChange = true
+    papersStore.currentPage = page
+    await papersStore.fetchPapers()
+  } else {
+    patentsStore.currentPage = page
+    await patentsStore.fetchPatents()
+  }
 }
 
 // local search & advanced
 const isAdvanced = ref(false)
-const searchQueryLocal = ref(searchQuery.value)
+const searchQueryLocal = ref('')
 const author = ref('')
 const organization = ref('')
 const startDateLocal = ref('')
 const endDateLocal = ref('')
 const fieldLocal = ref('')
 const isInputFocused = ref(false)
+const applicantLocal = ref('')
+const inventorLocal = ref('')
+const applicationYearLocal = ref<number | null>(null)
+const grantYearLocal = ref<number | null>(null)
+
+// Watch search mode to reset local query or sync it
+watch(searchMode, (newMode) => {
+  searchQueryLocal.value = newMode === 'paper' ? papersStore.searchQuery : patentsStore.searchQuery
+})
 
 // unified search handler for basic and advanced modes
 const onSearch = async () => {
-  // enforce defaults: UI shows 1, backend expects 0-based page
-  papersStore.pageSize = 12
-  papersStore.currentPage = 1
+  // Common date validation
+  const parseDate = (d: any) => {
+    if (!d) return null
+    const dt = typeof d === 'string' ? new Date(d) : new Date(d)
+    return Number.isNaN(dt.getTime()) ? null : dt
+  }
 
-  await papersStore.setFilters({
-    // pass empties if not provided — backend supports empty filters
-    q: searchQueryLocal.value || '',
-    author: author.value || '',
-    institution: organization.value || '',
-    fields: fieldLocal.value ? [fieldLocal.value] : [],
-    startDate: startDateLocal.value || '',
-    endDate: endDateLocal.value || ''
-  })
+  const sDate = parseDate(startDateLocal.value)
+  const eDate = parseDate(endDateLocal.value)
+  
+  if (sDate && !eDate) {
+    ElMessage({ message: '请填写截止时间', type: 'error', customClass: 'pf-message-parchment', duration: 4000 })
+    return
+  }
+  if (!sDate && eDate) {
+    ElMessage({ message: '请填写开始时间', type: 'error', customClass: 'pf-message-parchment', duration: 4000 })
+    return
+  }
+  if (sDate && eDate && sDate.getTime() > eDate.getTime()) {
+    ElMessage({ message: '请修改查询条件，保证开始时间早于截止时间', type: 'error', customClass: 'pf-message-parchment', duration: 4000 })
+    return
+  }
+
+  const formatDate = (d: any) => {
+    if (!d) return ''
+    if (typeof d === 'string') return d
+    const dt = new Date(d)
+    if (Number.isNaN(dt.getTime())) return ''
+    const y = dt.getFullYear()
+    const m = String(dt.getMonth() + 1).padStart(2, '0')
+    const day = String(dt.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  if (searchMode.value === 'paper') {
+    papersStore.pageSize = 12
+    papersStore.currentPage = 1
+    await papersStore.setFilters({
+      q: searchQueryLocal.value || '',
+      author: author.value || '',
+      institution: organization.value || '',
+      fields: fieldLocal.value ? [fieldLocal.value] : [],
+      startDate: formatDate(startDateLocal.value),
+      endDate: formatDate(endDateLocal.value)
+    })
+    } else {
+    // Patent Search
+    patentsStore.pageSize = 12
+    patentsStore.currentPage = 1
+    await patentsStore.setFilters({
+      q: searchQueryLocal.value || '',
+      applicationYear: applicationYearLocal.value ?? undefined,
+      grantYear: grantYearLocal.value ?? undefined
+    })
+  }
 }
 
 const onClearAdvanced = async () => {
@@ -291,21 +411,32 @@ const onClearAdvanced = async () => {
   endDateLocal.value = ''
   fieldLocal.value = ''
   searchQueryLocal.value = ''
-  papersStore.pageSize = 12
-  papersStore.currentPage = 1
-  await papersStore.setFilters({
-    q: '',
-    author: '',
-    institution: '',
-    fields: [],
-    startDate: '',
-    endDate: ''
-  })
+  applicantLocal.value = ''
+  inventorLocal.value = ''
+  applicationYearLocal.value = null
+  grantYearLocal.value = null
+  
+  if (searchMode.value === 'paper') {
+    papersStore.pageSize = 12
+    papersStore.currentPage = 1
+    await papersStore.setFilters({
+      q: '',
+      author: '',
+      institution: '',
+      fields: [],
+      startDate: '',
+      endDate: ''
+    })
+  }
 }
 
 onMounted(async () => {
   // initial load
-  papersStore.fetchPapers()
+  if (searchMode.value === 'paper') {
+    papersStore.fetchPapers()
+  } else {
+    patentsStore.fetchPatents()
+  }
 
   // Vanta Init
   try {
@@ -391,8 +522,41 @@ onBeforeUnmount(() => {
 /* Search area */
 .swiss-search-section { padding: 18px; border-radius: 12px; background: var(--card-bg); box-shadow: 0 6px 24px rgba(46,42,37,0.06); }
 
-.search-controls { display:flex; gap:18px; align-items:flex-start; flex-direction:column; }
+.search-controls { display:flex; gap:18px; align-items:center; flex-direction:row; flex-wrap:wrap; justify-content:space-between }
+.controls-groups { display:flex; gap:12px; align-items:center; background: rgba(255,252,245,0.6); padding:6px; border-radius:14px; box-shadow: 0 6px 18px rgba(46,42,37,0.03); }
 .segmented { display:flex; gap:8px; align-items:center }
+
+/* Emphasize resource type (论文/专利) over search-mode */
+.mode-toggle :deep(.el-button) {
+  min-width: 140px;
+  padding: 12px 20px;
+  font-size: 16px;
+  box-shadow: 0 8px 26px rgba(139,69,19,0.14);
+  border-radius: 999px;
+}
+
+.search-mode {
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+.search-mode :deep(.el-button) {
+  min-width: 96px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 700;
+  background: transparent;
+  color: var(--pf-muted);
+  border: 1px solid rgba(46,42,37,0.06);
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.search-mode :deep(.el-button.active) {
+  background: rgba(46,42,37,0.03);
+  color: var(--pf-ink);
+  border-color: rgba(46,42,37,0.08);
+}
 .segmented :deep(.el-button) {
   background: #fbf6ec;
   color: var(--pf-ink);
@@ -548,6 +712,16 @@ onBeforeUnmount(() => {
 
 .filter-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items:start }
 @include mobile { .filter-grid { grid-template-columns: 1fr } }
+
+.filter-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+  grid-column: 1 / -1; /* full width */
+}
+
+.filter-item { padding: 6px; }
 
 .filter-item label { font-size:12px; color:var(--pf-muted); font-weight:700; margin-bottom:6px; text-transform:uppercase }
 .filter-item :deep(.el-input__inner), .filter-item :deep(.el-select), .filter-item :deep(.el-date-editor__editor) { background: transparent }
@@ -740,7 +914,10 @@ onBeforeUnmount(() => {
 /* responsive adjustments */
 @include mobile {
   .page-content { padding: 20px 12px }
+  .search-controls { flex-direction: column; align-items: stretch; gap:12px }
   .segmented { justify-content: center }
+  .mode-toggle { order: 0 }
+  .search-mode { order: 1 }
   .swiss-search-btn { padding: 8px 12px !important }
 }
 
@@ -760,5 +937,41 @@ onBeforeUnmount(() => {
   .el-radio__input.is-checked + .el-radio__label {
     color: var(--el-color-primary);
   }
+}
+</style>
+
+<!-- 自定义全局消息样式（棕色羊皮纸 / 巴洛克复古风格） -->
+<style lang="scss">
+.pf-message-parchment.el-message, .pf-message-parchment {
+  background: linear-gradient(180deg, #fbf6ec 0%, #f3e6cf 100%) !important; /* 羊皮纸渐变 */
+  color: #5a3715 !important; /* 深棕文字 */
+  border: 1px solid rgba(90,55,21,0.12) !important;
+  box-shadow: 0 8px 30px rgba(90,55,21,0.12) !important;
+  font-family: "Noto Serif", Georgia, "Times New Roman", serif !important;
+  font-weight: 700 !important;
+  border-left: 6px solid rgba(184,137,58,0.7) !important; /* 金色装饰条 */
+  border-radius: 8px !important;
+  padding: 12px 18px !important;
+}
+
+.pf-message-parchment .el-message__content {
+  color: #5a3715 !important;
+}
+
+/* 强制让图标也变为棕色（兼容不同 Element Plus 版本） */
+.pf-message-parchment svg, .pf-message-parchment .el-icon {
+  color: #5a3715 !important;
+  fill: #5a3715 !important;
+  stroke: #5a3715 !important;
+}
+
+/* 支持较老结构：根节点本身使用自定义类 */
+.pf-message-parchment {
+  background: linear-gradient(180deg, #fbf6ec 0%, #f3e6cf 100%) !important;
+  color: #5a3715 !important;
+  border: 1px solid rgba(90,55,21,0.12) !important;
+  box-shadow: 0 8px 30px rgba(90,55,21,0.12) !important;
+  font-family: "Noto Serif", Georgia, "Times New Roman", serif !important;
+  font-weight: 700 !important;
 }
 </style>

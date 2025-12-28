@@ -51,8 +51,11 @@ const loading = ref(true)
 const currentPage = ref(1)
 const pageSize = ref(12)
 
-// Backend paginated; items already current page
-const paginatedItems = computed(() => items.value)
+// 前端分页：items.value 存储全部收藏，paginatedItems 只显示当前页
+const paginatedItems = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  return items.value.slice(start, start + pageSize.value)
+})
 
 const totalPages = computed(() => Math.ceil((total.value || items.value.length) / pageSize.value))
 
@@ -99,8 +102,17 @@ const load = async () => {
       p.isfavorited = true
       return p
     }) : []
-    items.value = normalized
-    total.value = totalElements
+    // 前端分页：累积所有收藏
+    if (currentPage.value === 1) {
+      items.value = normalized
+    } else {
+      // 合并去重
+      const ids = new Set(items.value.map(i => i.id))
+      normalized.forEach(n => {
+        if (!ids.has(n.id)) items.value.push(n)
+      })
+    }
+    total.value = items.value.length
   } catch (e) {
     console.error('[ERROR] Failed to load collections from backend:', e)
     // Fallback: show mock data while backend is being fixed

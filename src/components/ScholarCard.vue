@@ -80,9 +80,19 @@ const props = defineProps<{
   scholar: any
 }>()
 
-const emit = defineEmits(['follow-changed'])
+const emit = defineEmits<{
+  'follow-changed': [payload: { scholarId: string; isFollowed: boolean }]
+}>()
 const router = useRouter()
 const authStore = useAuthStore()
+
+const extractApiMessage = (payload: any, fallback = '操作失败') => {
+  const data = payload?.response?.data ?? payload?.data ?? payload
+  const message = data?.message ?? data?.msg ?? payload?.message
+  if (typeof message === 'string' && message.trim()) return message.trim()
+  if (typeof data === 'string' && data.trim()) return data.trim()
+  return fallback
+}
 
 const goToDetail = () => {
   router.push(`/scholars/${props.scholar.id}`)
@@ -103,17 +113,18 @@ const toggleFollow = async () => {
     return
   }
   try {
+    const targetId = props.scholar.id
+    const newFollowStatus = !props.scholar.isFollowed
     if (props.scholar.isFollowed) {
-      await unfollowUser(props.scholar.id)
-      ElMessage.success('已取消关注')
+      const res = await unfollowUser(targetId)
+      ElMessage.success(extractApiMessage(res, '已取消关注'))
     } else {
-      await followUser(props.scholar.id)
-      ElMessage.success('已关注')
+      const res = await followUser(targetId)
+      ElMessage.success(extractApiMessage(res, '已关注'))
     }
-    props.scholar.isFollowed = !props.scholar.isFollowed
-    emit('follow-changed') // 通知父组件刷新列表
+    emit('follow-changed', { scholarId: targetId, isFollowed: newFollowStatus })
   } catch (error: any) {
-    ElMessage.error(error.message || '操作失败')
+    ElMessage.error(extractApiMessage(error))
   }
 }
 

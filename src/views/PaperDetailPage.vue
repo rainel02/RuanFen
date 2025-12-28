@@ -13,19 +13,25 @@
 
             <div class="paper-actions">
               <el-button
+                @click="copyCitation"
+              >
+                引用
+              </el-button>
+              <el-button
                 :type="paper.isfavorited ? 'primary' : 'default'"
                 :icon="Star"
                 @click="toggleFavorite"
               >
                 {{ paper.isfavorited ? '已收藏' : '收藏' }}
               </el-button>
-              <!-- <el-button :icon="Share">分享</el-button> -->
-              <!-- <el-button :icon="Download" v-if="paper.url">下载PDF</el-button> -->
               <el-button
                 v-if="paper.landingPageUrl"
                 @click.prevent="openExternal(paper.landingPageUrl)"
               >
                 查看原文
+              </el-button>
+              <el-button type="primary" icon="MagicStick" class="poster-btn" style="margin-left:16px;" @click="openPoster">
+                智能生成论文海报
               </el-button>
             </div>
           </div>
@@ -35,6 +41,25 @@
               <el-card class="main-content">
                 <div class="paper-title-row">
                   <h1 class="paper-title">{{ paper.title }}</h1>
+                  <div class="title-actions">
+                    <button
+                      class="btn-favorite icon-btn"
+                      :class="{ 'is-active': paper.isfavorited }"
+                      @click.stop="toggleFavorite"
+                      aria-label="收藏"
+                    >
+                      <el-icon><Star /></el-icon>
+                    </button>
+
+                    <button
+                      v-if="paper.landingPageUrl"
+                      class="btn-external icon-btn"
+                      @click.prevent.stop="openExternal(paper.landingPageUrl)"
+                      aria-label="查看原文"
+                    >
+                      <el-icon><Document /></el-icon>
+                    </button>
+                  </div>
                 </div>
 
                 <div class="paper-meta">
@@ -42,7 +67,8 @@
                     <!-- <span class="meta-label">刊物：</span> -->
                     <!-- <span>{{ paper.publication }}</span> -->
                     <span class="meta-label">机构：</span>
-                    <span>{{ paper.institution }}</span>
+                    <span v-if="paper.institution && paper.institution.length">{{ paper.institution }}</span>
+                    <span v-else class="empty-placeholder">暂无详细信息</span>
                   </div>
 
                   <div class="publication-info">
@@ -58,11 +84,14 @@
 
                 <div class="paper-abstract">
                   <h3>摘要</h3>
-                  <p>{{ paper.abstractText }}</p>
+                    <div v-if="paper.abstractText && paper.abstractText.length">
+                      <p>{{ paper.abstractText }}</p>
+                    </div>
+                    <div v-else class="empty-placeholder">暂无详细信息</div>
                 </div>
 
                 <div class="paper-keywords">
-                  <h3>关键词</h3>
+                  <h3>领域</h3>
                   <div class="keywords-list">
                     <el-tag
                     v-for="field in paper.concepts"
@@ -123,7 +152,7 @@
                         >
                           <el-avatar :size="40">{{ authorInitial(author) }}</el-avatar>
                           <div class="author-info">
-                            <router-link v-if="author && author.id" :to="`/scholars/${author.id}`" class="author-name">
+                            <router-link v-if="getAuthorId(author)" :to="`/scholars/${getAuthorId(author)}`" class="author-name">
                               {{ authorLabel(author) }}
                             </router-link>
                             <span v-else class="author-name">{{ authorLabel(author) }}</span>
@@ -139,17 +168,20 @@
                     <h4>相关论文</h4>
                   </template>
                   <div class="related-list">
-                    <div
-                      v-for="relatedPaper in relatedPapers"
-                      :key="relatedPaper.id"
-                      class="related-item"
-                    >
-                      <router-link :to="`/paper/${relatedPaper.id}`" class="related-title">
-                        {{ relatedPaper.title }}
-                      </router-link>
-                      <p class="related-authors">{{ (relatedPaper.authorships || []).map(a => authorLabel(a)).join(', ') }}</p>
+                      <template v-if="relatedPapers && relatedPapers.length">
+                        <div
+                          v-for="relatedPaper in relatedPapers"
+                          :key="relatedPaper.id"
+                          class="related-item"
+                        >
+                          <router-link :to="`/paper/${relatedPaper.id}`" class="related-title">
+                            {{ relatedPaper.title }}
+                          </router-link>
+                          <p class="related-authors">{{ (relatedPaper.authorships || []).map(a => authorLabel(a)).join(', ') }}</p>
+                        </div>
+                      </template>
+                      <div v-else class="empty-placeholder">暂无详细信息</div>
                     </div>
-                  </div>
                 </el-card>
               </div>
             </el-col>
@@ -159,6 +191,30 @@
         <div v-else class="loading-state">
           <el-skeleton :rows="10" animated />
         </div>
+        <!-- 生成海报弹窗 -->
+        <el-dialog
+          v-model="showPosterDialog"
+          title="生成论文海报"
+            width="560px"
+          class="poster-dialog"
+          :close-on-click-modal="false"
+          :close-on-press-escape="true"
+        >
+          <div class="poster-dialog-content">
+            <div class="poster-preview">
+              <div v-if="posterLoading" class="poster-loading">
+                <div class="spinner" role="status" aria-label="loading"></div>
+                <div class="loading-text">正在生成海报，请稍候…</div>
+              </div>
+              <img v-else-if="posterImg" :src="posterImg" alt="AI海报" class="poster-img" />
+              <el-empty v-else description="海报预览占位" />
+            </div>
+            <div class="poster-dialog-actions">
+              <el-button @click="showPosterDialog = false">取消</el-button>
+              <el-button type="primary" :disabled="posterLoading || !posterImg" @click="downloadPoster">下载</el-button>
+            </div>
+          </div>
+        </el-dialog>
       </div>
     </div>
   </div>
@@ -166,19 +222,168 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { usePapersStore } from '@/stores/papers'
 import type { Paper } from '@/types/paper'
 import { useRoute } from 'vue-router'
 import { Star, Document, View } from '@element-plus/icons-vue'
 import AppHeader from '@/components/AppHeader.vue'
 import api from '@/api'
-// import { usePapersStore } from '../stores/papers'
+// 百炼模型API Key（sk）
+const BAILIAN_API_KEY = 'sk-80aa295708f444a8b03d7bd4680ee555'
+// 生成海报图片（通过 Vite /dashscope dev-proxy 转发到通义万相）
+async function generatePosterImage(prompt: string): Promise<string | null> {
+  // 前端直接发送 provider 所需的请求体，Vite proxy 会把请求重写到真实路径并注入 Authorization
+  const body = {
+    model: 'wan2.6-t2i',
+    input: {
+      messages: [
+        { role: 'user', content: [{ text: prompt }] }
+      ]
+    },
+    parameters: {
+      prompt_extend: true,
+      watermark: false,
+      n: 1,
+      negative_prompt: '',
+      size: '1280*1280'
+    }
+  }
+
+  // 开发时通过 Vite dev server 代理 `/dashscope` 转发到通义万相（Vite 在启动时注入 Authorization）
+  const res = await fetch('/dashscope', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+
+  if (!res.ok) {
+    let txt = ''
+    try { txt = await res.text() } catch (e) { txt = String(e) }
+    console.error('generatePosterImage: 非 2xx 响应', res.status, res.statusText, txt)
+    ElMessage.error(`AI 生成接口错误: ${res.status} ${res.statusText}`)
+    return null
+  }
+
+  const data = await res.json()
+  console.log('dashscope 返回:', data)
+  if (
+    data.output &&
+    data.output.choices &&
+    data.output.choices[0] &&
+    data.output.choices[0].message &&
+    data.output.choices[0].message.content &&
+    data.output.choices[0].message.content[0] &&
+    data.output.choices[0].message.content[0].image
+  ) {
+    return data.output.choices[0].message.content[0].image
+  }
+  if (data.output && data.output.images && data.output.images[0]) {
+    return data.output.images[0]
+  }
+  if (data.image) return data.image
+  return null
+}
+
+// 控制弹窗显示
+const showPosterDialog = ref(false)
+const posterImg = ref<string | null>(null)
+const posterLoading = ref(false)
+
+// 生成海报逻辑（弹窗打开时自动调用）
+const generatePoster = async () => {
+  console.log('generatePoster start')
+  if (!paper.value) {
+    console.log('generatePoster aborted: no paper')
+    return
+  }
+  posterLoading.value = true
+  posterImg.value = null
+  // 组装prompt（以图像为主，图多于文字，文字极简）
+  const prompt = `请根据以下论文信息生成一张学术风格但以视觉为主的 AI 海报，要求图像元素丰富、文字极简：
+- 以一张主视觉插图（示意图/概念图/主题艺术化图）为焦点，视觉占比大；
+- 辅助加入 1-2 个简单的可视化元素（图标、简易图表或示意图），用于突出关键结论；
+- 文字尽量少：仅保留论文标题、作者和 1-2 行摘要/关键点作为文本层，字体清晰、层次分明；
+- 色调学术、干净，留白合理，适合线上分享与打印（高分辨率），整体风格严谨但有视觉吸引力；
+请使用下面的论文信息创作海报：\n论文题目：${paper.value.title}\n作者：${(paper.value.authorships||[]).map(a=>typeof a==='string'?a:a?.name).join('，')}\n摘要：${paper.value.abstractText}\n关键词：${(paper.value.concepts||[]).join('，')}`
+  try {
+    const img = await generatePosterImage(prompt)
+    if (img) {
+      posterImg.value = img
+    } else {
+      ElMessage.error('AI海报生成失败')
+    }
+  } catch (e) {
+    ElMessage.error('AI海报生成异常')
+  } finally {
+    posterLoading.value = false
+  }
+}
+
+// 下载海报逻辑（支持 data URL 和跨域 URL -> fetch blob）
+const downloadPoster = async () => {
+  console.log('downloadPoster invoked, posterImg:', posterImg.value)
+  if (!posterImg.value) {
+    console.log('no poster to download')
+    ElMessage.warning('当前没有可下载的海报')
+    return
+  }
+
+  const filename = `${(paper.value?.title || 'poster').replace(/[^a-z0-9\u4e00-\u9fa5_-]/gi, '_')}.png`
+
+  try {
+    // data URL 直接下载
+    if (posterImg.value.startsWith('data:')) {
+      const a = document.createElement('a')
+      a.href = posterImg.value
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      ElMessage.success('海报已下载')
+      return
+    }
+
+    // 否则尝试 fetch 为 blob（解决跨域或需要授权的场景）
+    const resp = await fetch(posterImg.value, { method: 'GET', credentials: 'omit' })
+    if (!resp.ok) throw new Error(`下载请求失败 ${resp.status}`)
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    // 释放对象 URL
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+    ElMessage.success('海报已下载')
+  } catch (e) {
+    console.error('downloadPoster error', e)
+    ElMessage.error('海报下载失败')
+  }
+}
+
+// 监听弹窗打开时自动生成海报
+watch(showPosterDialog, (val) => {
+  console.log('showPosterDialog changed:', val)
+  if (val) {
+    console.log('trigger generatePoster from watch')
+    generatePoster()
+      .then(() => console.log('generatePoster finished'))
+      .catch(e => console.error('generatePoster error', e))
+  }
+})
+
+// 打开弹窗的入口，便于调试
+function openPoster() {
+  console.log('openPoster clicked')
+  showPosterDialog.value = true
+}
 
 const route = useRoute()
-
 const paper = ref<Paper | null>(null)
 const relatedPapers = ref<Paper[]>([])
-
-
 
 const authorKey = (author: any, idx: number) => {
   if (!author) return String(idx)
@@ -191,6 +396,32 @@ const authorLabel = (author: any) => (typeof author === 'string' ? author : (aut
 const authorInitial = (author: any) => {
   const name = authorLabel(author)
   return name ? name.charAt(0) : '?'
+}
+
+const getAuthorId = (author: any) => {
+  if (!author || typeof author === 'string') return null
+
+  const tryFromString = (s?: string | null) => {
+    if (!s) return null
+    const m = String(s).match(/(?:openalex\.org\/)([A-Za-z0-9]+)/)
+    return m ? m[1] : null
+  }
+
+  // common places: author.id or author.authorIds (array of URLs)
+  const fromId = tryFromString(author.id)
+  if (fromId) return fromId
+
+  const candidateArrays = [author.authorIds, author.ids]
+  for (const arr of candidateArrays) {
+    if (Array.isArray(arr)) {
+      for (const item of arr) {
+        const found = tryFromString(item)
+        if (found) return found
+      }
+    }
+  }
+
+  return null
 }
 
 const formatDate = (dateStringOrYear?: string | number) => {
@@ -214,21 +445,113 @@ const formatDate = (dateStringOrYear?: string | number) => {
   return s
 }
 
+const papersStore = usePapersStore()
+
 const toggleFavorite = async () => {
   if (!paper.value) return
   const id = paper.value.id
-  if (!paper.value.isfavorited) {
-    const res = await api.addToCollections(id).catch(() => null)
-    if (res && (res.status === 201 || res.ok)) {
+
+  try {
+    const msgOpts = { customClass: 'swiss-message', duration: 1500, offset: 60 }
+    const errorMsgOpts = { customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 }
+    // if the store contains this paper, use store method (keeps central state)
+    const storeHas = !!(papersStore as any).papers?.find((p: any) => p.id === id)
+    if (storeHas) {
+      await papersStore.toggleFavorite(id)
+      const updated = (papersStore as any).papers.find((p: any) => p.id === id)
+      if (updated) {
+        paper.value.isfavorited = !!updated.isfavorited
+        // update favouriteCount if store provides it
+        if (typeof updated.favouriteCount !== 'undefined') paper.value.favouriteCount = updated.favouriteCount
+      }
+      if (!updated?.isfavorited) {
+        ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
+      } else {
+        ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
+      }
+      return
+    }
+
+    // fallback: call API directly and update local paper
+    if (!paper.value.isfavorited) {
+      const res = await api.addToCollections(id)
+      ElMessage.success({ message: '已加入收藏夹', ...msgOpts })
       paper.value.isfavorited = true
       paper.value.favouriteCount = (paper.value.favouriteCount || 0) + 1
-    }
-  } else {
-    const res = await api.removeFromCollections(id).catch(() => null)
-    if (res && (res.status === 204 || res.ok)) {
+    } else {
+      const res = await api.removeFromCollections(id)
+      ElMessage.success({ message: '已从收藏夹移除', ...msgOpts })
       paper.value.isfavorited = false
       paper.value.favouriteCount = Math.max(0, (paper.value.favouriteCount || 1) - 1)
     }
+  } catch (error) {
+    console.error('Toggle favorite failed', error)
+    ElMessage.error({ message: '操作失败，请稍后重试', customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 })
+  }
+}
+
+// GB/T 7714-2015 citation formatter (basic implementation)
+const formatAuthorsGb = (authors: any[] | undefined) => {
+  if (!authors || authors.length === 0) return ''
+  // Use up to 3 authors then add '等' (et al.) per common GB/T conventions
+  const names = authors.map((a: any) => (typeof a === 'string' ? a : a?.name || '')).filter(Boolean)
+  if (names.length === 0) return ''
+  if (names.length <= 3) return names.join('; ')
+  return names.slice(0, 3).join('; ') + ' 等'
+}
+
+const getGbCitation = (p: Paper | null) => {
+  if (!p) return ''
+  const authors = formatAuthorsGb(p.authorships as any[])
+  const title = p.title || ''
+  const journal = p.publication || ''
+  const year = p.publicationDate ? String(p.publicationDate).slice(0,4) : ''
+  // volume/issue/pages might not be available; try common fields if present
+  // fallbacks: p.volume, p.issue, p.startPage, p.endPage
+  // Try to access generically if available
+  const vol = (p as any).volume ? String((p as any).volume) : ''
+  const issue = (p as any).issue ? String((p as any).issue) : ''
+  const sp = (p as any).startPage ? String((p as any).startPage) : ''
+  const ep = (p as any).endPage ? String((p as any).endPage) : ''
+  let pubPart = ''
+  if (journal) pubPart += journal
+  if (year) pubPart += (pubPart ? ', ' : '') + year
+  if (vol) pubPart += (vol ? ', ' + vol : '')
+  if (issue) pubPart += (issue ? '(' + issue + ')' : '')
+  if (sp && ep) pubPart += ': ' + sp + '-' + ep
+
+  const doi = p.doi ? ` DOI: ${p.doi}` : ''
+  // Assemble according to GB/T 7714 basic article format: 作者. 题名[J]. 刊名, 年, 卷(期): 起止页. DOI
+  const authorsPart = authors ? authors + '. ' : ''
+  const titlePart = title ? title + '[J]. ' : ''
+  const citation = `${authorsPart}${titlePart}${pubPart ? pubPart + '.' : ''}${doi}`.trim()
+  return citation
+}
+
+const copyCitation = async () => {
+  if (!paper.value) return
+  const txt = getGbCitation(paper.value)
+  if (!txt) {
+    ElMessage.warning({ message: '无法生成引用内容', customClass: 'swiss-message', duration: 2000, offset: 60 })
+    return
+  }
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(txt)
+    } else {
+      const ta = document.createElement('textarea')
+      ta.value = txt
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      ta.remove()
+    }
+    ElMessage.success({ message: '引用已复制到剪贴板', customClass: 'swiss-message', duration: 1800, offset: 60 })
+  } catch (e) {
+    console.error('copyCitation failed', e)
+    ElMessage.error({ message: '复制失败，请手动复制', customClass: 'swiss-message swiss-message-error', duration: 3000, offset: 60 })
   }
 }
 
@@ -238,12 +561,37 @@ const loadPaper = async (paperId: string) => {
     const data = await api.getAchievement(paperId)
     paper.value = data
     relatedPapers.value = data.relatedWorks || []
+    // If the central store already has this paper (e.g. user favorited from list), prefer store state
+    try {
+      const storePaper = (papersStore as any).papers?.find((p: any) => String(p.id) === String(paperId))
+      if (storePaper && paper.value) {
+        if (typeof storePaper.isfavorited !== 'undefined') paper.value.isfavorited = !!storePaper.isfavorited
+        if (typeof storePaper.favouriteCount !== 'undefined') paper.value.favouriteCount = storePaper.favouriteCount
+      }
+    } catch (e) {
+      // ignore store merge errors
+      console.warn('merge store paper state failed', e)
+    }
     // optional: scroll to top when navigating to another paper
     window.scrollTo({ top: 0, behavior: 'smooth' })
   } catch (e) {
     console.error('load paper error', e)
   }
 }
+
+// Keep detail page in sync if store papers change (e.g. user toggles favorite elsewhere)
+watch(
+  () => (papersStore as any).papers,
+  (newPapers: any[]) => {
+    if (!paper.value || !Array.isArray(newPapers)) return
+    const sp = newPapers.find((p: any) => String(p.id) === String(paper.value?.id))
+    if (sp) {
+      if (typeof sp.isfavorited !== 'undefined') paper.value.isfavorited = !!sp.isfavorited
+      if (typeof sp.favouriteCount !== 'undefined') paper.value.favouriteCount = sp.favouriteCount
+    }
+  },
+  { deep: true }
+)
 
 function openExternal(url?: string): void {
   if (!url) return
@@ -271,7 +619,98 @@ watch(() => route.params.id, (newId, oldId) => {
 </script>
 
 <style scoped lang="scss">
+// 复制自 src/styles/mixins.scss - 避免在 SFC 中使用 @use 导致顺序错误
 @mixin mobile { @media (max-width: 767px) { @content; } }
+
+@mixin tablet { @media (min-width: 768px) and (max-width: 1199px) { @content; } }
+
+@mixin desktop { @media (min-width: 1200px) { @content; } }
+// 生成海报弹窗样式
+.poster-dialog {
+  .el-dialog__header {
+    background: rgba(255, 252, 245, 0.8);
+    border-bottom: 1px solid var(--pf-border);
+    font-family: var(--font-sans);
+    font-size: 18px;
+    color: var(--pf-ink);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 20px 24px 12px 24px;
+  }
+  .el-dialog__body {
+    background: var(--card-bg);
+    padding: 32px 24px 16px 24px;
+  }
+  .el-dialog__footer {
+    background: transparent;
+    border-top: none;
+    padding: 0 24px 24px 24px;
+  }
+}
+
+.poster-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.poster-preview {
+  /* 保持正方形预览以匹配生成的海报尺寸（通义万相默认我们请求为 1280x1280） */
+  width: 360px;
+  height: 360px;
+  background: linear-gradient(135deg, #f7efe2 60%, #fdf9f2 100%);
+  border: 1.5px dashed var(--pf-accent);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 24px rgba(46, 42, 37, 0.06);
+}
+
+.poster-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  border: 4px solid rgba(0,0,0,0.08);
+  border-top-color: var(--pf-accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--pf-muted);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.poster-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  background: #fff;
+}
+
+.poster-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  gap: 16px;
+}
+ 
 
 .paper-detail-page {
   // Theme Variables - Parchment / Beige / Gold
@@ -291,17 +730,20 @@ watch(() => route.params.id, (newId, oldId) => {
   background: linear-gradient(180deg, var(--pf-bg) 0%, #fdf9f2 100%);
   color: var(--pf-ink);
   font-family: var(--font-serif);
+  overflow: visible; /* allow top-floating controls to remain visible */
 }
 
 .page-content {
   flex: 1;
   padding: 48px 24px;
   @include mobile { padding: 24px 16px; }
+  overflow: visible;
 }
 
 .container {
   max-width: 1100px;
   margin: 0 auto;
+  overflow: visible;
 }
 
 /* Header Area */
@@ -360,8 +802,8 @@ watch(() => route.params.id, (newId, oldId) => {
     box-shadow: 0 4px 12px rgba(184, 137, 58, 0.2);
 
     &:hover {
-      background: darken(#b8893a, 5%);
-      border-color: darken(#b8893a, 5%);
+      background: adjust(#b8893a, -5%);
+      border-color: adjust(#b8893a, -5%);
       transform: translateY(-1px);
     }
   }
@@ -373,10 +815,29 @@ watch(() => route.params.id, (newId, oldId) => {
 
     &:hover {
       border-color: var(--pf-accent);
-      color: var(--pf-accent);
-      background: rgba(184, 137, 58, 0.05);
+      color: var(--pf-accent) !important;
+      background: rgba(184, 137, 58, 0.05) !important;
     }
   }
+}
+
+/* Specific styling for external link button to avoid Element default blue hover/focus */
+:deep(.external-btn) {
+  background: transparent !important;
+  border: 1px solid var(--pf-border) !important;
+  color: var(--pf-ink) !important;
+  box-shadow: none !important;
+}
+
+:deep(.external-btn:hover) {
+  border-color: var(--pf-accent) !important;
+  color: var(--pf-accent) !important;
+  background: rgba(184, 137, 58, 0.05) !important;
+}
+
+:deep(.external-btn:focus), :deep(.external-btn:active) {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Cards General */
@@ -392,6 +853,8 @@ watch(() => route.params.id, (newId, oldId) => {
 .main-content {
   padding: 48px;
   margin-bottom: 32px;
+  overflow: visible; /* allow title action buttons to extend outside without being clipped */
+  position: relative; /* ensure absolute children position relative to this card */
 
   :deep(.el-card__body) { padding: 0; }
 
@@ -405,6 +868,65 @@ watch(() => route.params.id, (newId, oldId) => {
   color: var(--pf-ink);
   margin: 0 0 24px 0;
   letter-spacing: -0.01em;
+}
+
+.paper-title-row {
+  position: relative;
+  display: block;
+  padding-top: 12px; /* 保留顶部空间，避免按钮被遮挡 */
+}
+
+.title-actions {
+  position: absolute;
+  top: -30px; /* 放在标题上方，减小偏移以避免被上层元素遮挡 */
+  left: 0px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: none;
+  z-index: 9999; /* 提高层级，确保不被页面其它元素覆盖 */
+}
+
+.title-actions .icon-btn {
+  background: transparent;
+  border: 1px solid var(--pf-border);
+  color: var(--pf-ink);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.title-actions .icon-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 69, 19, 0.12);
+}
+
+.title-actions .btn-favorite.is-active {
+  background: var(--pf-accent);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(184, 137, 58, 0.18);
+}
+
+.title-actions .btn-external:hover {
+  border-color: var(--pf-accent);
+  color: var(--pf-accent);
+  background: rgba(184, 137, 58, 0.05);
+}
+
+@media (max-width: 767px) {
+  .title-actions {
+    position: static;
+    transform: none;
+    margin-top: 8px;
+    gap: 8px;
+  }
 }
 
 .paper-meta {
@@ -581,12 +1103,19 @@ watch(() => route.params.id, (newId, oldId) => {
   &:last-child { margin-bottom: 0; }
 
   .el-avatar {
-    background: var(--pf-accent);
-    color: #fff;
-    font-family: var(--font-serif);
-    font-weight: 700;
-    border: 2px solid rgba(255,255,255,0.5);
-    box-shadow: 0 2px 8px rgba(184, 137, 58, 0.2);
+  background: var(--pf-accent);
+  color: #fff;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.5);
+  box-shadow: 0 2px 8px rgba(184, 137, 58, 0.2);
+  width: 40px !important; /* ensure fixed circular avatar */
+  height: 40px !important;
+  flex-shrink: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   }
 
   .author-info {
@@ -623,6 +1152,17 @@ watch(() => route.params.id, (newId, oldId) => {
   font-style: italic;
 }
 
+/* Unified empty placeholder used across abstract, related list, institution, authors */
+.empty-placeholder {
+  color: var(--pf-muted);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  text-align: center;
+  padding: 14px 0;
+  font-style: italic;
+  background: transparent;
+}
+
 .related-item {
   padding-bottom: 16px;
   margin-bottom: 16px;
@@ -655,7 +1195,72 @@ watch(() => route.params.id, (newId, oldId) => {
   }
 }
 
+/* Ensure Element Plus card internals don't clip our floating controls */
+:deep(.el-card), :deep(.el-card__body) {
+  overflow: visible !important;
+}
+
 .loading-state {
   padding: 40px;
+}
+</style>
+
+<style lang="scss">
+/* 全局样式 - 用于 ElMessage 等插入到 body 的元素 */
+.swiss-message {
+  --el-message-bg-color: #fffcf5 !important;
+  --el-message-border-color: rgba(184, 137, 58, 0.3) !important;
+  --el-message-text-color: #2e2a25 !important;
+  --el-color-success: #b8893a !important; /* 将成功图标颜色改为金色 */
+  
+  font-family: "Noto Serif", Georgia, serif !important;
+  border-radius: 4px !important;
+  box-shadow: 0 8px 24px rgba(46, 42, 37, 0.12) !important;
+  border-width: 1px !important;
+  padding: 12px 24px !important;
+  min-width: 300px !important;
+  
+  .el-message__content {
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+  }
+  
+  .el-icon {
+    font-size: 18px !important;
+  }
+}
+
+/* 强制覆盖 Element Plus 成功/图标颜色（有时 Element 使用更高优先级的选择器） */
+.swiss-message,
+.swiss-message * {
+  color: #2e2a25 !important;
+}
+.swiss-message {
+  background-color: #fffcf5 !important;
+  border: 1px solid rgba(184, 137, 58, 0.18) !important;
+}
+.swiss-message .el-icon,
+.swiss-message .el-message__icon,
+.swiss-message .el-icon svg,
+.swiss-message .el-icon path {
+  color: #b8893a !important;
+  fill: #b8893a !important;
+}
+.swiss-message .el-message__content {
+  color: #2e2a25 !important;
+}
+
+/* 错误/警告样式 - 复古红 */
+.swiss-message.swiss-message-error {
+  --el-message-border-color: rgba(166, 55, 55, 0.3) !important;
+  border-color: rgba(166, 55, 55, 0.25) !important;
+}
+
+.swiss-message.swiss-message-error .el-icon,
+.swiss-message.swiss-message-error .el-message__icon,
+.swiss-message.swiss-message-error .el-icon svg,
+.swiss-message.swiss-message-error .el-icon path {
+  color: #a63737 !important;
+  fill: #a63737 !important;
 }
 </style>
