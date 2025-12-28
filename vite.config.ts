@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
         // 代理真实后端 API（/api），不拦截 Apifox Mock 服务
         // Apifox Mock 服务使用完整 URL（http://127.0.0.1:4523/...），不会被代理拦截
         '/api': {
-          target: 'http://localhost:8080',
+          target: 'http://10.193.59.61:8080',
           changeOrigin: true
         },
         // 开发时将 /dashscope 转发给 Dashscope（通义万相）并注入本地环境变量中的 Authorization

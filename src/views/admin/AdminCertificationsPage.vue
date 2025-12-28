@@ -120,6 +120,20 @@ const getAppliedAt = (row: any) => {
   return formatDateTime(timeValue)
 }
 
+const getApplicationId = (row: any) => {
+  if (!row) return ''
+  return (
+    row.id
+    || row.appId
+    || row.applicationId
+    || row.certificationId
+    || row.requestId
+    || row.applicationID
+    || row?.application?.id
+    || ''
+  )
+}
+
 const loadCertifications = async () => {
   loading.value = true
   try {
@@ -139,7 +153,12 @@ const loadCertifications = async () => {
 
 const handleApprove = async (row: any) => {
   try {
-    await adminApi.approveCertification(row.id || row.appId)
+    const applicationId = getApplicationId(row)
+    if (!applicationId) {
+      ElMessage.error('当前记录缺少申请ID，无法提交审批')
+      return
+    }
+    await adminApi.approveCertification(applicationId)
     ElMessage.success(`已批准 ${getApplicantName(row)} 的认证申请`)
     await loadCertifications()
   } catch (error: any) {
@@ -148,12 +167,20 @@ const handleApprove = async (row: any) => {
 }
 
 const handleReject = (row: any) => {
-  currentRejectId.value = row.id || row.appId
+  currentRejectId.value = getApplicationId(row)
+  if (!currentRejectId.value) {
+    ElMessage.error('当前记录缺少申请ID，无法驳回')
+    return
+  }
   rejectForm.value.reason = ''
   rejectDialogVisible.value = true
 }
 
 const confirmReject = async () => {
+  if (!currentRejectId.value) {
+    ElMessage.error('暂无可驳回的申请，请重新选择记录')
+    return
+  }
   if (!rejectForm.value.reason.trim()) {
     ElMessage.warning('请输入驳回原因')
     return
