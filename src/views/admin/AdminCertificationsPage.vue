@@ -10,10 +10,18 @@
         <h1>认证审核</h1>
         
         <el-table :data="certifications" style="width: 100%">
-          <el-table-column prop="applicantName" label="申请人" width="150" />
+          <el-table-column label="申请人" width="150">
+            <template #default="{ row }">
+              {{ getApplicantName(row) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="organization" label="机构" width="200" />
           <el-table-column prop="title" label="职位" width="150" />
-          <el-table-column prop="applyTime" label="申请时间" width="180" />
+          <el-table-column label="申请时间" width="180">
+            <template #default="{ row }">
+              {{ getAppliedAt(row) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="status" label="状态" width="100">
             <template #default="{ row }">
               <el-tag :type="row.status === 'pending' ? 'warning' : 'info'">
@@ -77,13 +85,51 @@ const rejectForm = ref({
   reason: ''
 })
 
+const formatDateTime = (value: any) => {
+  if (!value) return '—'
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return typeof value === 'string' ? value : '—'
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
+
+const getApplicantName = (row: any) => {
+  if (!row) return '—'
+  return row.applicantName
+    || row.realName
+    || row.name
+    || row.userName
+    || row.username
+    || row.publicName
+    || row.user?.name
+    || row.user?.username
+    || '—'
+}
+
+const getAppliedAt = (row: any) => {
+  if (!row) return '—'
+  const timeValue = row.applyTime
+    ?? row.applicationTime
+    ?? row.appliedAt
+    ?? row.submittedAt
+    ?? row.submitted_at
+    ?? row.createdAt
+    ?? row.created_at
+    ?? row.createdTime
+    ?? row.created_time
+    ?? null
+  return formatDateTime(timeValue)
+}
+
 const loadCertifications = async () => {
   loading.value = true
   try {
     const response = await adminApi.getCertifications({ status: 'pending' })
-    if (response.applications) {
-      certifications.value = response.applications
-    }
+    const listCandidate = Array.isArray(response)
+      ? response
+      : response?.applications
+        || response?.data
+        || []
+    certifications.value = Array.isArray(listCandidate) ? listCandidate : []
   } catch (error: any) {
     ElMessage.error(error.message || '加载认证列表失败')
   } finally {
@@ -94,7 +140,7 @@ const loadCertifications = async () => {
 const handleApprove = async (row: any) => {
   try {
     await adminApi.approveCertification(row.id || row.appId)
-    ElMessage.success(`已批准 ${row.applicantName || row.realName} 的认证申请`)
+    ElMessage.success(`已批准 ${getApplicantName(row)} 的认证申请`)
     await loadCertifications()
   } catch (error: any) {
     ElMessage.error(error.message || '批准失败')
