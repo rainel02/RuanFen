@@ -150,7 +150,7 @@ import AppHeader from '../components/AppHeader.vue'
 import { use } from 'echarts/core'
 import * as echarts from 'echarts'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, BarChart } from 'echarts/charts'
+import { LineChart, BarChart, GraphChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, TitleComponent, LegendComponent } from 'echarts/components'
 import VChart from 'vue-echarts'
 import 'echarts-wordcloud'
@@ -162,7 +162,7 @@ import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 import * as XLSX from 'xlsx'
 
-use([CanvasRenderer, LineChart, BarChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent])
+use([CanvasRenderer, LineChart, BarChart, GraphChart, GridComponent, TooltipComponent, TitleComponent, LegendComponent])
 
 const authStore = useAuthStore()
 const hotTopicRange = ref<'1y' | '3m' | 'all'>('all')
@@ -726,7 +726,9 @@ const rebuildGraph = () => {
           id: person.id,
           name: person.name,
           // 尺寸进一步微调，确保文字全显时不拥挤
-          symbolSize: isInitial ? 35 : (isExpanded ? 20 : 8),
+          symbolSize: isInitial ? 45 : (isExpanded ? 20 : 8),
+          //draggable: true,
+          //cursor: 'move',
           itemStyle: {
             color: isInitial ? THEME.core : (isExpanded ? THEME.expanded : THEME.node),
             borderWidth: 0.8,
@@ -761,7 +763,7 @@ const rebuildGraph = () => {
   });
 
   relationOption.value = {
-    animation: false,
+    animation: true,
     tooltip: { 
       trigger: 'item',
       backgroundColor: 'rgba(255, 254, 252, 0.98)',
@@ -776,18 +778,19 @@ const rebuildGraph = () => {
       data: Array.from(nodesMap.values()),
       links: links,
       roam: true,
-      draggable: true,
+      //draggable: true,
       // --- 核心优化：解决“转动明显”问题 ---
+      
       force: {
         // 1. 增加摩擦力到极限边缘，让节点像在粘稠的墨水中缓慢移动
-        friction: 0.95,    
+        friction: 1,    
         // 2. 减小斥力，防止初始“爆炸式”散开
-        repulsion: 1000,    
+        repulsion: 200,    
         // 3. 缩短连线，减少长距离拉扯产生的杠杆力（旋转主因）
-        edgeLength: 120,   
+        edgeLength: 100,   
         // 4. 极低的向心力，让节点在原地附近寻找平衡，而不是绕中心公转
-        gravity: 0.00001,     
-        layoutAnimation: false
+        gravity: 0.1,     
+        layoutAnimation: true
       },
       // ----------------------------------
       emphasis: { 

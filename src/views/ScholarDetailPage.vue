@@ -32,7 +32,7 @@
                 </p>
                 <div class="bio-preview">{{ scholar.bio || '暂无简介' }}</div>
                 
-                <div class="action-buttons">
+                <!-- <div class="action-buttons">
                   <el-button 
                     class="gothic-btn follow-btn"
                     :class="{ 'followed': scholar.isFollowed }"
@@ -47,7 +47,7 @@
                   <el-button class="gothic-btn" circle>
                     <el-icon><Share /></el-icon>
                   </el-button>
-                </div>
+                </div> -->
                 
                 <div class="stats-section">
                   <div class="stat-box">
