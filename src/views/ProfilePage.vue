@@ -203,7 +203,7 @@
                   >
                     <el-icon><Edit /></el-icon> 编辑资料
                   </el-button>
-                  <template v-if="verificationStatus === 'unverified' || verificationStatus === 'rejected'">
+                  <template v-if="verificationStatus != 'pending' && verificationStatus != 'approved'">
                     <el-button 
                       class="gothic-btn"
                       @click="showVerificationDialog = true"
