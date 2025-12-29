@@ -64,24 +64,31 @@
                 <el-select v-model="rankingDomain" size="small" style="width: 160px" @change="fetchRanking" class="retro-select">
                   <el-option label="全部" value="all" class="retro-option" />
                   <el-option label="Medicine" value="Medicine" class="retro-option" />
-                  <el-option label="Biology" value="Biology" class="retro-option" />
-                  <el-option label="Chemistry" value="Chemistry" class="retro-option" />
-                  <el-option label="Computer science" value="Computer science" class="retro-option" />
-                  <el-option label="Business" value="Business" class="retro-option" />
-                  <el-option label="Sociology" value="Sociology" class="retro-option" />
-                  <el-option label="Political science" value="Political science" class="retro-option" />
-                  <el-option label="Geology" value="Geology" class="retro-option" />
-                  <el-option label="Philosophy" value="Philosophy" class="retro-option" />
-                  <el-option label="History" value="History" class="retro-option" />
-                  <el-option label="Materials science" value="Materials science" class="retro-option" />
-                  <el-option label="Psychology" value="Psychology" class="retro-option" />
-                  <el-option label="Physics" value="Physics" class="retro-option" />
-                  <el-option label="Environmental science" value="Environmental science" class="retro-option" />
-                  <el-option label="Mathematics" value="Mathematics" class="retro-option" />
+                  <el-option label="Social Sciences" value="Social Sciences" class="retro-option" />
                   <el-option label="Engineering" value="Engineering" class="retro-option" />
-                  <el-option label="Geography" value="Geography" class="retro-option" />
-                  <el-option label="Economics" value="Economics" class="retro-option" />
-                  <el-option label="Art" value="Art" class="retro-option" />
+                  <el-option label="Arts and Humanities" value="Arts and Humanities" class="retro-option" />
+                  <el-option label="Physics and Astronomy" value="Physics and Astronomy" class="retro-option" />
+                  <el-option label="Computer Science" value="Computer Science" class="retro-option" />
+                  <el-option label="Agricultural and Biological Sciences" value="Agricultural and Biological Sciences" class="retro-option" />
+                  <el-option label="Biochemistry, Genetics and Molecular Biology" value="Biochemistry, Genetics and Molecular Biology" class="retro-option" />
+                  <el-option label="Environmental Science" value="Environmental Science" class="retro-option" />
+                  <el-option label="Economics, Econometrics and Finance" value="Economics, Econometrics and Finance" class="retro-option" />
+                  <el-option label="Materials Science" value="Materials Science" class="retro-option" />
+                  <el-option label="Business, Management and Accounting" value="Business, Management and Accounting" class="retro-option" />
+                  <el-option label="Psychology" value="Psychology" class="retro-option" />
+                  <el-option label="Earth and Planetary Sciences" value="Earth and Planetary Sciences" class="retro-option" />
+                  <el-option label="Health Professions" value="Health Professions" class="retro-option" />
+                  <el-option label="Chemistry" value="Chemistry" class="retro-option" />
+                  <el-option label="Mathematics" value="Mathematics" class="retro-option" />
+                  <el-option label="Neuroscience" value="Neuroscience" class="retro-option" />
+                  <el-option label="Decision Sciences" value="Decision Sciences" class="retro-option" />
+                  <el-option label="Immunology and Microbiology" value="Immunology and Microbiology" class="retro-option" />
+                  <el-option label="Energy" value="Energy" class="retro-option" />
+                  <el-option label="Nursing" value="Nursing" class="retro-option" />
+                  <el-option label="Pharmacology, Toxicology and Pharmaceutics" value="Pharmacology, Toxicology and Pharmaceutics" class="retro-option" />
+                  <el-option label="Dentistry" value="Dentistry" class="retro-option" />
+                  <el-option label="Chemical Engineering" value="Chemical Engineering" class="retro-option" />
+                  <el-option label="Veterinary" value="Veterinary" class="retro-option" />
                 </el-select>
               </div>
             </template>
@@ -94,7 +101,7 @@
                   </div>
                 </template>
               </el-table-column>
-              <el-table-column label="学者" align="center">
+              <el-table-column label="学者" align="center" width="200">
                 <template #default="scope">
                   <div class="scholar-info">
                     <el-avatar :size="36" :src="scope.row.avatar || defaultAvatar" class="scholar-avatar" />
@@ -104,14 +111,37 @@
                   </div>
                 </template>
               </el-table-column>
+              <el-table-column prop="domain" label="研究领域" align="center" width="230">
+                <template #default="scope">
+                  <span class="domain">{{ scope.row.domain }}</span>
+                </template>
+              </el-table-column>
               <el-table-column prop="score" label="影响力指数" align="center" width="120">
                 <template #default="scope">
                   <span class="score-text">{{ scope.row.score }}</span>
                 </template>
               </el-table-column>
-              <el-table-column prop="hIndex" label="H-index" align="center" width="120" />
-              <el-table-column prop="i10Index" label="i10-index" align="center" width="120" />
-              <el-table-column prop="worksCount" label="发表论文数" align="center" width="120" />
+              <el-table-column prop="citedCount" label="引用量" align="center" width="120">
+                <template #default="scope">
+                  <span class="citedCount">{{ scope.row.citedCount }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="hIndex" label="H-index" align="center" width="120">
+                <template #default="scope">
+                  <span class="hindex-text">{{ scope.row.hIndex }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="i10Index" label="i10-index" align="center" width="120">
+                <template #default="scope">
+                  <span class="hindex-text">{{ scope.row.i10Index }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="worksCount" label="发表论文数" align="center" width="120">
+                <template #default="scope">
+                  <span class="hindex-text">{{ scope.row.worksCount }}</span>
+                </template>
+              </el-table-column>
+              
             </el-table>
           </el-card>
         </el-col>
@@ -363,6 +393,7 @@ const fetchRanking = async () => {
       rank: index+1,
       name: item.scholar?.displayName || '未知',
       score: item.influenceScore,
+      citedCount: item.scholar?.citedCount ?? '--',
       domain: (item.scholar?.primaryTags || []).join(', ') || '未知',
       hIndex: item.scholar?.hindex ?? '--',
       i10Index: item.scholar?.i10Index ?? '--',
@@ -373,11 +404,11 @@ const fetchRanking = async () => {
     console.error(error)
     // Fallback mock data
     rankingData.value = [
-      { rank: 1, name: 'Dr. Zhang Wei', score: 95.8, domain: 'AI', hIndex: 20, i10Index: 15, worksCount: 42, avatar: '' },
-      { rank: 2, name: 'Prof. Li Ming', score: 92.3, domain: 'AI', hIndex: 18, i10Index: 12, worksCount: 38, avatar: '' },
-      { rank: 3, name: 'Dr. Wang Fang', score: 88.7, domain: 'AI', hIndex: 16, i10Index: 10, worksCount: 35, avatar: '' },
-      { rank: 4, name: 'Prof. Chen Hua', score: 85.2, domain: 'AI', hIndex: 14, i10Index: 8, worksCount: 30, avatar: '' },
-      { rank: 5, name: 'Dr. Liu Yang', score: 82.6, domain: 'Medicine', hIndex: 12, i10Index: 6, worksCount: 28, avatar: '' }
+      { rank: 1, name: 'Dr. Zhang Wei', score: 95.8, citedCount: 110900, domain: 'AI', hIndex: 20, i10Index: 15, worksCount: 42, avatar: '' },
+      { rank: 2, name: 'Prof. Li Ming', score: 92.3, citedCount: 78364, domain: 'AI', hIndex: 18, i10Index: 12, worksCount: 38, avatar: '' },
+      { rank: 3, name: 'Dr. Wang Fang', score: 88.7, citedCount: 53379, domain: 'AI', hIndex: 16, i10Index: 10, worksCount: 35, avatar: '' },
+      { rank: 4, name: 'Prof. Chen Hua', score: 85.2, citedCount: 45886, domain: 'AI', hIndex: 14, i10Index: 8, worksCount: 30, avatar: '' },
+      { rank: 5, name: 'Dr. Liu Yang', score: 82.6, citedCount: 11970, domain: 'Medicine', hIndex: 12, i10Index: 6, worksCount: 28, avatar: '' }
     ]
   }
 }
@@ -543,160 +574,7 @@ const handleNodeClick = async (params: ECElementEvent) => {
   }
 };
 
-/*
-const rebuildGraph = () => {
-  const nodesMap = new Map();
-  type Link = {
-    source: string; // 学者1的ID
-    target: string; // 学者2的ID
-    value: number;  // 合作次数
-    lineStyle?: {   // 连线样式（可选）
-      width: number;
-    };
-  };
-  const links: Link[] = [];
 
-
-  allRelationData.value.forEach(item => {
-    // 提取节点逻辑
-    [
-      { id: item.author1Id, name: item.author1Name },
-      { id: item.author2Id, name: item.author2Name }
-    ].forEach(person => {
-      if (!nodesMap.has(person.id)) {
-        const isInitial = person.name === initialAuthorName;
-        const isExpanded = expandedAuthors.value.has(person.name);
-
-        nodesMap.set(person.id, {
-          id: person.id,
-          name: person.name,
-          symbolSize: isInitial ? 60 : (isExpanded ? 45 : 30),
-          itemStyle: {
-            color: isInitial ? '#67C23A' : (isExpanded ? '#E6A23C' : '#409EFF')
-          },
-          label: {
-            show: true,
-            color: '#fff'
-          }
-        });
-      }
-    });
-
-    // 建立连线
-    links.push({
-      source: item.author1Id,
-      target: item.author2Id,
-      value: item.count,
-      lineStyle: { 
-        width: Math.min(item.count * 2, 8),
-        //color: 'rgba(255, 255, 255, 0.3)',
-        //curveness: 0.1
-      }
-    });
-  });
-
-  // 设置最终配置
-  relationOption.value = {
-    tooltip: { trigger: 'item', formatter: '{b}' },
-    series: [{
-      type: 'graph',
-      layout: 'force',
-      data: Array.from(nodesMap.values()),
-      links: links,
-      roam: true,
-      force: {
-        repulsion: 600,
-        edgeLength: 120,
-        layoutAnimation: true 
-      },
-      emphasis: { focus: 'adjacency' }
-    }]
-  };
-};*/
-
-/*
-const rebuildGraph = () => {
-  const THEME = {
-    core: '#1A1A1A',      // 核心学者：墨黑
-    expanded: '#9D8461',  // 已展开：黄铜
-    node: '#E8E4DB',      // 普通节点：纸张灰线
-    edge: '#D1CDC5'       // 连线：极细浅灰
-  };
-  const nodesMap = new Map();
-  const links: any[] = [];
-
-  // 调试点 1: 打印当前池子里有多少条关系
-  console.log("Current allRelationData count:", allRelationData.value.length);
-
-  allRelationData.value.forEach(item => {
-    // 提取节点逻辑
-    const persons = [
-      { id: item.author1Id, name: item.author1Name },
-      { id: item.author2Id, name: item.author2Name }
-    ];
-
-    persons.forEach(person => {
-      if (!nodesMap.has(person.id)) {
-        const isInitial = person.name === initialAuthorName;
-        const isExpanded = expandedAuthors.value.has(person.name);
-
-        nodesMap.set(person.id, {
-          id: person.id, // 确保 ID 是唯一的字符串
-          name: person.name,
-          symbolSize: isInitial ? 60 : (isExpanded ? 45 : 25),
-          itemStyle: {
-            color: isInitial ? '#67C23A' : (isExpanded ? '#E6A23C' : '#409EFF')
-          },
-          label: {
-            show: true,
-            position: 'right',
-            color: '#fff',
-            fontSize: 10
-          }
-        });
-      }
-    });
-
-    // 建立连线
-    links.push({
-      source: item.author1Id,
-      target: item.author2Id,
-      value: item.count,
-      lineStyle: { 
-        width: Math.min(item.count * 1.5, 6),
-        curveness: 0.1, // 增加弧度，防止重合线
-        color: 'rgba(255, 255, 255, 0.4)'
-      }
-    });
-  });
-
-  // 调试点 2: 打印生成的节点数
-  console.log("Generated Nodes:", nodesMap.size);
-
-  relationOption.value = {
-    tooltip: { trigger: 'item', formatter: (p: any) => p.dataType === 'edge' ? `合作次数: ${p.value}` : p.name },
-    series: [{
-      type: 'graph',
-      layout: 'force',
-      data: Array.from(nodesMap.values()),
-      links: links,
-      roam: true,
-      draggable: true,
-      force: {
-        repulsion: 300, // 增加斥力，让新节点弹得更远
-        edgeLength: 300,
-        friction: 2,
-        gravity: 0.1,
-        layoutAnimation: true 
-      },
-      emphasis: { focus: 'adjacency' },
-      lineStyle: {
-        opacity: 0.8
-      }
-    }]
-  };
-};
-*/
 const rebuildGraph = () => {
   const THEME = {
     core: '#1A1A1A',      // 核心学者：墨黑
@@ -990,6 +868,24 @@ onMounted(async () => {
   font-family: 'Georgia', serif;
   font-weight: bold;
   color: #D4AF37;
+}
+
+.domain {
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  color: #1f508d;
+}
+
+.citedCount {
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  color: #2d2b26;
+}
+
+.hindex-text {
+  font-family: 'Georgia', serif;
+  font-weight: bold;
+  color: #2d2b26;
 }
 
 :deep(.el-table) {
