@@ -39,13 +39,14 @@ export default {
       if (filters.grantYear != null) params.grantYear = filters.grantYear
       // include pagination params (backend expects 0-based page index)
       params.page = page - 1
-      params.pageSize = pageSize
+      // change pageSize -> size to match backend parameter name
+      params.size = pageSize
 
       const raw: any = await request.get('/patent', { params })
       // normalize potential shapes: backend may return { content: [], totalElements },
       // or return an array directly, or wrap with { data: ... }
       const content = raw && (raw.content ?? raw.data ?? raw)
-
+      console.log('Raw patent API response:', raw)
       let list: Patent[] = []
       let total = 0
 
