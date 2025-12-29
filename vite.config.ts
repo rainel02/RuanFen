@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: 'http://10.128.53.189:8080',
+          target: 'http://localhost:8080',
           changeOrigin: true
         },
         '/dashscope': {
