@@ -31,6 +31,7 @@
           <router-link v-if="showForum" to="/forum" class="nav-item" :class="{ active: route.path.startsWith('/forum') }">论坛</router-link>
           <router-link to="/chat" class="nav-item" :class="{ active: route.path === '/chat' }">消息</router-link>
           <router-link to="/analytics" class="nav-item" :class="{ active: route.path === '/analytics' }">分析</router-link>
+          <router-link to="/knowledge" class="nav-item" :class="{ active: route.path.startsWith('/knowledge') }">我的智库</router-link>
           <router-link 
             v-if="isLoggedIn && isAdmin" 
             to="/admin" 
