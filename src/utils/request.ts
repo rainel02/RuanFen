@@ -1,13 +1,7 @@
 import axios from 'axios'
 
-const DEFAULT_BASE = '/api'
-const NODE_DEFAULT_BASE = 'http://localhost:8080/api'
-const BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL ?? (
-  typeof window === 'undefined' ? NODE_DEFAULT_BASE : DEFAULT_BASE
-)
-
 const service = axios.create({
-  baseURL: BASE_URL,
+  baseURL: import.meta.env.VITE_API_BASE,
   timeout: 10000
 })
 
