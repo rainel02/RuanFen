@@ -42,28 +42,35 @@ export default {
       params.pageSize = pageSize
 
       const raw: any = await request.get('/patent', { params })
-      console.log('Raw patent API response:', raw)
-      console.log(raw.content);
-
-      // normalize response: some servers wrap with { code, message, data },
-      // request interceptor usually unwraps to data, but handle both shapes
-      const res: any = raw.content
+      // normalize potential shapes: backend may return { content: [], totalElements },
+      // or return an array directly, or wrap with { data: ... }
+      const content = raw && (raw.content ?? raw.data ?? raw)
 
       let list: Patent[] = []
       let total = 0
 
-      if (Array.isArray(res)) {
-        // raw array
-        list = res.map(mapBackendToPatent)
-        total = raw.totalElements
+      if (Array.isArray(content)) {
+        // backend returned an array (could be paged or full list)
+        list = content.map(mapBackendToPatent)
+
+        // prefer explicit server-side total metadata when present
+        if (raw && (raw.totalElements != null)) {
+          total = Number(raw.totalElements)
+        } else if (raw && (raw.total != null)) {
+          total = Number(raw.total)
+        } else {
+          // no server-side metadata — treat returned array as full list
+          total = list.length
+        }
       } else {
         // fallback to mock if response shape unexpected
         list = mockPatents.map((m: any) => ({ ...m }))
         total = list.length
       }
 
-      // apply client-side pagination if backend returned full list
-      if (list.length && !(res && ((res.list && res.total) || (res.data && (res.total || res.data.length)) || (res.patents && (res.total || res.patents.length)) || (res.content && (res.totalElements || res.content.length))))) {
+      // if backend returned the full list (no server-side total metadata),
+      // apply client-side pagination
+      if (Array.isArray(content) && !(raw && (raw.totalElements != null || raw.total != null))) {
         const start = (page - 1) * pageSize
         const end = start + pageSize
         const paged = list.slice(start, end)
