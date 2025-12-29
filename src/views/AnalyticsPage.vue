@@ -580,12 +580,13 @@ const rebuildGraph = () => {
     core: '#1A1A1A',      // 核心学者：墨黑
     expanded: '#9D8461',  // 已展开：黄铜
     node: '#E8E4DB',      // 普通节点：纸张灰线
-    edge: 'rgba(26, 26, 26, 0.08)', // 极淡墨色连线，降低初始视觉压力
+    edge: 'rgba(26, 26, 26, 0.8)', // 极淡墨色连线，降低初始视觉压力
     text: '#1A1A1A'       // 文字：墨黑
   };
 
   const nodesMap = new Map();
-  const links: any[] = [];
+  // 使用 Map 对边进行去重（无向边），key 采用排序后的两个节点ID
+  const linksMap = new Map<string, any>();
 
   //let coreNodeId = '';
 
@@ -627,17 +628,40 @@ const rebuildGraph = () => {
         });
       }
     });
+    // 构建无向边：对 (a,b) 与 (b,a) 进行合并
+    const id1 = item.author1Id;
+    const id2 = item.author2Id;
+    if (!id1 || !id2) return;
+    const [a, b] = id1 < id2 ? [id1, id2] : [id2, id1];
+    const key = `${a}|${b}`;
+    const weight = item.count ?? 1;
+    if (linksMap.has(key)) {
+      const existing = linksMap.get(key);
+      existing.value = (existing.value ?? 0) + weight; // 合并权重
+    } else {
+      linksMap.set(key, {
+        source: a,
+        target: b,
+        value: weight,
+        lineStyle: {
+          width: 0.15, // 极细线，减少干扰
+          curveness: 0.1,
+          color: THEME.edge
+        }
+      });
+    }
+  });
 
-    links.push({
-      source: item.author1Id,
-      target: item.author2Id,
-      value: item.count,
-      lineStyle: { 
-        width: 0.5, // 极细线，减少干扰
-        curveness: 0.1, 
-        color: THEME.edge
-      }
-    });
+  // 后端数据包含双向重复记录，合并累加后需除以2
+  const links: any[] = Array.from(linksMap.values()).map((link: any) => {
+    link.value = link.value / 2;
+    //const realCnt = link.value;
+    //const lineWidth = Math.min(1.5 + (realCnt - 1) * 0.4, 8);
+    //link.lineStyle = {
+      //...link.lineStyle, // 保留原有的 curveness 和 color
+      //width: lineWidth   // 应用动态线宽
+    //};
+    return link;
   });
 
   relationOption.value = {
@@ -655,6 +679,8 @@ const rebuildGraph = () => {
       layout: 'force',
       data: Array.from(nodesMap.values()),
       links: links,
+      // 无向边（不显示箭头）
+      edgeSymbol: ['none', 'none'],
       roam: true,
       //draggable: true,
       // --- 核心优化：解决“转动明显”问题 ---

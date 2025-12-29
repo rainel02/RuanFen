@@ -24,7 +24,11 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
+<<<<<<< Updated upstream
           target: 'http://10.128.53.189:8080',
+=======
+          target: 'http://10.128.53.189:8080',  //10.128.53.189
+>>>>>>> Stashed changes
           changeOrigin: true
         },
         '/dashscope': {
