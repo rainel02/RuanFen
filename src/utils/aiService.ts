@@ -1,7 +1,7 @@
 import { ElMessage } from 'element-plus';
 
 const API_KEY = import.meta.env.VITE_ALIYUN_API_KEY;
-const BASE_URL = import.meta.env.VITE_ALIYUN_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const BASE_URL = import.meta.env.VITE_ALIYUN_BASE_URL;
 const API_URL = `${BASE_URL}/chat/completions`;
 const MODEL = import.meta.env.VITE_ALIYUN_MODEL || 'qwen-plus';
 
